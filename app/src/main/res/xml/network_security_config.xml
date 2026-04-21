@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Configuração de segurança de rede.
+    Bloqueia tráfego HTTP em texto puro — o app não faz requisições de rede,
+    mas esta configuração é boa prática exigida pelo F-Droid.
+-->
+<network-security-config>
+    <base-config cleartextTrafficPermitted="false">
+        <trust-anchors>
+            <certificates src="system" />
+        </trust-anchors>
+    </base-config>
+</network-security-config>

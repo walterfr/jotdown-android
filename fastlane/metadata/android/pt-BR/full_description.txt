@@ -1,0 +1,11 @@
+﻿Jotdown é um fichador acadêmico completo que funciona 100% offline no seu dispositivo.
+
+Funcionalidades:
+- Leitor de PDF integrado com zoom e navegação por páginas
+- Sublinhe e capture citações diretamente no PDF
+- Adicione post-its e anotações em qualquer ponto da página
+- Desenhe e destaque com caneta, lápis e marca-texto
+- Exporte seu fichamento em .MD, .TXT ou .PDF no formato ABNT
+- Todos os dados são salvos localmente via IndexedDB — sem nuvem, sem conta
+
+Ideal para estudantes, pesquisadores e professores que precisam organizar leituras acadêmicas com agilidade.

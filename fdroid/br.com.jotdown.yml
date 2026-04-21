@@ -1,0 +1,47 @@
+# Jotdown — F-Droid Metadata
+# Arquivo para submissão em: https://gitlab.com/fdroid/fdroiddata
+# Caminho no fork: metadata/br.com.jotdown.yml
+
+Categories:
+  - Education
+
+License: GPL-3.0-only
+
+AuthorName: prof.walterfr
+# AuthorEmail: seu@email.com   ← preencha antes de submeter
+SourceCode: https://github.com/profwalterfr/jotdown-android
+IssueTracker: https://github.com/profwalterfr/jotdown-android/issues
+# Changelog: https://github.com/profwalterfr/jotdown-android/releases
+
+AutoName: Jotdown
+
+Summary: Fichador acadêmico com leitor de PDF e exportação ABNT
+
+Description: |-
+  Jotdown é um fichador acadêmico 100% offline para estudantes e pesquisadores.
+
+  Funcionalidades:
+  * Leitor de PDF com renderização de alta qualidade (PDF.js)
+  * Ferramentas de desenho: caneta, lápis, marca-texto e borracha
+  * Anotações em post-it sobre qualquer ponto do documento
+  * Captura de citações diretas com um toque
+  * Metadados ABNT (livro, artigo, site)
+  * Exportação do fichamento em .md, .txt e .pdf
+  * Todos os dados ficam no dispositivo (IndexedDB) — sem nuvem, sem rastreamento
+
+  O app não coleta nenhum dado do usuário, não requer conta, não faz requisições
+  de rede durante o uso normal e funciona completamente offline.
+
+Builds:
+  - versionName: '1.0.0'
+    versionCode: 1
+    commit: v1.0.0
+    gradle:
+      - yes
+    # O task downloadWebAssets baixa as libs JS/CSS durante o build
+    # Todas as libs são FLOSS (MIT / Apache-2.0 / OFL-1.1 / CC-BY-4.0)
+
+AutoUpdateMode: Version
+UpdateCheckMode: Tags
+CurrentVersion: '1.0.0'
+CurrentVersionCode: 1

@@ -1,0 +1,26 @@
+# Android / Gradle
+.gradle/
+build/
+local.properties
+*.iml
+.idea/
+*.jks
+*.keystore
+
+# Assets baixados pelo Gradle (não commitar — são gerados no build)
+app/src/main/assets/libs/
+app/src/main/assets/css/
+app/src/main/assets/webfonts/
+
+# O index.html É commitado em web/ e copiado para assets/ pelo Gradle
+# app/src/main/assets/index.html  ← NÃO ignorar
+
+# APKs gerados
+*.apk
+*.aab
+
+# macOS
+.DS_Store
+
+# Windows
+Thumbs.db

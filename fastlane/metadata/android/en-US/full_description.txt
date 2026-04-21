@@ -1,0 +1,11 @@
+﻿Jotdown is a complete academic reader that works 100% offline on your device.
+
+Features:
+- Integrated PDF reader with zoom and page navigation
+- Highlight and capture citations directly from the PDF
+- Add sticky notes and annotations anywhere on the page
+- Draw and highlight with pen, pencil and highlighter tools
+- Export your notes in .MD, .TXT or .PDF in ABNT format
+- All data is saved locally via IndexedDB — no cloud, no account required
+
+Perfect for students, researchers and teachers who need to organize academic readings efficiently.

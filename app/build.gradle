@@ -1,0 +1,157 @@
+plugins {
+    id 'com.android.application'
+    id 'org.jetbrains.kotlin.android'
+}
+
+android {
+    buildFeatures {
+        buildConfig true
+    }
+    namespace 'br.com.jotdown'
+    compileSdk 34
+
+    defaultConfig {
+        applicationId "br.com.jotdown"
+        minSdk 26          // Android 8.0 — cobre 95%+ dos devices ativos
+        targetSdk 34
+        versionCode 1
+        versionName "1.0.0"
+    }
+
+    buildTypes {
+        release {
+            minifyEnabled   true
+            shrinkResources true
+            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+        }
+        debug {
+            applicationIdSuffix ".debug"
+            versionNameSuffix  "-debug"
+        }
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+
+    kotlinOptions {
+        jvmTarget = '17'
+    }
+
+    // Assets ficam em src/main/assets/ — copiados pelo task downloadWebAssets
+    sourceSets {
+        main {
+            assets.srcDirs = ['src/main/assets']
+        }
+    }
+    packaging {
+        jniLibs {
+            useLegacyPackaging false
+        }
+    }
+}
+
+dependencies {
+    // AppCompat: única dependência Android — Apache-2.0, disponível no Maven Google
+    implementation 'androidx.appcompat:appcompat:1.7.0'
+}
+
+// ─── Task: Download das libs JS/CSS (F-Droid compliance) ─────────────────────
+//
+// O F-Droid constrói o APK a partir do código-fonte.
+// Para evitar que arquivos .min.js pré-compilados sejam marcados como
+// "binários de origem desconhecida", este task baixa as libs durante o build.
+// Todas as libs são FLOSS:
+//   Preact      → MIT    → https://github.com/preactjs/preact
+//   htm         → Apache-2.0 → https://github.com/developit/htm
+//   Tailwind    → MIT    → https://github.com/tailwindlabs/tailwindcss
+//   PDF.js      → Apache-2.0 → https://github.com/mozilla/pdf.js
+//   html2pdf    → MIT    → https://github.com/eKoopmans/html2pdf.js
+//   Font Awesome → Icons: CC-BY-4.0 / Code: MIT / Fonts: OFL-1.1
+//
+tasks.register('downloadWebAssets') {
+    description = 'Baixa bibliotecas JS/CSS de fontes confiáveis para os assets do app'
+    group       = 'build'
+
+    def assetsDir  = file("src/main/assets")
+    def libsDir    = file("src/main/assets/libs")
+    def cssDir     = file("src/main/assets/css")
+    def fontsDir   = file("src/main/assets/webfonts")
+
+    doFirst {
+        [assetsDir, libsDir, cssDir, fontsDir].each { it.mkdirs() }
+    }
+
+    doLast {
+        def downloads = [
+            // ── Preact + htm ────────────────────────────────────────────────
+            ["https://unpkg.com/preact@10.19.3/dist/preact.umd.js",
+             "${libsDir}/preact.umd.js"],
+            ["https://unpkg.com/preact@10.19.3/hooks/dist/hooks.umd.js",
+             "${libsDir}/hooks.umd.js"],
+            ["https://unpkg.com/htm@3.1.1/dist/htm.umd.js",
+             "${libsDir}/htm.umd.js"],
+
+            // ── Tailwind ────────────────────────────────────────────────────
+            ["https://cdn.tailwindcss.com",
+             "${libsDir}/tailwind-cdn.js"],
+
+            // ── PDF.js ──────────────────────────────────────────────────────
+            ["https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js",
+             "${libsDir}/pdf.min.js"],
+            ["https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js",
+             "${libsDir}/pdf.worker.min.js"],
+            ["https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf_viewer.min.css",
+             "${cssDir}/pdf_viewer.min.css"],
+
+            // ── html2pdf ────────────────────────────────────────────────────
+            ["https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js",
+             "${libsDir}/html2pdf.bundle.min.js"],
+
+            // ── Font Awesome 6 (CSS) ────────────────────────────────────────
+            ["https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/fontawesome.min.css",
+             "${cssDir}/fontawesome.min.css"],
+            ["https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/solid.min.css",
+             "${cssDir}/solid.min.css"],
+            ["https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/regular.min.css",
+             "${cssDir}/regular.min.css"],
+
+            // ── Font Awesome 6 (webfonts OFL-1.1) ──────────────────────────
+            ["https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/webfonts/fa-solid-900.woff2",
+             "${fontsDir}/fa-solid-900.woff2"],
+            ["https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/webfonts/fa-regular-400.woff2",
+             "${fontsDir}/fa-regular-400.woff2"],
+            ]
+
+        downloads.each { entry ->
+            def (url, dest) = entry
+            def destFile = file(dest)
+            if (!destFile.exists()) {
+                println "→ Baixando: ${destFile.name}"
+                new URL(url).withInputStream { is ->
+                    destFile.withOutputStream { os -> os << is }
+                }
+                println "  ✓ ${destFile.name}"
+            } else {
+                println "  ✓ Já existe: ${destFile.name} (pulando)"
+            }
+        }
+
+        // Copia o index.html do projeto web para os assets
+        def webIndex = rootProject.file("web/index.html")
+        if (webIndex.exists()) {
+            copy {
+                from webIndex
+                into assetsDir
+            }
+            println "  ✓ index.html copiado de web/"
+        } else {
+            println "  ⚠ web/index.html não encontrado — copie manualmente para src/main/assets/"
+        }
+    }
+}
+
+// Executa o download antes de gerar os assets do build
+preBuild.dependsOn downloadWebAssets
+

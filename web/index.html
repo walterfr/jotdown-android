@@ -1,0 +1,1277 @@
+﻿<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Jotdown - Fichador Acadêmico</title>
+    <meta name="theme-color" content="#1e1b4b">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+
+    <!--
+        Estratégia PWA:
+        - 1ª visita: carrega do CDN (requer internet)
+        - Service Worker cacheia tudo automaticamente
+        - Visitas seguintes: 100% offline, sem internet
+        Não é necessário rodar nenhum script de download.
+    -->
+
+    <!-- Preact + htm (substituem React + Babel — elimina ~1 MB) -->
+    <script src="libs/preact.umd.js"></script>
+    <script src="libs/hooks.umd.js"></script>
+    <script src="libs/htm.umd.js"></script>
+
+    <!-- Tailwind CSS -->
+    <script src="libs/tailwind-cdn.js"></script>
+
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="css/fontawesome.min.css">
+    <link rel="stylesheet" href="css/solid.min.css">
+    <link rel="stylesheet" href="css/regular.min.css">
+
+    <!-- PDF.js -->
+    <link rel="stylesheet" href="css/pdf_viewer.min.css">
+    <script src="libs/pdf.min.js"></script>
+
+    <!-- html2pdf -->
+    <script src="libs/html2pdf.bundle.min.js"></script>
+
+    <style>
+        body { overscroll-behavior-y: none; touch-action: pan-y; }
+        .custom-scroll::-webkit-scrollbar { width: 6px; }
+        .custom-scroll::-webkit-scrollbar-track { background: transparent; }
+        .custom-scroll::-webkit-scrollbar-thumb { background: #94a3b8; border-radius: 4px; }
+
+        input[type=number]::-webkit-inner-spin-button,
+        input[type=number]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+        input[type=number] { -moz-appearance: textfield; }
+
+        #fichador-app-root {
+            height: 100vh;
+            width: 100vw;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            background-color: #f3f4f6;
+        }
+
+        .drawing-mode { user-select: none; }
+        .dragging-panel { user-select: none; cursor: ns-resize; }
+
+        .textLayer {
+            position: absolute;
+            left: 0; top: 0; right: 0; bottom: 0;
+            overflow: hidden;
+            opacity: 1;
+            line-height: 1.0;
+        }
+        .textLayer > span {
+            color: transparent !important;
+            position: absolute;
+            white-space: pre;
+            cursor: text;
+            transform-origin: 0% 0%;
+        }
+        .textLayer ::selection {
+            background: rgba(99, 102, 241, 0.3) !important;
+            color: transparent !important;
+        }
+
+        @keyframes popIn {
+            0%   { transform: scale(0);   opacity: 0; }
+            80%  { transform: scale(1.2); opacity: 1; }
+            100% { transform: scale(1);   opacity: 1; }
+        }
+        .animate-pop { animation: popIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards; }
+
+        @keyframes fadeOut {
+            from { opacity: 1; visibility: visible; }
+            to   { opacity: 0; visibility: hidden;  }
+        }
+        .splash-exit { animation: fadeOut 0.5s cubic-bezier(0.4, 0, 0.2, 1) forwards; }
+
+        @keyframes loadingBar {
+            0%   { width: 0%;    transform: translateX(-100%); }
+            100% { width: 100%;  transform: translateX(200%);  }
+        }
+        .animate-loading-bar { animation: loadingBar 1.5s infinite ease-in-out; }
+    </style>
+</head>
+<body class="bg-gray-100 p-0 m-0">
+
+    <div id="fichador-app-root"></div>
+
+    <script>
+
+        // ─── Setup Preact + htm ──────────────────────────────────────────────────
+        const { h, render, Fragment } = preact;
+        const { useState, useEffect, useRef } = preactHooks;
+        const html = htm.bind(h);
+
+        // ─── BANCO DE DADOS LOCAL (IndexedDB) ────────────────────────────────────
+        const DB_NAME    = 'JotdownDB';
+        const STORE_NAME = 'documents';
+
+        const openDB = () => new Promise((resolve, reject) => {
+            const req = indexedDB.open(DB_NAME, 1);
+            req.onupgradeneeded = (e) => {
+                const db = e.target.result;
+                if (!db.objectStoreNames.contains(STORE_NAME))
+                    db.createObjectStore(STORE_NAME, { keyPath: 'id' });
+            };
+            req.onsuccess = () => resolve(req.result);
+            req.onerror   = () => reject(req.error);
+        });
+
+        const dbSaveDocument = async (doc) => {
+            const db = await openDB();
+            return new Promise((resolve, reject) => {
+                const tx = db.transaction(STORE_NAME, 'readwrite');
+                tx.objectStore(STORE_NAME).put(doc);
+                tx.oncomplete = () => resolve();
+                tx.onerror    = () => reject(tx.error);
+            });
+        };
+
+        const dbGetAllDocuments = async () => {
+            const db = await openDB();
+            return new Promise((resolve, reject) => {
+                const tx  = db.transaction(STORE_NAME, 'readonly');
+                const req = tx.objectStore(STORE_NAME).getAll();
+                req.onsuccess = () => resolve(req.result);
+                req.onerror   = () => reject(req.error);
+            });
+        };
+
+        const dbGetDocument = async (id) => {
+            const db = await openDB();
+            return new Promise((resolve, reject) => {
+                const tx  = db.transaction(STORE_NAME, 'readonly');
+                const req = tx.objectStore(STORE_NAME).get(id);
+                req.onsuccess = () => resolve(req.result);
+                req.onerror   = () => reject(req.error);
+            });
+        };
+
+        const dbDeleteDocument = async (id) => {
+            const db = await openDB();
+            return new Promise((resolve, reject) => {
+                const tx = db.transaction(STORE_NAME, 'readwrite');
+                tx.objectStore(STORE_NAME).delete(id);
+                tx.oncomplete = () => resolve();
+                tx.onerror    = () => reject(tx.error);
+            });
+        };
+
+        // ─── COMPONENTE: AnnotationItem ──────────────────────────────────────────
+        const AnnotationItem = ({ annotation, isEditing, onUpdate, onToggle, onDelete }) => {
+            const [text, setText]   = useState(annotation.text);
+            const textareaRef       = useRef(null);
+
+            useEffect(() => {
+                if (isEditing && textareaRef.current) textareaRef.current.focus();
+            }, [isEditing]);
+
+            const handleBlur = () => {
+                if (text.trim() === '') onDelete(annotation.id);
+                else onUpdate(annotation.id, text);
+            };
+
+            if (isEditing) {
+                return html`
+                    <div class="absolute z-50 animate-pop"
+                         style=${{ left: annotation.x, top: annotation.y, transform: 'translate(-50%, -50%)' }}>
+                        <div class="bg-yellow-200 shadow-2xl rounded-br-xl border border-yellow-400 w-56 h-48 flex flex-col">
+                            <div class="bg-yellow-300 h-7 border-b border-yellow-400 flex justify-between px-2 items-center">
+                                <span class="text-[10px] font-bold text-yellow-800 uppercase">
+                                    <i class="fas fa-thumbtack mr-1"></i> Anotação
+                                </span>
+                                <button onMouseDown=${(e) => { e.preventDefault(); handleBlur(); }}
+                                        class="text-yellow-700 hover:text-red-600 transition">
+                                    <i class="fas fa-check-circle"></i>
+                                </button>
+                            </div>
+                            <textarea
+                                ref=${textareaRef}
+                                class="flex-1 w-full bg-transparent p-3 outline-none resize-none text-sm text-gray-800 custom-scroll font-medium leading-relaxed"
+                                value=${text}
+                                onChange=${(e) => setText(e.target.value)}
+                                onBlur=${handleBlur}
+                                placeholder="Escreva a sua reflexão..."
+                            />
+                        </div>
+                    </div>
+                `;
+            }
+
+            return html`
+                <div class="absolute z-40 cursor-pointer"
+                     style=${{ left: annotation.x, top: annotation.y, transform: 'translate(-50%, -50%)' }}
+                     onClick=${(e) => { e.stopPropagation(); onToggle(annotation.id); }}>
+                    <div class="transform hover:scale-125 transition-transform duration-200 group animate-pop relative">
+                        <i class="fas fa-comment-dots text-amber-500 text-base p-4 -m-4 drop-shadow-md"></i>
+                        <div class="hidden sm:group-hover:block absolute bottom-full left-1/2 transform -translate-x-1/2 mb-3 bg-gray-900 text-white text-xs p-2 rounded-lg shadow-xl w-48 whitespace-pre-wrap z-50 pointer-events-none line-clamp-4">
+                            ${annotation.text}
+                            <div class="absolute top-full left-1/2 transform -translate-x-1/2 border-4 border-transparent border-t-gray-900"></div>
+                        </div>
+                    </div>
+                </div>
+            `;
+        };
+
+        // ─── COMPONENTE: DrawingCanvas ───────────────────────────────────────────
+        const DrawingCanvas = ({ pageNumber, width, height, activeTool, strokeColor, strokeWidth, registerApi, onHistoryChange, initialPaths, onSaveDrawings }) => {
+            const canvasRef   = useRef(null);
+            const [isDrawing, setIsDrawing] = useState(false);
+            const paths       = useRef(initialPaths || []);
+            const currentStep = useRef((initialPaths && initialPaths.length > 0) ? initialPaths.length - 1 : -1);
+            const currentPath = useRef(null);
+
+            const redrawAll = () => {
+                const canvas = canvasRef.current;
+                if (!canvas) return;
+                const ctx = canvas.getContext('2d');
+                ctx.clearRect(0, 0, canvas.width / 2, canvas.height / 2);
+
+                for (let i = 0; i <= currentStep.current; i++) {
+                    const path = paths.current[i];
+                    if (!path || path.points.length === 0) continue;
+                    ctx.beginPath();
+                    ctx.moveTo(path.points[0].x, path.points[0].y);
+                    ctx.lineWidth = path.width;
+
+                    if (path.tool === 'eraser') {
+                        ctx.globalCompositeOperation = 'destination-out';
+                        ctx.lineWidth  = path.width * 5;
+                        ctx.strokeStyle = 'rgba(0,0,0,1)';
+                        ctx.globalAlpha = 1.0;
+                    } else {
+                        ctx.globalCompositeOperation = 'source-over';
+                        ctx.strokeStyle = path.color;
+                        if      (path.tool === 'highlighter') { ctx.globalAlpha = 0.4; ctx.lineWidth = path.width * 4; }
+                        else if (path.tool === 'pencil')      { ctx.globalAlpha = 0.7; }
+                        else                                  { ctx.globalAlpha = 1.0; }
+                    }
+                    for (let j = 1; j < path.points.length; j++) ctx.lineTo(path.points[j].x, path.points[j].y);
+                    ctx.stroke();
+                }
+            };
+
+            const undo = () => {
+                if (currentStep.current >= 0) {
+                    currentStep.current -= 1;
+                    redrawAll();
+                    if (onHistoryChange) onHistoryChange(pageNumber, currentStep.current >= 0, true);
+                    onSaveDrawings(paths.current.slice(0, currentStep.current + 1));
+                }
+            };
+
+            const redo = () => {
+                if (currentStep.current < paths.current.length - 1) {
+                    currentStep.current += 1;
+                    redrawAll();
+                    if (onHistoryChange) onHistoryChange(pageNumber, true, currentStep.current < paths.current.length - 1);
+                    onSaveDrawings(paths.current.slice(0, currentStep.current + 1));
+                }
+            };
+
+            useEffect(() => { if (registerApi) registerApi(pageNumber, { undo, redo }); }, [pageNumber]);
+
+            useEffect(() => {
+                const canvas = canvasRef.current;
+                if (!canvas) return;
+                if (canvas.width === 0 || canvas.width !== width * 2) {
+                    canvas.width  = width * 2;
+                    canvas.height = height * 2;
+                    const ctx = canvas.getContext('2d');
+                    ctx.scale(2, 2);
+                    ctx.lineCap  = 'round';
+                    ctx.lineJoin = 'round';
+                    redrawAll();
+                }
+            }, [width, height]);
+
+            const startDrawing = (e) => {
+                if (activeTool === 'select' || activeTool === 'annotation') return;
+                const canvas  = canvasRef.current;
+                const ctx     = canvas.getContext('2d');
+                const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+                const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+                const rect    = canvas.getBoundingClientRect();
+                const x = clientX - rect.left;
+                const y = clientY - rect.top;
+
+                currentPath.current = { tool: activeTool, color: strokeColor, width: strokeWidth, points: [{ x, y }] };
+                ctx.lineWidth = strokeWidth;
+
+                if (activeTool === 'eraser') {
+                    ctx.globalCompositeOperation = 'destination-out';
+                    ctx.lineWidth = strokeWidth * 5; ctx.strokeStyle = 'rgba(0,0,0,1)'; ctx.globalAlpha = 1.0;
+                } else {
+                    ctx.globalCompositeOperation = 'source-over'; ctx.strokeStyle = strokeColor;
+                    if      (activeTool === 'highlighter') { ctx.globalAlpha = 0.4; ctx.lineWidth = strokeWidth * 4; }
+                    else if (activeTool === 'pencil')      { ctx.globalAlpha = 0.7; }
+                    else                                   { ctx.globalAlpha = 1.0; }
+                }
+                ctx.beginPath(); ctx.moveTo(x, y); setIsDrawing(true);
+            };
+
+            const draw = (e) => {
+                if (!isDrawing || activeTool === 'select' || activeTool === 'annotation') return;
+                e.preventDefault();
+                const canvas  = canvasRef.current;
+                const ctx     = canvas.getContext('2d');
+                const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+                const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+                const rect    = canvas.getBoundingClientRect();
+                const x = clientX - rect.left;
+                const y = clientY - rect.top;
+                currentPath.current.points.push({ x, y });
+                ctx.lineTo(x, y); ctx.stroke();
+            };
+
+            const stopDrawing = () => {
+                if (isDrawing) {
+                    canvasRef.current.getContext('2d').closePath();
+                    setIsDrawing(false);
+                    const step = currentStep.current + 1;
+                    paths.current = paths.current.slice(0, step);
+                    paths.current.push(currentPath.current);
+                    currentStep.current = step;
+                    if (onHistoryChange) onHistoryChange(pageNumber, true, false);
+                    onSaveDrawings(paths.current);
+                }
+            };
+
+            return html`
+                <canvas
+                    ref=${canvasRef}
+                    onMouseDown=${startDrawing} onMouseMove=${draw} onMouseUp=${stopDrawing} onMouseLeave=${stopDrawing}
+                    onTouchStart=${startDrawing} onTouchMove=${draw} onTouchEnd=${stopDrawing}
+                    style=${{
+                        position: 'absolute', top: 0, left: 0, width: '100%', height: '100%',
+                        pointerEvents: (activeTool === 'select' || activeTool === 'annotation') ? 'none' : 'auto',
+                        zIndex: 30, mixBlendMode: 'multiply'
+                    }}
+                />
+            `;
+        };
+
+        // ─── COMPONENTE: PdfPageViewer ───────────────────────────────────────────
+        const PdfPageViewer = ({
+            pdfDocument, pageNumber, activeTool, strokeColor, strokeWidth,
+            registerApi, onHistoryChange, annotations, onAddAnnotation,
+            onUpdateAnnotation, onDeleteAnnotation, editingAnnotationId,
+            setEditingAnnotationId, drawings, onSaveDrawings
+        }) => {
+            const containerRef  = useRef(null);
+            const canvasRef     = useRef(null);
+            const textLayerRef  = useRef(null);
+            const [viewport, setViewport]         = useState(null);
+            const [shouldRender, setShouldRender] = useState(false);
+
+            useEffect(() => {
+                const observer = new IntersectionObserver(([entry]) => {
+                    if (entry.isIntersecting) { setShouldRender(true); observer.disconnect(); }
+                }, { rootMargin: '800px 0px' });
+                if (containerRef.current) observer.observe(containerRef.current);
+                return () => observer.disconnect();
+            }, []);
+
+            useEffect(() => {
+                if (!shouldRender || !pdfDocument) return;
+                let renderTask = null; let isMounted = true;
+
+                const renderPage = async () => {
+                    try {
+                        const page  = await pdfDocument.getPage(pageNumber);
+                        const scale = 1.5;
+                        const vp    = page.getViewport({ scale });
+                        if (isMounted) setViewport(vp);
+
+                        const canvas      = canvasRef.current;
+                        if (!canvas) return;
+                        const context     = canvas.getContext('2d');
+                        const outputScale = window.devicePixelRatio || 1;
+                        canvas.width  = Math.floor(vp.width  * outputScale);
+                        canvas.height = Math.floor(vp.height * outputScale);
+                        canvas.style.width  = Math.floor(vp.width)  + 'px';
+                        canvas.style.height = Math.floor(vp.height) + 'px';
+
+                        const transform     = outputScale !== 1 ? [outputScale, 0, 0, outputScale, 0, 0] : null;
+                        const renderContext = { canvasContext: context, transform, viewport: vp };
+                        renderTask          = page.render(renderContext);
+                        await renderTask.promise;
+
+                        const textContent  = await page.getTextContent();
+                        const textLayerDiv = textLayerRef.current;
+                        if (!textLayerDiv) return;
+                        textLayerDiv.innerHTML = '';
+                        textLayerDiv.style.setProperty('--scale-factor', vp.scale);
+                        window.pdfjsLib.renderTextLayer({ textContentSource: textContent, container: textLayerDiv, viewport: vp, textDivs: [] });
+                    } catch (e) {
+                        if (e.name !== 'RenderingCancelledException') console.error('Erro na renderização', e);
+                    }
+                };
+
+                renderPage();
+                return () => { isMounted = false; if (renderTask) renderTask.cancel(); };
+            }, [shouldRender, pdfDocument, pageNumber]);
+
+            const defaultWidth      = viewport ? viewport.width  : 600;
+            const defaultHeight     = viewport ? viewport.height : 800;
+            const pageAnnotations   = annotations.filter(a => a.page === pageNumber);
+
+            return html`
+                <div ref=${containerRef}
+                     id=${`pdf-page-${pageNumber}`}
+                     data-page=${pageNumber}
+                     class="pdf-page-container bg-white shadow-xl border border-gray-200 relative rounded-xl mx-auto mb-8 overflow-hidden"
+                     style=${{ width: viewport ? viewport.width : '100%', maxWidth: '100%', minHeight: defaultHeight }}>
+
+                    <div class="absolute top-0 right-0 bg-gray-100 border-b border-l border-gray-200 px-3 py-1 text-xs font-bold text-gray-500 rounded-bl-xl select-none z-40">
+                        Página ${pageNumber}
+                    </div>
+
+                    ${shouldRender && html`
+                        <div class="relative mx-auto" style=${{ width: defaultWidth, height: defaultHeight }}>
+                            <canvas ref=${canvasRef} class="absolute top-0 left-0 z-10 block"></canvas>
+                            <div ref=${textLayerRef}
+                                 class="textLayer z-20"
+                                 style=${{ width: defaultWidth, height: defaultHeight, pointerEvents: activeTool === 'select' ? 'auto' : 'none' }}>
+                            </div>
+
+                            <${DrawingCanvas}
+                                pageNumber=${pageNumber} width=${defaultWidth} height=${defaultHeight}
+                                activeTool=${activeTool} strokeColor=${strokeColor} strokeWidth=${strokeWidth}
+                                registerApi=${registerApi} onHistoryChange=${onHistoryChange}
+                                initialPaths=${drawings[pageNumber] || []}
+                                onSaveDrawings=${(paths) => onSaveDrawings(pageNumber, paths)}
+                            />
+
+                            ${activeTool === 'annotation' && html`
+                                <div class="absolute inset-0 z-50 cursor-crosshair bg-amber-500 bg-opacity-5"
+                                     onClick=${(e) => {
+                                         const rect = e.currentTarget.getBoundingClientRect();
+                                         onAddAnnotation(pageNumber, e.clientX - rect.left, e.clientY - rect.top);
+                                     }}>
+                                </div>
+                            `}
+
+                            ${pageAnnotations.map(annot => html`
+                                <${AnnotationItem}
+                                    key=${annot.id}
+                                    annotation=${annot}
+                                    isEditing=${editingAnnotationId === annot.id}
+                                    onUpdate=${onUpdateAnnotation}
+                                    onDelete=${onDeleteAnnotation}
+                                    onToggle=${(id) => setEditingAnnotationId(editingAnnotationId === id ? null : id)}
+                                />
+                            `)}
+                        </div>
+                    `}
+                </div>
+            `;
+        };
+
+        // ─── APP PRINCIPAL ────────────────────────────────────────────────────────
+        function App() {
+            // Screens
+            const [currentScreen,   setCurrentScreen]   = useState('splash');
+            const [splashAnimating, setSplashAnimating] = useState(false);
+            const [isProcessing,    setIsProcessing]    = useState(false);
+            const [isExportingPDF,  setIsExportingPDF]  = useState(false);
+
+            // Library
+            const [libraryDocs, setLibraryDocs] = useState([]);
+
+            // Reader – documento
+            const [currentDocId,  setCurrentDocId]  = useState(null);
+            const [pdfDocument,   setPdfDocument]   = useState(null);
+            const [numPages,      setNumPages]       = useState(0);
+            const [fileName,      setFileName]       = useState('');
+
+            // Reader – dados IndexedDB
+            const [highlights,  setHighlights]  = useState([]);
+            const [annotations, setAnnotations] = useState([]);
+            const [drawings,    setDrawings]    = useState({});
+            const [metadata,    setMetadata]    = useState({
+                docType: 'livro', authorLastName: '', authorFirstName: '',
+                title: '', subtitle: '', edition: '', city: '',
+                publisher: '', year: '', journal: '', volume: '',
+                pages: '', url: '', accessDate: ''
+            });
+
+            // Reader – UI
+            const [editingAnnotationId,  setEditingAnnotationId]  = useState(null);
+            const [isRightSidebarOpen,   setIsRightSidebarOpen]   = useState(false);
+            const [isSidebarOpen,        setIsSidebarOpen]        = useState(false);
+            const [activeTool,           setActiveTool]           = useState('select');
+            const [strokeColor,          setStrokeColor]          = useState('#fde047');
+            const [strokeWidth]                                    = useState(4);
+            const [panelHeight,          setPanelHeight]          = useState(250);
+            const isDraggingPanel                                  = useRef(false);
+            const [currentPage,          setCurrentPage]          = useState(1);
+            const [pageInputValue,       setPageInputValue]       = useState('1');
+            const viewerRef                                        = useRef(null);
+            const canvasApis                                       = useRef({});
+            const [historyState,         setHistoryState]         = useState({});
+
+            // ── Helpers ──────────────────────────────────────────────────────────
+            const registerCanvasApi = (pageNumber, api) => { canvasApis.current[pageNumber] = api; };
+
+            const handleHistoryChange = (pageNumber, canUndoStatus, canRedoStatus) =>
+                setHistoryState(prev => ({ ...prev, [pageNumber]: { canUndo: canUndoStatus, canRedo: canRedoStatus } }));
+
+            const handleUndo = () => { if (canvasApis.current[currentPage]) canvasApis.current[currentPage].undo(); };
+            const handleRedo = () => { if (canvasApis.current[currentPage]) canvasApis.current[currentPage].redo(); };
+
+            const handleMetadataChange  = (e) => setMetadata(prev => ({ ...prev, [e.target.name]: e.target.value }));
+            const handlePageInputChange = (e) => setPageInputValue(e.target.value);
+
+            const handleSliderChange = (e) => {
+                const newPage = parseInt(e.target.value);
+                setCurrentPage(newPage); setPageInputValue(newPage.toString());
+                document.getElementById(`pdf-page-${newPage}`)?.scrollIntoView({ behavior: 'smooth' });
+            };
+
+            const submitPageInput = () => {
+                let page = parseInt(pageInputValue);
+                if (isNaN(page)) { setPageInputValue(currentPage.toString()); return; }
+                page = Math.max(1, Math.min(page, numPages));
+                setCurrentPage(page); setPageInputValue(page.toString());
+                document.getElementById(`pdf-page-${page}`)?.scrollIntoView({ behavior: 'smooth' });
+            };
+
+            const startPanelDrag = () => { isDraggingPanel.current = true; document.body.classList.add('dragging-panel'); };
+
+            const canUndo = historyState[currentPage]?.canUndo || false;
+            const canRedo = historyState[currentPage]?.canRedo || false;
+
+            // ── 1. Boot & Splash ─────────────────────────────────────────────────
+            useEffect(() => {
+                const initApp = async () => {
+                    if (window.pdfjsLib) {
+                            window.pdfjsLib.GlobalWorkerOptions.workerSrc =
+                            'libs/pdf.worker.min.js';
+                    }
+                    const docs = await dbGetAllDocuments();
+                    setLibraryDocs(docs.sort((a, b) => b.dateAdded - a.dateAdded));
+                    setTimeout(() => {
+                        setSplashAnimating(true);
+                        setTimeout(() => setCurrentScreen('library'), 500);
+                    }, 2000);
+                };
+                initApp();
+            }, []);
+
+            // ── 2. Autosave ──────────────────────────────────────────────────────
+            useEffect(() => {
+                if (currentScreen === 'reader' && currentDocId && !isProcessing) {
+                    (async () => {
+                        const doc = await dbGetDocument(currentDocId);
+                        if (doc) {
+                            doc.metadata    = metadata;
+                            doc.highlights  = highlights;
+                            doc.annotations = annotations;
+                            doc.drawings    = drawings;
+                            await dbSaveDocument(doc);
+                        }
+                    })();
+                }
+            }, [metadata, highlights, annotations, drawings, currentDocId, currentScreen, isProcessing]);
+
+            // ── 3. Drag panel ────────────────────────────────────────────────────
+            useEffect(() => {
+                const onMove = (e) => {
+                    if (!isDraggingPanel.current) return;
+                    e.preventDefault();
+                    const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+                    const h = Math.min(Math.max(window.innerHeight - clientY, 150), window.innerHeight - 80);
+                    setPanelHeight(h);
+                };
+                const onUp = () => { isDraggingPanel.current = false; document.body.classList.remove('dragging-panel'); };
+                window.addEventListener('mousemove', onMove);
+                window.addEventListener('mouseup',   onUp);
+                window.addEventListener('touchmove', onMove, { passive: false });
+                window.addEventListener('touchend',  onUp);
+                return () => {
+                    window.removeEventListener('mousemove', onMove);
+                    window.removeEventListener('mouseup',   onUp);
+                    window.removeEventListener('touchmove', onMove);
+                    window.removeEventListener('touchend',  onUp);
+                };
+            }, []);
+
+            // ── 4. Scroll Observer ───────────────────────────────────────────────
+            useEffect(() => {
+                if (!pdfDocument) return;
+                const observer = new IntersectionObserver((entries) => {
+                    entries.forEach(entry => {
+                        if (entry.isIntersecting) {
+                            setCurrentPage(Number(entry.target.dataset.page));
+                            setPageInputValue(entry.target.dataset.page);
+                        }
+                    });
+                }, { threshold: 0.3 });
+                document.querySelectorAll('.pdf-page-container').forEach(p => observer.observe(p));
+                return () => observer.disconnect();
+            }, [pdfDocument, numPages]);
+
+            // ── 5. CRUD de documentos ────────────────────────────────────────────
+            const createNewDocument = async (file) => {
+                setIsProcessing(true);
+                try {
+                    const newId  = Date.now().toString();
+                    const newDoc = {
+                        id: newId, fileName: file.name,
+                        title: file.name.replace('.pdf', ''), dateAdded: Date.now(),
+                        pdfData: await file.arrayBuffer(),
+                        metadata: {
+                            docType: 'livro', authorLastName: '', authorFirstName: '',
+                            title: file.name.replace('.pdf', ''), subtitle: '', edition: '',
+                            city: '', publisher: '', year: '', journal: '',
+                            volume: '', pages: '', url: '', accessDate: ''
+                        },
+                        highlights: [], annotations: [], drawings: {}
+                    };
+                    await dbSaveDocument(newDoc);
+                    await loadDocumentFromDB(newId);
+                } catch {
+                    alert('Erro ao salvar PDF no dispositivo.');
+                    setIsProcessing(false);
+                }
+            };
+
+            const loadDocumentFromDB = async (id) => {
+                setIsProcessing(true);
+                setCurrentScreen('reader');
+                setIsSidebarOpen(false); setIsRightSidebarOpen(false);
+                try {
+                    const doc = await dbGetDocument(id);
+                    if (!doc) throw new Error('Documento não encontrado');
+                    setCurrentDocId(doc.id); setFileName(doc.fileName);
+                    setMetadata(doc.metadata || {
+                        docType: 'livro', authorLastName: '', authorFirstName: '', title: '',
+                        subtitle: '', edition: '', city: '', publisher: '', year: '',
+                        journal: '', volume: '', pages: '', url: '', accessDate: ''
+                    });
+                    setHighlights(doc.highlights || []);
+                    setAnnotations(doc.annotations || []);
+                    setDrawings(doc.drawings || {});
+                    setCurrentPage(1); setPageInputValue('1'); setHistoryState({});
+                    const pdf = await window.pdfjsLib.getDocument(doc.pdfData).promise;
+                    setPdfDocument(pdf);
+                    setNumPages(Math.min(pdf.numPages, 150));
+                } catch {
+                    alert('Erro ao abrir o documento.');
+                    setCurrentScreen('library');
+                } finally {
+                    setIsProcessing(false);
+                }
+            };
+
+            const deleteDocument = async (id, e) => {
+                e.stopPropagation();
+                if (window.confirm('Deseja apagar este PDF e todas as suas anotações do dispositivo?')) {
+                    await dbDeleteDocument(id);
+                    setLibraryDocs((await dbGetAllDocuments()).sort((a, b) => b.dateAdded - a.dateAdded));
+                }
+            };
+
+            const returnToLibrary = async () => {
+                setCurrentDocId(null); setPdfDocument(null);
+                setLibraryDocs((await dbGetAllDocuments()).sort((a, b) => b.dateAdded - a.dateAdded));
+                setCurrentScreen('library');
+            };
+
+            // ── 6. Lógica do Reader ──────────────────────────────────────────────
+            const handleSaveDrawings    = (pn, paths) => setDrawings(prev => ({ ...prev, [pn]: paths }));
+            const handleUpdateAnnotation = (id, text) => { setAnnotations(prev => prev.map(a => a.id === id ? { ...a, text } : a)); setEditingAnnotationId(null); };
+            const handleDeleteAnnotation = (id)        => { setAnnotations(prev => prev.filter(a => a.id !== id)); setEditingAnnotationId(null); };
+
+            const handleAddAnnotation = (pn, x, y) => {
+                const newId = Date.now();
+                setAnnotations(prev => [...prev, { id: newId, page: pn, x, y, text: '' }]);
+                setEditingAnnotationId(newId); setActiveTool('select');
+            };
+
+            const goToPage = (pageNum) => {
+                setCurrentPage(pageNum); setPageInputValue(pageNum.toString());
+                document.getElementById(`pdf-page-${pageNum}`)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            };
+
+            const captureHighlight = () => {
+                const selection    = window.getSelection();
+                const selectedText = selection.toString().trim();
+                if (!selectedText) return;
+                let node = selection.anchorNode; let pageNum = currentPage;
+                while (node && node.parentElement) {
+                    if (node.parentElement.dataset.page) { pageNum = parseInt(node.parentElement.dataset.page); break; }
+                    node = node.parentElement;
+                }
+                setHighlights(prev => [...prev, { id: Date.now(), text: selectedText, page: pageNum }]);
+                selection.removeAllRanges();
+                const btn = document.getElementById('btn-capture');
+                if (btn) { btn.classList.add('bg-green-400'); setTimeout(() => btn.classList.remove('bg-green-400'), 300); }
+            };
+
+            // ── 7. Exportação ABNT ───────────────────────────────────────────────
+            const getReferenceData = () => {
+                const { docType, authorLastName, authorFirstName, title, subtitle,
+                        edition, city, publisher, year, journal, volume, pages, url, accessDate } = metadata;
+                const lastNameFullRef = authorLastName ? authorLastName.toUpperCase() : '';
+                const lastNameInText  = authorLastName
+                    ? authorLastName.charAt(0).toUpperCase() + authorLastName.slice(1).toLowerCase() : '';
+                const fSub = subtitle ? `: ${subtitle}` : '';
+                const fEd  = edition  ? `${edition}. ed. ` : '';
+
+                let refText = '', refHTML = '', refMD = '';
+                if (docType === 'livro') {
+                    refText = `${lastNameFullRef}, ${authorFirstName}. ${title}${fSub}. ${fEd}${city}: ${publisher}, ${year}.`;
+                    refMD   = `${lastNameFullRef}, ${authorFirstName}. **${title}**${fSub}. ${fEd}${city}: ${publisher}, ${year}.`;
+                    refHTML = `${lastNameFullRef}, ${authorFirstName}. <strong>${title}</strong>${fSub}. ${fEd}${city}: ${publisher}, ${year}.`;
+                } else if (docType === 'artigo') {
+                    const vv = volume ? `v. ${volume}, ` : '';
+                    const pp = pages  ? `p. ${pages}, `  : '';
+                    refText = `${lastNameFullRef}, ${authorFirstName}. ${title}${fSub}. ${journal}, ${city}, ${vv}${pp}${year}.`;
+                    refMD   = `${lastNameFullRef}, ${authorFirstName}. ${title}${fSub}. **${journal}**, ${city}, ${vv}${pp}${year}.`;
+                    refHTML = `${lastNameFullRef}, ${authorFirstName}. ${title}${fSub}. <strong>${journal}</strong>, ${city}, ${vv}${pp}${year}.`;
+                } else {
+                    refText = `${lastNameFullRef}, ${authorFirstName}. ${title}${fSub}. Disponível em: <${url}>. Acesso em: ${accessDate}.`;
+                    refMD   = `${lastNameFullRef}, ${authorFirstName}. **${title}**${fSub}. Disponível em: <${url}>. Acesso em: ${accessDate}.`;
+                    refHTML = `${lastNameFullRef}, ${authorFirstName}. <strong>${title}</strong>${fSub}. Disponível em: &lt;${url}&gt;. Acesso em: ${accessDate}.`;
+                }
+                return { refText, refMD, refHTML, lastNameInText, year };
+            };
+
+            const downloadMD = () => {
+                const { refMD, lastNameInText, year } = getReferenceData();
+                let md = `# Fichamento: ${metadata.title}\n\n## Referência Completa\n${refMD}\n\n## Destaques e Citações\n\n`;
+                highlights.forEach(h => { md += `> ${h.text} (${lastNameInText}, ${year}, p. ${h.page})\n\n`; });
+                const a = document.createElement('a');
+                a.href = URL.createObjectURL(new Blob([md], { type: 'text/markdown;charset=utf-8' }));
+                a.download = `fichamento_${metadata.authorLastName || 'doc'}.md`; a.click();
+            };
+
+            const downloadTXT = () => {
+                const { refText, lastNameInText, year } = getReferenceData();
+                let txt = `FICHAMENTO: ${(metadata.title || 'DOCUMENTO').toUpperCase()}\n${'='.repeat(52)}\n\nREFERÊNCIA COMPLETA:\n${refText}\n\n${'-'.repeat(52)}\nCITAÇÕES DIRETAS:\n\n`;
+                highlights.forEach(h => { txt += `${h.text} (${lastNameInText}, ${year}, p. ${h.page})\n\n`; });
+                const a = document.createElement('a');
+                a.href = URL.createObjectURL(new Blob([txt], { type: 'text/plain;charset=utf-8' }));
+                a.download = `fichamento_${metadata.authorLastName || 'doc'}.txt`; a.click();
+            };
+
+            const downloadPDF = () => {
+                setIsExportingPDF(true);
+                const { refHTML, lastNameInText, year } = getReferenceData();
+                let body = `<div style="font-family:Arial,sans-serif;font-size:12pt;line-height:1.5;padding:20px;text-align:justify;">
+                    <h1 style="font-size:14pt;font-weight:bold;text-align:center;margin-bottom:30px;text-transform:uppercase;">Fichamento: ${metadata.title}</h1>
+                    <p style="margin-bottom:20px;"><strong>REFERÊNCIA BIBLIOGRÁFICA</strong><br/>${refHTML}</p>
+                    <div style="margin-bottom:20px;border-bottom:1px solid #ccc;"></div>
+                    <p style="margin-bottom:15px;"><strong>DESTAQUES E CITAÇÕES DIRETAS</strong></p>`;
+                highlights.forEach(h => {
+                    body += `<div style="margin-bottom:20px;padding-left:4cm;"><p style="font-size:10pt;line-height:1.2;">${h.text} (${lastNameInText}, ${year}, p. ${h.page})</p></div>`;
+                });
+                body += '</div>';
+                window.html2pdf().set({
+                    margin: [1, 1, 1, 1],
+                    filename: `fichamento_${metadata.authorLastName || 'doc'}.pdf`,
+                    html2canvas: { scale: 2 },
+                    jsPDF: { unit: 'in', format: 'a4', orientation: 'portrait' }
+                }).from(body).save().then(() => setIsExportingPDF(false));
+            };
+
+            const getMarkdownPreview = () => {
+                const { refMD, lastNameInText, year } = getReferenceData();
+                let md = `## Referência Completa\n${refMD}\n\n## Destaques Capturados\n\n`;
+                highlights.forEach(h => { md += `> ${h.text} (${lastNameInText}, ${year}, p. ${h.page})\n\n`; });
+                return md;
+            };
+
+            const colors     = ['#000000', '#ef4444', '#3b82f6', '#10b981', '#fde047', '#8b5cf6'];
+            const pagesArray = Array.from({ length: numPages }, (_, i) => i + 1);
+            const validAnnotations = annotations.filter(a => a.text.trim() !== '');
+
+            // ══════════════════════════ RENDERIZAÇÃO ═══════════════════════════════
+
+            // Tela: Splash
+            if (currentScreen === 'splash') {
+                return html`
+                    <div class=${`fixed inset-0 z-[9999] bg-slate-900 flex flex-col items-center justify-center text-white ${splashAnimating ? 'splash-exit' : ''}`}>
+                        <div class="w-24 h-24 bg-gradient-to-br from-indigo-500 to-indigo-700 rounded-3xl shadow-[0_0_40px_rgba(99,102,241,0.4)] flex items-center justify-center mb-8 border border-indigo-400/30 transform transition-transform hover:scale-105">
+                            <i class="fas fa-pen-nib text-5xl text-white drop-shadow-md"></i>
+                        </div>
+                        <h1 class="text-5xl font-black tracking-tight mb-1 text-transparent bg-clip-text bg-gradient-to-r from-white to-indigo-200">Jotdown</h1>
+                        <p class="text-indigo-300 text-[10px] font-bold tracking-[0.3em] uppercase mb-3">Fichador Acadêmico</p>
+                        <span class="text-slate-400 text-[11px] font-medium lowercase tracking-wide">by @prof.walterfr</span>
+                        <div class="mt-16 w-48 h-1 bg-slate-800 rounded-full overflow-hidden relative">
+                            <div class="absolute top-0 bottom-0 left-0 bg-indigo-500 w-1/2 rounded-full animate-loading-bar"></div>
+                        </div>
+                    </div>
+                `;
+            }
+
+            // Tela: Biblioteca
+            if (currentScreen === 'library') {
+                return html`
+                    <div class="flex flex-col h-screen w-screen bg-[#f8fafc] overflow-y-auto custom-scroll">
+                        <header class="bg-white h-16 flex justify-between items-center px-6 shadow-sm border-b border-gray-200 shrink-0">
+                            <div class="flex items-center gap-3">
+                                <div class="w-8 h-8 bg-indigo-600 rounded-lg flex items-center justify-center shadow-md">
+                                    <i class="fas fa-pen-nib text-white text-sm"></i>
+                                </div>
+                                <span class="font-black text-2xl text-indigo-900 tracking-tight">Jotdown</span>
+                            </div>
+                            <div class="flex flex-col items-end">
+                                <span class="text-[10px] font-bold text-gray-400 uppercase tracking-widest">A sua Biblioteca</span>
+                                <span class="text-[9px] font-medium text-slate-400 lowercase">by @prof.walterfr</span>
+                            </div>
+                        </header>
+
+                        <div class="p-8 max-w-6xl mx-auto w-full">
+                            <div class="flex justify-between items-end mb-8">
+                                <div>
+                                    <h2 class="text-3xl font-black text-gray-800">Documentos Salvos</h2>
+                                    <p class="text-gray-500 mt-1">Todos os PDFs, marcações e post-its são guardados offline no seu dispositivo.</p>
+                                </div>
+                                <label class="bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-3 rounded-xl font-bold shadow-lg hover:shadow-xl transition transform hover:-translate-y-1 cursor-pointer flex items-center gap-2">
+                                    <i class="fas fa-plus"></i> Novo PDF
+                                    <input type="file" accept="application/pdf" class="hidden"
+                                           onChange=${(e) => createNewDocument(e.target.files[0])} />
+                                </label>
+                            </div>
+
+                            ${libraryDocs.length === 0 ? html`
+                                <div class="bg-white border border-gray-200 rounded-2xl p-12 flex flex-col items-center justify-center text-gray-400 mt-10">
+                                    <i class="fas fa-books text-6xl mb-4 text-indigo-100"></i>
+                                    <p class="text-lg font-bold text-gray-600">A sua estante está vazia.</p>
+                                    <p class="text-sm">Carregue um PDF para começar o seu primeiro fichamento.</p>
+                                </div>
+                            ` : html`
+                                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                                    ${libraryDocs.map(doc => html`
+                                        <div key=${doc.id}
+                                             onClick=${() => loadDocumentFromDB(doc.id)}
+                                             class="bg-white border border-gray-200 rounded-2xl p-5 hover:border-indigo-400 hover:shadow-xl transition cursor-pointer group flex flex-col h-56 relative">
+                                            <button onClick=${(e) => deleteDocument(doc.id, e)}
+                                                    class="absolute top-3 right-3 text-gray-300 hover:text-red-500 opacity-0 group-hover:opacity-100 transition">
+                                                <i class="fas fa-trash-alt"></i>
+                                            </button>
+                                            <div class="w-12 h-12 bg-red-100 text-red-500 rounded-xl flex items-center justify-center mb-4">
+                                                <i class="fas fa-file-pdf text-2xl"></i>
+                                            </div>
+                                            <h3 class="font-bold text-gray-800 line-clamp-2 flex-1 leading-tight">
+                                                ${doc.metadata?.title || doc.fileName}
+                                            </h3>
+                                            <div class="flex flex-col gap-2 mt-4 pt-4 border-t border-gray-100">
+                                                <div class="flex gap-2">
+                                                    <span class="text-[10px] bg-indigo-50 text-indigo-700 px-2 py-1 rounded font-bold">
+                                                        <i class="fas fa-quote-right mr-1"></i> ${doc.highlights?.length || 0} Citações
+                                                    </span>
+                                                    <span class="text-[10px] bg-amber-50 text-amber-700 px-2 py-1 rounded font-bold">
+                                                        <i class="fas fa-sticky-note mr-1"></i> ${doc.annotations?.length || 0} Notas
+                                                    </span>
+                                                </div>
+                                                <span class="text-[10px] text-gray-400">
+                                                    <i class="far fa-clock mr-1"></i>
+                                                    Adicionado em ${new Date(doc.dateAdded).toLocaleDateString('pt-BR')}
+                                                </span>
+                                            </div>
+                                        </div>
+                                    `)}
+                                </div>
+                            `}
+                        </div>
+                    </div>
+                `;
+            }
+
+            // Tela: Reader
+            return html`
+                <div class=${`flex flex-col h-screen w-screen bg-[#f8fafc] font-sans overflow-hidden ${activeTool !== 'select' ? 'drawing-mode' : ''}`}>
+
+                    ${activeTool === 'annotation' && html`
+                        <div class="fixed top-24 left-1/2 transform -translate-x-1/2 bg-amber-500 text-white px-6 py-3 rounded-full shadow-2xl z-50 animate-pulse font-bold tracking-wide border-2 border-amber-300">
+                            <i class="fas fa-hand-pointer mr-2"></i> Toque aonde deseja adicionar uma anotação.
+                        </div>
+                    `}
+
+                    <header class="bg-white text-gray-800 h-16 flex justify-between items-center px-4 shadow-sm z-30 shrink-0">
+                        <div class="flex items-center gap-3">
+                            <button onClick=${returnToLibrary}
+                                    class="text-gray-400 hover:text-indigo-600 p-2 rounded-lg hover:bg-gray-100 transition mr-1"
+                                    title="Voltar à Biblioteca">
+                                <i class="fas fa-arrow-left text-xl"></i>
+                            </button>
+                            <button onClick=${() => setIsSidebarOpen(true)}
+                                    class="text-gray-500 hover:text-indigo-600 p-2 rounded-lg hover:bg-gray-100 transition shadow-sm border border-gray-200">
+                                <i class="fas fa-bars text-xl"></i>
+                            </button>
+                            <div class="hidden md:flex items-center gap-2 ml-2">
+                                <div class="w-7 h-7 bg-indigo-600 rounded-lg flex items-center justify-center shadow-sm">
+                                    <i class="fas fa-pen-nib text-white text-xs"></i>
+                                </div>
+                                <span class="font-black text-xl text-indigo-900 tracking-tight">Jotdown</span>
+                            </div>
+                        </div>
+
+                        <div class="flex items-center">
+                            <div class="hidden sm:flex items-center bg-gray-100 p-1.5 rounded-xl gap-1 border border-gray-200 mr-3">
+                                <button onClick=${handleUndo} disabled=${!canUndo}
+                                        class=${`p-2 w-10 h-10 rounded-lg flex items-center justify-center transition ${canUndo ? 'text-gray-600 hover:bg-white hover:shadow' : 'text-gray-300'}`}>
+                                    <i class="fas fa-undo text-lg"></i>
+                                </button>
+                                <button onClick=${handleRedo} disabled=${!canRedo}
+                                        class=${`p-2 w-10 h-10 rounded-lg flex items-center justify-center transition ${canRedo ? 'text-gray-600 hover:bg-white hover:shadow' : 'text-gray-300'}`}>
+                                    <i class="fas fa-redo text-lg"></i>
+                                </button>
+                            </div>
+
+                            <div class="flex items-center bg-gray-100 p-1.5 rounded-xl gap-1 border border-gray-200">
+                                <button onClick=${() => setActiveTool('select')}
+                                        class=${`p-2 w-10 h-10 rounded-lg transition ${activeTool === 'select' ? 'bg-white shadow text-indigo-600' : 'text-gray-500 hover:text-gray-700'}`}>
+                                    <i class="fas fa-i-cursor text-lg"></i>
+                                </button>
+                                <div class="w-px h-6 bg-gray-300 mx-1"></div>
+                                <button onClick=${() => setActiveTool('pen')}
+                                        class=${`p-2 w-10 h-10 rounded-lg transition ${activeTool === 'pen' ? 'bg-white shadow text-indigo-600' : 'text-gray-500 hover:text-gray-700'}`}>
+                                    <i class="fas fa-pen text-lg"></i>
+                                </button>
+                                <button onClick=${() => setActiveTool('pencil')}
+                                        class=${`p-2 w-10 h-10 rounded-lg transition ${activeTool === 'pencil' ? 'bg-white shadow text-indigo-600' : 'text-gray-500 hover:text-gray-700'}`}>
+                                    <i class="fas fa-pencil-alt text-lg"></i>
+                                </button>
+                                <button onClick=${() => { setActiveTool('highlighter'); setStrokeColor('#fde047'); }}
+                                        class=${`p-2 w-10 h-10 rounded-lg transition ${activeTool === 'highlighter' ? 'bg-white shadow text-indigo-600' : 'text-gray-500 hover:text-gray-700'}`}>
+                                    <i class="fas fa-marker text-lg"></i>
+                                </button>
+                                <button onClick=${() => setActiveTool('eraser')}
+                                        class=${`p-2 w-10 h-10 rounded-lg transition ${activeTool === 'eraser' ? 'bg-white shadow text-indigo-600' : 'text-gray-500 hover:text-gray-700'}`}>
+                                    <i class="fas fa-eraser text-lg"></i>
+                                </button>
+                                <div class="w-px h-6 bg-gray-300 mx-1"></div>
+                                <button onClick=${() => setActiveTool('annotation')}
+                                        class=${`p-2 w-10 h-10 rounded-lg transition ${activeTool === 'annotation' ? 'bg-amber-100 shadow text-amber-600 border border-amber-300' : 'text-amber-500 hover:text-amber-600'}`}>
+                                    <i class="fas fa-sticky-note text-lg"></i>
+                                </button>
+                            </div>
+                        </div>
+
+                        <div class="flex items-center gap-3">
+                            ${activeTool !== 'select' && activeTool !== 'eraser' && activeTool !== 'annotation' && html`
+                                <div class="hidden sm:flex bg-gray-100 p-1 rounded-lg gap-1 border border-gray-200">
+                                    ${colors.map(c => html`
+                                        <button key=${c} onClick=${() => setStrokeColor(c)}
+                                                class=${`w-6 h-6 rounded-full border-2 transition ${strokeColor === c ? 'border-white ring-2 ring-indigo-400' : 'border-transparent hover:scale-110'}`}
+                                                style=${{ backgroundColor: c }}>
+                                        </button>
+                                    `)}
+                                </div>
+                            `}
+
+                            ${activeTool === 'select' && html`
+                                <button id="btn-capture" onClick=${captureHighlight}
+                                        class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg text-sm font-bold shadow-md transition-colors flex items-center gap-2">
+                                    <i class="fas fa-quote-right"></i>
+                                    <span class="hidden lg:inline">Capturar Citação</span>
+                                </button>
+                            `}
+
+                            <button onClick=${() => setIsRightSidebarOpen(true)}
+                                    class="relative text-gray-500 hover:text-amber-500 p-2 rounded-lg hover:bg-gray-100 transition shadow-sm border border-gray-200 ml-2">
+                                <i class="fas fa-comments text-xl"></i>
+                                ${validAnnotations.length > 0 && html`
+                                    <span class="absolute -top-2 -right-2 bg-amber-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full border-2 border-white">
+                                        ${validAnnotations.length}
+                                    </span>
+                                `}
+                            </button>
+                        </div>
+                    </header>
+
+                    <div class="flex flex-1 overflow-hidden relative">
+
+                        ${(isSidebarOpen || isRightSidebarOpen) && html`
+                            <div class="fixed inset-0 bg-black bg-opacity-40 z-40 transition-opacity"
+                                 onClick=${() => { setIsSidebarOpen(false); setIsRightSidebarOpen(false); }}>
+                            </div>
+                        `}
+
+                        <!-- Sidebar esquerda: Metadados & Exportação -->
+                        <div class=${`absolute top-0 left-0 h-full w-[380px] max-w-[85vw] bg-white shadow-2xl z-50 transform transition-transform duration-300 ease-in-out flex flex-col overflow-hidden ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'}`}>
+                            <div class="bg-indigo-900 text-white p-4 flex justify-between items-center shrink-0">
+                                <h2 class="font-bold tracking-wide text-sm">
+                                    <i class="fas fa-folder-open mr-2"></i> Metadados & Fichamento
+                                </h2>
+                                <button onClick=${() => setIsSidebarOpen(false)} class="text-indigo-200 hover:text-white text-xl p-1">
+                                    <i class="fas fa-times"></i>
+                                </button>
+                            </div>
+
+                            <div class="flex-1 overflow-y-auto p-5 custom-scroll pb-16">
+                                <div class="space-y-4 pb-8">
+                                    <div class="border-b pb-2 mb-2">
+                                        <h3 class="text-xs font-bold text-gray-500 uppercase">Referência ABNT</h3>
+                                    </div>
+
+                                    <select name="docType" value=${metadata.docType} onChange=${handleMetadataChange}
+                                            class="w-full border border-gray-300 rounded-lg p-2.5 text-sm outline-none bg-gray-50">
+                                        <option value="livro">Livro / Monografia / Tese</option>
+                                        <option value="artigo">Artigo de Revista / Periódico</option>
+                                        <option value="site">Documento Eletrônico (Site/Internet)</option>
+                                    </select>
+
+                                    <div class="grid grid-cols-2 gap-3">
+                                        <div>
+                                            <label class="text-[10px] font-bold text-gray-500 uppercase">Sobrenome</label>
+                                            <input type="text" name="authorLastName" value=${metadata.authorLastName}
+                                                   onChange=${handleMetadataChange}
+                                                   class="w-full border-b border-gray-300 bg-transparent py-1 text-sm outline-none focus:border-indigo-600" />
+                                        </div>
+                                        <div>
+                                            <label class="text-[10px] font-bold text-gray-500 uppercase">Nome</label>
+                                            <input type="text" name="authorFirstName" value=${metadata.authorFirstName}
+                                                   onChange=${handleMetadataChange}
+                                                   class="w-full border-b border-gray-300 bg-transparent py-1 text-sm outline-none focus:border-indigo-600" />
+                                        </div>
+                                    </div>
+
+                                    <div>
+                                        <label class="text-[10px] font-bold text-gray-500 uppercase">Título da Obra</label>
+                                        <input type="text" name="title" value=${metadata.title} onChange=${handleMetadataChange}
+                                               class="w-full border-b border-gray-300 bg-transparent py-1 text-sm font-bold outline-none focus:border-indigo-600" />
+                                    </div>
+
+                                    <div>
+                                        <label class="text-[10px] font-bold text-gray-500 uppercase">Subtítulo (Opcional)</label>
+                                        <input type="text" name="subtitle" value=${metadata.subtitle} onChange=${handleMetadataChange}
+                                               class="w-full border-b border-gray-300 bg-transparent py-1 text-sm outline-none focus:border-indigo-600" />
+                                    </div>
+
+                                    ${metadata.docType === 'livro' && html`
+                                        <${Fragment}>
+                                            <div class="grid grid-cols-3 gap-3">
+                                                <div class="col-span-1">
+                                                    <label class="text-[10px] font-bold text-gray-500 uppercase">Edição</label>
+                                                    <input type="text" name="edition" value=${metadata.edition} onChange=${handleMetadataChange}
+                                                           class="w-full border-b border-gray-300 bg-transparent py-1 text-sm outline-none focus:border-indigo-600" />
+                                                </div>
+                                                <div class="col-span-2">
+                                                    <label class="text-[10px] font-bold text-gray-500 uppercase">Cidade (Local)</label>
+                                                    <input type="text" name="city" value=${metadata.city} onChange=${handleMetadataChange}
+                                                           class="w-full border-b border-gray-300 bg-transparent py-1 text-sm outline-none focus:border-indigo-600" />
+                                                </div>
+                                            </div>
+                                            <div class="grid grid-cols-2 gap-3">
+                                                <div>
+                                                    <label class="text-[10px] font-bold text-gray-500 uppercase">Editora</label>
+                                                    <input type="text" name="publisher" value=${metadata.publisher} onChange=${handleMetadataChange}
+                                                           class="w-full border-b border-gray-300 bg-transparent py-1 text-sm outline-none focus:border-indigo-600" />
+                                                </div>
+                                                <div>
+                                                    <label class="text-[10px] font-bold text-gray-500 uppercase">Ano</label>
+                                                    <input type="text" name="year" value=${metadata.year} onChange=${handleMetadataChange}
+                                                           class="w-full border-b border-gray-300 bg-transparent py-1 text-sm outline-none focus:border-indigo-600" />
+                                                </div>
+                                            </div>
+                                        <//>
+                                    `}
+
+                                    ${metadata.docType === 'artigo' && html`
+                                        <${Fragment}>
+                                            <div>
+                                                <label class="text-[10px] font-bold text-gray-500 uppercase">Revista/Periódico</label>
+                                                <input type="text" name="journal" value=${metadata.journal} onChange=${handleMetadataChange}
+                                                       class="w-full border-b border-gray-300 bg-transparent py-1 text-sm outline-none focus:border-indigo-600" />
+                                            </div>
+                                            <div class="grid grid-cols-2 gap-3">
+                                                <div>
+                                                    <label class="text-[10px] font-bold text-gray-500 uppercase">Cidade</label>
+                                                    <input type="text" name="city" value=${metadata.city} onChange=${handleMetadataChange}
+                                                           class="w-full border-b border-gray-300 bg-transparent py-1 text-sm outline-none focus:border-indigo-600" />
+                                                </div>
+                                                <div>
+                                                    <label class="text-[10px] font-bold text-gray-500 uppercase">Ano</label>
+                                                    <input type="text" name="year" value=${metadata.year} onChange=${handleMetadataChange}
+                                                           class="w-full border-b border-gray-300 bg-transparent py-1 text-sm outline-none focus:border-indigo-600" />
+                                                </div>
+                                            </div>
+                                            <div class="grid grid-cols-2 gap-3">
+                                                <div>
+                                                    <label class="text-[10px] font-bold text-gray-500 uppercase">Vol / Num</label>
+                                                    <input type="text" name="volume" value=${metadata.volume} onChange=${handleMetadataChange}
+                                                           class="w-full border-b border-gray-300 bg-transparent py-1 text-sm outline-none focus:border-indigo-600" />
+                                                </div>
+                                                <div>
+                                                    <label class="text-[10px] font-bold text-gray-500 uppercase">Páginas</label>
+                                                    <input type="text" name="pages" value=${metadata.pages} onChange=${handleMetadataChange}
+                                                           class="w-full border-b border-gray-300 bg-transparent py-1 text-sm outline-none focus:border-indigo-600" />
+                                                </div>
+                                            </div>
+                                        <//>
+                                    `}
+
+                                    ${metadata.docType === 'site' && html`
+                                        <${Fragment}>
+                                            <div>
+                                                <label class="text-[10px] font-bold text-gray-500 uppercase">URL do Site</label>
+                                                <input type="text" name="url" value=${metadata.url} onChange=${handleMetadataChange}
+                                                       class="w-full border-b border-gray-300 bg-transparent py-1 text-sm outline-none focus:border-indigo-600" />
+                                            </div>
+                                            <div class="grid grid-cols-2 gap-3">
+                                                <div>
+                                                    <label class="text-[10px] font-bold text-gray-500 uppercase">Acesso em</label>
+                                                    <input type="text" name="accessDate" value=${metadata.accessDate} onChange=${handleMetadataChange}
+                                                           class="w-full border-b border-gray-300 bg-transparent py-1 text-sm outline-none focus:border-indigo-600" />
+                                                </div>
+                                                <div>
+                                                    <label class="text-[10px] font-bold text-gray-500 uppercase">Ano</label>
+                                                    <input type="text" name="year" value=${metadata.year} onChange=${handleMetadataChange}
+                                                           class="w-full border-b border-gray-300 bg-transparent py-1 text-sm outline-none focus:border-indigo-600" />
+                                                </div>
+                                            </div>
+                                        <//>
+                                    `}
+                                </div>
+                            </div>
+
+                            <!-- Painel de exportação (redimensionável) -->
+                            <div style=${{ height: `${panelHeight}px` }}
+                                 class="bg-slate-900 border-t-4 border-indigo-600 shrink-0 shadow-[0_-10px_20px_rgba(0,0,0,0.15)] flex flex-col relative transition-none z-50">
+                                <div class="w-full h-8 flex justify-center items-center cursor-ns-resize"
+                                     onMouseDown=${startPanelDrag} onTouchStart=${startPanelDrag}>
+                                    <div class="w-16 h-1.5 bg-slate-600 rounded-full"></div>
+                                </div>
+                                <div class="px-4 pb-2 flex justify-between items-center shrink-0">
+                                    <h3 class="text-xs font-bold text-white">
+                                        <i class="fas fa-save mr-1"></i> Exportar Citações
+                                    </h3>
+                                    <span class="text-[10px] text-indigo-200 bg-indigo-950 px-2 py-1 rounded-full border border-indigo-800">
+                                        ${highlights.length} Capturas
+                                    </span>
+                                </div>
+                                <div class="p-4 pt-0 flex flex-col flex-1 overflow-hidden">
+                                    <div class="grid grid-cols-3 gap-2 mb-3 shrink-0">
+                                        <button onClick=${downloadMD}
+                                                class="bg-slate-800 hover:bg-indigo-600 text-white p-2 rounded-lg transition border border-slate-700 hover:border-indigo-500">
+                                            <span class="text-[10px] font-bold">.MD</span>
+                                        </button>
+                                        <button onClick=${downloadTXT}
+                                                class="bg-slate-800 hover:bg-emerald-600 text-white p-2 rounded-lg transition border border-slate-700 hover:border-emerald-500">
+                                            <span class="text-[10px] font-bold">.TXT</span>
+                                        </button>
+                                        <button onClick=${downloadPDF}
+                                                class="bg-slate-800 hover:bg-red-600 text-white p-2 rounded-lg transition border border-slate-700 hover:border-red-500">
+                                            <span class="text-[10px] font-bold">.PDF</span>
+                                        </button>
+                                    </div>
+                                    <div class="flex-1 overflow-y-auto custom-scroll bg-slate-950 p-4 rounded-xl border border-slate-800 shadow-inner">
+                                        <pre class="text-[11px] text-slate-300 whitespace-pre-wrap font-mono leading-relaxed"
+                                             dangerouslySetInnerHTML=${{ __html: getMarkdownPreview().replace(/\*\*(.*?)\*\*/g, '<strong class="text-white">$1</strong>') }}>
+                                        </pre>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Sidebar direita: Anotações -->
+                        <div class=${`absolute top-0 right-0 h-full w-[350px] max-w-[85vw] bg-white shadow-[0_0_30px_rgba(0,0,0,0.2)] z-50 transform transition-transform duration-300 ease-in-out flex flex-col overflow-hidden ${isRightSidebarOpen ? 'translate-x-0' : 'translate-x-full'}`}>
+                            <div class="bg-amber-500 text-white p-4 flex justify-between items-center shrink-0">
+                                <h2 class="font-bold tracking-wide text-sm drop-shadow-md">
+                                    <i class="fas fa-sticky-note mr-2"></i> Minhas Anotações
+                                </h2>
+                                <button onClick=${() => setIsRightSidebarOpen(false)} class="text-amber-100 hover:text-white text-xl p-1">
+                                    <i class="fas fa-times"></i>
+                                </button>
+                            </div>
+                            <div class="flex-1 overflow-y-auto p-5 custom-scroll bg-amber-50/30">
+                                ${validAnnotations.length === 0 ? html`
+                                    <div class="flex flex-col items-center justify-center h-full text-amber-300/60 mt-10">
+                                        <i class="fas fa-comment-slash text-6xl mb-4"></i>
+                                        <p class="text-sm font-bold text-center px-4">Nenhuma anotação criada.</p>
+                                    </div>
+                                ` : html`
+                                    <div class="space-y-4">
+                                        ${[...validAnnotations].sort((a, b) => a.page - b.page).map(annot => html`
+                                            <div key=${annot.id}
+                                                 onClick=${() => { setIsRightSidebarOpen(false); goToPage(annot.page); }}
+                                                 class="bg-white p-4 rounded-xl shadow-sm border border-amber-200 cursor-pointer hover:border-amber-400 hover:shadow-md transition group">
+                                                <div class="flex justify-between items-center mb-2">
+                                                    <span class="text-[10px] font-bold text-amber-700 bg-amber-100 px-2 py-0.5 rounded-md">
+                                                        Pág. ${annot.page}
+                                                    </span>
+                                                    <i class="fas fa-arrow-right text-gray-300 group-hover:text-amber-500 text-xs"></i>
+                                                </div>
+                                                <p class="text-sm text-gray-700 leading-relaxed line-clamp-4 font-medium italic">"${annot.text}"</p>
+                                            </div>
+                                        `)}
+                                    </div>
+                                `}
+                            </div>
+                        </div>
+
+                        <!-- PDF Viewer -->
+                        <div class="flex-1 flex flex-col relative w-full h-full bg-[#e5e5f7]"
+                             style=${{ backgroundImage: 'radial-gradient(#cbd5e1 1px, transparent 1px)', backgroundSize: '20px 20px' }}>
+
+                            ${numPages > 0 && html`
+                                <div class="absolute bottom-6 right-6 bg-white shadow-xl border border-gray-200 rounded-2xl px-4 py-2 flex items-center gap-3 z-20 opacity-90 hover:opacity-100 transition">
+                                    <input type="number" value=${pageInputValue}
+                                           onChange=${handlePageInputChange}
+                                           onBlur=${submitPageInput}
+                                           onKeyDown=${(e) => e.key === 'Enter' && submitPageInput()}
+                                           class="w-10 text-center text-sm font-bold text-indigo-700 bg-transparent outline-none border-b border-gray-300 focus:border-indigo-500" />
+                                    <span class="text-xs font-bold text-gray-400">/ ${numPages}</span>
+                                    <input type="range" min="1" max=${numPages} value=${currentPage}
+                                           onChange=${handleSliderChange}
+                                           class="w-24 accent-indigo-600 hidden sm:block" />
+                                </div>
+                            `}
+
+                            <div ref=${viewerRef}
+                                 class="flex-1 overflow-y-auto p-4 md:p-8 custom-scroll relative z-10"
+                                 id="pdf-viewer-container">
+                                ${isProcessing ? html`
+                                    <div class="flex flex-col items-center justify-center h-full text-indigo-800">
+                                        <i class="fas fa-spinner fa-spin text-5xl mb-4"></i>
+                                        <p class="font-bold bg-white px-6 py-3 rounded-full shadow-lg">Carregando...</p>
+                                    </div>
+                                ` : pdfDocument ? html`
+                                    <div class="space-y-8 max-w-5xl mx-auto pb-32 relative">
+                                        ${pagesArray.map(pageNumber => html`
+                                            <${PdfPageViewer}
+                                                key=${pageNumber}
+                                                pdfDocument=${pdfDocument}
+                                                pageNumber=${pageNumber}
+                                                activeTool=${activeTool}
+                                                strokeColor=${strokeColor}
+                                                strokeWidth=${strokeWidth}
+                                                registerApi=${registerCanvasApi}
+                                                onHistoryChange=${handleHistoryChange}
+                                                annotations=${annotations}
+                                                onAddAnnotation=${handleAddAnnotation}
+                                                onUpdateAnnotation=${handleUpdateAnnotation}
+                                                onDeleteAnnotation=${handleDeleteAnnotation}
+                                                editingAnnotationId=${editingAnnotationId}
+                                                setEditingAnnotationId=${setEditingAnnotationId}
+                                                drawings=${drawings}
+                                                onSaveDrawings=${handleSaveDrawings}
+                                            />
+                                        `)}
+                                    </div>
+                                ` : null}
+                            </div>
+                        </div>
+
+                    </div>
+                </div>
+            `;
+        }
+
+        // ── Renderiza o app ──────────────────────────────────────────────────────
+        render(html`<${App} />`, document.getElementById('fichador-app-root'));
+    </script>
+</body>
+</html>

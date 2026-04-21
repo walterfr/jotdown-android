@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Tema sem ActionBar: o app exibe o WebView em tela cheia -->
+    <style name="Theme.Jotdown" parent="Theme.AppCompat.Light.NoActionBar">
+        <item name="android:windowBackground">@android:color/white</item>
+        <item name="android:statusBarColor">#1e1b4b</item>
+        <item name="android:navigationBarColor">#1e1b4b</item>
+    </style>
+</resources>

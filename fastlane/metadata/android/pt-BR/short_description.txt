@@ -1,0 +1,1 @@
+﻿Fichador acadêmico com leitor de PDF e anotações offline
