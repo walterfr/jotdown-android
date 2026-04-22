@@ -26,29 +26,46 @@ class MainActivity : AppCompatActivity() {
 
         // ── Configurações do WebView ─────────────────────────────────────────
         with(webView.settings) {
-            javaScriptEnabled        = true   // Necessário para o app HTML/JS
-            domStorageEnabled        = true   // localStorage
-            databaseEnabled          = true   // IndexedDB (salva os PDFs)
-            allowFileAccess          = true   // Acesso aos assets locais
+            javaScriptEnabled        = true
+            domStorageEnabled        = true
+            databaseEnabled          = true
+            allowFileAccess          = true
             allowContentAccess       = true
-            cacheMode                = WebSettings.LOAD_DEFAULT
+            // Estas duas linhas são CRÍTICAS para carregar scripts locais (libs/)
+            allowFileAccessFromFileURLs = true
+            allowUniversalAccessFromFileURLs = true
+            cacheMode                = WebSettings.LOAD_NO_CACHE
             mediaPlaybackRequiresUserGesture = false
-            // Bloqueia conteúdo misto HTTP dentro de HTTPS
-            mixedContentMode         = WebSettings.MIXED_CONTENT_NEVER_ALLOW
+            // Permite carregar o FontAwesome via HTTPS enquanto o resto é local
+            mixedContentMode         = WebSettings.MIXED_CONTENT_ALWAYS_ALLOW
         }
 
         // ── WebViewClient: intercepta erros de carregamento ──────────────────
         webView.webViewClient = object : WebViewClient() {
+            override fun onPageStarted(view: WebView?, url: String?, favicon: android.graphics.Bitmap?) {
+                super.onPageStarted(view, url, favicon)
+                android.util.Log.d("Jotdown/JS", "Página iniciada: $url")
+            }
+
+            override fun onPageFinished(view: WebView?, url: String?) {
+                super.onPageFinished(view, url)
+                android.util.Log.d("Jotdown/JS", "Página finalizada: $url")
+                // Força a execução de um log para testar a comunicação
+                view?.evaluateJavascript("console.log('Jotdown/JS: WebView injetou log com sucesso');", null)
+            }
+
             override fun shouldOverrideUrlLoading(
                 view: WebView, request: WebResourceRequest
             ): Boolean {
-                // Mantém navegação interna no WebView;
-                // links externos abrem no browser do sistema
                 val url = request.url.toString()
-                return if (url.startsWith("file://") || url.startsWith("about:")) {
+                return if (url.startsWith("file://") || url.startsWith("about:") || url.contains("android_asset")) {
                     false
                 } else {
-                    startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url)))
+                    try {
+                        startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url)))
+                    } catch (e: Exception) {
+                        android.util.Log.e("Jotdown/JS", "Erro ao abrir link externo", e)
+                    }
                     true
                 }
             }
@@ -58,12 +75,10 @@ class MainActivity : AppCompatActivity() {
                 request: WebResourceRequest,
                 error: WebResourceError
             ) {
+                val msg = "Erro no WebView: ${error.errorCode} - ${error.description} (URL: ${request.url})"
+                android.util.Log.e("Jotdown/JS", msg)
                 if (request.isForMainFrame) {
-                    Toast.makeText(
-                        this@MainActivity,
-                        "Erro: ${error.description}",
-                        Toast.LENGTH_LONG
-                    ).show()
+                    Toast.makeText(this@MainActivity, "Erro ao carregar: ${error.description}", Toast.LENGTH_LONG).show()
                 }
             }
         }
@@ -94,14 +109,10 @@ class MainActivity : AppCompatActivity() {
                 }
             }
 
-            // Permite que o JS use console.log() (útil durante o desenvolvimento)
+            // Log de erro forçado para ajudar a identificar a tela branca
             override fun onConsoleMessage(msg: ConsoleMessage): Boolean {
-                if (BuildConfig.DEBUG) {
-                    android.util.Log.d(
-                        "Jotdown/JS",
-                        "${msg.message()} — ${msg.sourceId()}:${msg.lineNumber()}"
-                    )
-                }
+                val logMsg = "${msg.message()} — ${msg.sourceId()}:${msg.lineNumber()}"
+                android.util.Log.e("Jotdown/JS", logMsg)
                 return true
             }
         }

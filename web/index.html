@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
@@ -8,15 +8,7 @@
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 
-    <!--
-        Estratégia PWA:
-        - 1ª visita: carrega do CDN (requer internet)
-        - Service Worker cacheia tudo automaticamente
-        - Visitas seguintes: 100% offline, sem internet
-        Não é necessário rodar nenhum script de download.
-    -->
-
-    <!-- Preact + htm (substituem React + Babel — elimina ~1 MB) -->
+    <!-- Preact + htm (substituem React + Babel) -->
     <script src="libs/preact.umd.js"></script>
     <script src="libs/hooks.umd.js"></script>
     <script src="libs/htm.umd.js"></script>
@@ -71,6 +63,8 @@
             white-space: pre;
             cursor: text;
             transform-origin: 0% 0%;
+            -webkit-user-select: text;
+            user-select: text;
         }
         .textLayer ::selection {
             background: rgba(99, 102, 241, 0.3) !important;
@@ -167,14 +161,16 @@
         const AnnotationItem = ({ annotation, isEditing, onUpdate, onToggle, onDelete }) => {
             const [text, setText]   = useState(annotation.text);
             const textareaRef       = useRef(null);
+            const textValueRef      = useRef(annotation.text);
 
             useEffect(() => {
                 if (isEditing && textareaRef.current) textareaRef.current.focus();
             }, [isEditing]);
 
             const handleBlur = () => {
-                if (text.trim() === '') onDelete(annotation.id);
-                else onUpdate(annotation.id, text);
+                const val = textValueRef.current.trim();
+                if (val === '') onDelete(annotation.id);
+                else onUpdate(annotation.id, textValueRef.current);
             };
 
             if (isEditing) {
@@ -186,7 +182,7 @@
                                 <span class="text-[10px] font-bold text-yellow-800 uppercase">
                                     <i class="fas fa-thumbtack mr-1"></i> Anotação
                                 </span>
-                                <button onMouseDown=${(e) => { e.preventDefault(); handleBlur(); }}
+                                <button onPointerDown=${(e) => { e.preventDefault(); handleBlur(); }}
                                         class="text-yellow-700 hover:text-red-600 transition">
                                     <i class="fas fa-check-circle"></i>
                                 </button>
@@ -195,7 +191,8 @@
                                 ref=${textareaRef}
                                 class="flex-1 w-full bg-transparent p-3 outline-none resize-none text-sm text-gray-800 custom-scroll font-medium leading-relaxed"
                                 value=${text}
-                                onChange=${(e) => setText(e.target.value)}
+                                onInput=${(e) => { textValueRef.current = e.target.value; setText(e.target.value); }}
+                                onChange=${(e) => { textValueRef.current = e.target.value; setText(e.target.value); }}
                                 onBlur=${handleBlur}
                                 placeholder="Escreva a sua reflexão..."
                             />
@@ -367,8 +364,9 @@
             const containerRef  = useRef(null);
             const canvasRef     = useRef(null);
             const textLayerRef  = useRef(null);
-            const [viewport, setViewport]         = useState(null);
-            const [shouldRender, setShouldRender] = useState(false);
+            const [viewport, setViewport]             = useState(null);
+            const [shouldRender, setShouldRender]     = useState(false);
+            const [containerWidth, setContainerWidth] = useState(0);
 
             useEffect(() => {
                 const observer = new IntersectionObserver(([entry]) => {
@@ -379,14 +377,25 @@
             }, []);
 
             useEffect(() => {
+                if (!containerRef.current) return;
+                const ro = new ResizeObserver(entries => {
+                    for (const entry of entries) setContainerWidth(Math.floor(entry.contentRect.width));
+                });
+                ro.observe(containerRef.current);
+                return () => ro.disconnect();
+            }, []);
+
+            useEffect(() => {
                 if (!shouldRender || !pdfDocument) return;
                 let renderTask = null; let isMounted = true;
 
                 const renderPage = async () => {
                     try {
-                        const page  = await pdfDocument.getPage(pageNumber);
-                        const scale = 1.5;
-                        const vp    = page.getViewport({ scale });
+                        const page   = await pdfDocument.getPage(pageNumber);
+                        const baseVp = page.getViewport({ scale: 1 });
+                        const availW = (containerRef.current?.clientWidth || window.innerWidth) - 2;
+                        const scale  = Math.min(1.5, availW / baseVp.width);
+                        const vp     = page.getViewport({ scale });
                         if (isMounted) setViewport(vp);
 
                         const canvas      = canvasRef.current;
@@ -416,7 +425,7 @@
 
                 renderPage();
                 return () => { isMounted = false; if (renderTask) renderTask.cancel(); };
-            }, [shouldRender, pdfDocument, pageNumber]);
+            }, [shouldRender, pdfDocument, pageNumber, containerWidth]);
 
             const defaultWidth      = viewport ? viewport.width  : 600;
             const defaultHeight     = viewport ? viewport.height : 800;
@@ -476,33 +485,24 @@
 
         // ─── APP PRINCIPAL ────────────────────────────────────────────────────────
         function App() {
-            // Screens
             const [currentScreen,   setCurrentScreen]   = useState('splash');
             const [splashAnimating, setSplashAnimating] = useState(false);
             const [isProcessing,    setIsProcessing]    = useState(false);
             const [isExportingPDF,  setIsExportingPDF]  = useState(false);
-
-            // Library
-            const [libraryDocs, setLibraryDocs] = useState([]);
-
-            // Reader – documento
-            const [currentDocId,  setCurrentDocId]  = useState(null);
-            const [pdfDocument,   setPdfDocument]   = useState(null);
-            const [numPages,      setNumPages]       = useState(0);
-            const [fileName,      setFileName]       = useState('');
-
-            // Reader – dados IndexedDB
-            const [highlights,  setHighlights]  = useState([]);
-            const [annotations, setAnnotations] = useState([]);
-            const [drawings,    setDrawings]    = useState({});
-            const [metadata,    setMetadata]    = useState({
+            const [libraryDocs,     setLibraryDocs]     = useState([]);
+            const [currentDocId,    setCurrentDocId]    = useState(null);
+            const [pdfDocument,     setPdfDocument]     = useState(null);
+            const [numPages,        setNumPages]         = useState(0);
+            const [fileName,        setFileName]         = useState('');
+            const [highlights,      setHighlights]      = useState([]);
+            const [annotations,     setAnnotations]     = useState([]);
+            const [drawings,        setDrawings]        = useState({});
+            const [metadata,        setMetadata]        = useState({
                 docType: 'livro', authorLastName: '', authorFirstName: '',
                 title: '', subtitle: '', edition: '', city: '',
                 publisher: '', year: '', journal: '', volume: '',
                 pages: '', url: '', accessDate: ''
             });
-
-            // Reader – UI
             const [editingAnnotationId,  setEditingAnnotationId]  = useState(null);
             const [isRightSidebarOpen,   setIsRightSidebarOpen]   = useState(false);
             const [isSidebarOpen,        setIsSidebarOpen]        = useState(false);
@@ -517,15 +517,11 @@
             const canvasApis                                       = useRef({});
             const [historyState,         setHistoryState]         = useState({});
 
-            // ── Helpers ──────────────────────────────────────────────────────────
             const registerCanvasApi = (pageNumber, api) => { canvasApis.current[pageNumber] = api; };
-
             const handleHistoryChange = (pageNumber, canUndoStatus, canRedoStatus) =>
                 setHistoryState(prev => ({ ...prev, [pageNumber]: { canUndo: canUndoStatus, canRedo: canRedoStatus } }));
-
             const handleUndo = () => { if (canvasApis.current[currentPage]) canvasApis.current[currentPage].undo(); };
             const handleRedo = () => { if (canvasApis.current[currentPage]) canvasApis.current[currentPage].redo(); };
-
             const handleMetadataChange  = (e) => setMetadata(prev => ({ ...prev, [e.target.name]: e.target.value }));
             const handlePageInputChange = (e) => setPageInputValue(e.target.value);
 
@@ -544,16 +540,13 @@
             };
 
             const startPanelDrag = () => { isDraggingPanel.current = true; document.body.classList.add('dragging-panel'); };
-
             const canUndo = historyState[currentPage]?.canUndo || false;
             const canRedo = historyState[currentPage]?.canRedo || false;
 
-            // ── 1. Boot & Splash ─────────────────────────────────────────────────
             useEffect(() => {
                 const initApp = async () => {
                     if (window.pdfjsLib) {
-                            window.pdfjsLib.GlobalWorkerOptions.workerSrc =
-                            'libs/pdf.worker.min.js';
+                        window.pdfjsLib.GlobalWorkerOptions.workerSrc = 'libs/pdf.worker.min.js';
                     }
                     const docs = await dbGetAllDocuments();
                     setLibraryDocs(docs.sort((a, b) => b.dateAdded - a.dateAdded));
@@ -565,7 +558,6 @@
                 initApp();
             }, []);
 
-            // ── 2. Autosave ──────────────────────────────────────────────────────
             useEffect(() => {
                 if (currentScreen === 'reader' && currentDocId && !isProcessing) {
                     (async () => {
@@ -581,7 +573,6 @@
                 }
             }, [metadata, highlights, annotations, drawings, currentDocId, currentScreen, isProcessing]);
 
-            // ── 3. Drag panel ────────────────────────────────────────────────────
             useEffect(() => {
                 const onMove = (e) => {
                     if (!isDraggingPanel.current) return;
@@ -603,7 +594,6 @@
                 };
             }, []);
 
-            // ── 4. Scroll Observer ───────────────────────────────────────────────
             useEffect(() => {
                 if (!pdfDocument) return;
                 const observer = new IntersectionObserver((entries) => {
@@ -618,7 +608,6 @@
                 return () => observer.disconnect();
             }, [pdfDocument, numPages]);
 
-            // ── 5. CRUD de documentos ────────────────────────────────────────────
             const createNewDocument = async (file) => {
                 setIsProcessing(true);
                 try {
@@ -685,8 +674,7 @@
                 setCurrentScreen('library');
             };
 
-            // ── 6. Lógica do Reader ──────────────────────────────────────────────
-            const handleSaveDrawings    = (pn, paths) => setDrawings(prev => ({ ...prev, [pn]: paths }));
+            const handleSaveDrawings     = (pn, paths) => setDrawings(prev => ({ ...prev, [pn]: paths }));
             const handleUpdateAnnotation = (id, text) => { setAnnotations(prev => prev.map(a => a.id === id ? { ...a, text } : a)); setEditingAnnotationId(null); };
             const handleDeleteAnnotation = (id)        => { setAnnotations(prev => prev.filter(a => a.id !== id)); setEditingAnnotationId(null); };
 
@@ -702,9 +690,13 @@
             };
 
             const captureHighlight = () => {
-                const selection    = window.getSelection();
-                const selectedText = selection.toString().trim();
-                if (!selectedText) return;
+                const selection = window.getSelection();
+                if (!selection || selection.rangeCount === 0) return;
+                const selectedText = selection.toString()
+                    .trim()
+                    .replace(/[ \t]+/g, ' ')
+                    .replace(/\n{3,}/g, '\n\n');
+                if (!selectedText || selectedText.length < 2) return;
                 let node = selection.anchorNode; let pageNum = currentPage;
                 while (node && node.parentElement) {
                     if (node.parentElement.dataset.page) { pageNum = parseInt(node.parentElement.dataset.page); break; }
@@ -716,7 +708,6 @@
                 if (btn) { btn.classList.add('bg-green-400'); setTimeout(() => btn.classList.remove('bg-green-400'), 300); }
             };
 
-            // ── 7. Exportação ABNT ───────────────────────────────────────────────
             const getReferenceData = () => {
                 const { docType, authorLastName, authorFirstName, title, subtitle,
                         edition, city, publisher, year, journal, volume, pages, url, accessDate } = metadata;
@@ -794,9 +785,6 @@
             const pagesArray = Array.from({ length: numPages }, (_, i) => i + 1);
             const validAnnotations = annotations.filter(a => a.text.trim() !== '');
 
-            // ══════════════════════════ RENDERIZAÇÃO ═══════════════════════════════
-
-            // Tela: Splash
             if (currentScreen === 'splash') {
                 return html`
                     <div class=${`fixed inset-0 z-[9999] bg-slate-900 flex flex-col items-center justify-center text-white ${splashAnimating ? 'splash-exit' : ''}`}>
@@ -813,7 +801,6 @@
                 `;
             }
 
-            // Tela: Biblioteca
             if (currentScreen === 'library') {
                 return html`
                     <div class="flex flex-col h-screen w-screen bg-[#f8fafc] overflow-y-auto custom-scroll">
@@ -829,7 +816,6 @@
                                 <span class="text-[9px] font-medium text-slate-400 lowercase">by @prof.walterfr</span>
                             </div>
                         </header>
-
                         <div class="p-8 max-w-6xl mx-auto w-full">
                             <div class="flex justify-between items-end mb-8">
                                 <div>
@@ -842,7 +828,6 @@
                                            onChange=${(e) => createNewDocument(e.target.files[0])} />
                                 </label>
                             </div>
-
                             ${libraryDocs.length === 0 ? html`
                                 <div class="bg-white border border-gray-200 rounded-2xl p-12 flex flex-col items-center justify-center text-gray-400 mt-10">
                                     <i class="fas fa-books text-6xl mb-4 text-indigo-100"></i>
@@ -888,7 +873,6 @@
                 `;
             }
 
-            // Tela: Reader
             return html`
                 <div class=${`flex flex-col h-screen w-screen bg-[#f8fafc] font-sans overflow-hidden ${activeTool !== 'select' ? 'drawing-mode' : ''}`}>
 
@@ -901,8 +885,7 @@
                     <header class="bg-white text-gray-800 h-16 flex justify-between items-center px-4 shadow-sm z-30 shrink-0">
                         <div class="flex items-center gap-3">
                             <button onClick=${returnToLibrary}
-                                    class="text-gray-400 hover:text-indigo-600 p-2 rounded-lg hover:bg-gray-100 transition mr-1"
-                                    title="Voltar à Biblioteca">
+                                    class="text-gray-400 hover:text-indigo-600 p-2 rounded-lg hover:bg-gray-100 transition mr-1">
                                 <i class="fas fa-arrow-left text-xl"></i>
                             </button>
                             <button onClick=${() => setIsSidebarOpen(true)}
@@ -928,7 +911,6 @@
                                     <i class="fas fa-redo text-lg"></i>
                                 </button>
                             </div>
-
                             <div class="flex items-center bg-gray-100 p-1.5 rounded-xl gap-1 border border-gray-200">
                                 <button onClick=${() => setActiveTool('select')}
                                         class=${`p-2 w-10 h-10 rounded-lg transition ${activeTool === 'select' ? 'bg-white shadow text-indigo-600' : 'text-gray-500 hover:text-gray-700'}`}>
@@ -970,7 +952,6 @@
                                     `)}
                                 </div>
                             `}
-
                             ${activeTool === 'select' && html`
                                 <button id="btn-capture" onClick=${captureHighlight}
                                         class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg text-sm font-bold shadow-md transition-colors flex items-center gap-2">
@@ -978,7 +959,6 @@
                                     <span class="hidden lg:inline">Capturar Citação</span>
                                 </button>
                             `}
-
                             <button onClick=${() => setIsRightSidebarOpen(true)}
                                     class="relative text-gray-500 hover:text-amber-500 p-2 rounded-lg hover:bg-gray-100 transition shadow-sm border border-gray-200 ml-2">
                                 <i class="fas fa-comments text-xl"></i>
@@ -992,14 +972,12 @@
                     </header>
 
                     <div class="flex flex-1 overflow-hidden relative">
-
                         ${(isSidebarOpen || isRightSidebarOpen) && html`
                             <div class="fixed inset-0 bg-black bg-opacity-40 z-40 transition-opacity"
                                  onClick=${() => { setIsSidebarOpen(false); setIsRightSidebarOpen(false); }}>
                             </div>
                         `}
 
-                        <!-- Sidebar esquerda: Metadados & Exportação -->
                         <div class=${`absolute top-0 left-0 h-full w-[380px] max-w-[85vw] bg-white shadow-2xl z-50 transform transition-transform duration-300 ease-in-out flex flex-col overflow-hidden ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'}`}>
                             <div class="bg-indigo-900 text-white p-4 flex justify-between items-center shrink-0">
                                 <h2 class="font-bold tracking-wide text-sm">
@@ -1009,47 +987,39 @@
                                     <i class="fas fa-times"></i>
                                 </button>
                             </div>
-
                             <div class="flex-1 overflow-y-auto p-5 custom-scroll pb-16">
                                 <div class="space-y-4 pb-8">
                                     <div class="border-b pb-2 mb-2">
                                         <h3 class="text-xs font-bold text-gray-500 uppercase">Referência ABNT</h3>
                                     </div>
-
                                     <select name="docType" value=${metadata.docType} onChange=${handleMetadataChange}
                                             class="w-full border border-gray-300 rounded-lg p-2.5 text-sm outline-none bg-gray-50">
                                         <option value="livro">Livro / Monografia / Tese</option>
                                         <option value="artigo">Artigo de Revista / Periódico</option>
                                         <option value="site">Documento Eletrônico (Site/Internet)</option>
                                     </select>
-
                                     <div class="grid grid-cols-2 gap-3">
                                         <div>
                                             <label class="text-[10px] font-bold text-gray-500 uppercase">Sobrenome</label>
-                                            <input type="text" name="authorLastName" value=${metadata.authorLastName}
-                                                   onChange=${handleMetadataChange}
+                                            <input type="text" name="authorLastName" value=${metadata.authorLastName} onChange=${handleMetadataChange}
                                                    class="w-full border-b border-gray-300 bg-transparent py-1 text-sm outline-none focus:border-indigo-600" />
                                         </div>
                                         <div>
                                             <label class="text-[10px] font-bold text-gray-500 uppercase">Nome</label>
-                                            <input type="text" name="authorFirstName" value=${metadata.authorFirstName}
-                                                   onChange=${handleMetadataChange}
+                                            <input type="text" name="authorFirstName" value=${metadata.authorFirstName} onChange=${handleMetadataChange}
                                                    class="w-full border-b border-gray-300 bg-transparent py-1 text-sm outline-none focus:border-indigo-600" />
                                         </div>
                                     </div>
-
                                     <div>
                                         <label class="text-[10px] font-bold text-gray-500 uppercase">Título da Obra</label>
                                         <input type="text" name="title" value=${metadata.title} onChange=${handleMetadataChange}
                                                class="w-full border-b border-gray-300 bg-transparent py-1 text-sm font-bold outline-none focus:border-indigo-600" />
                                     </div>
-
                                     <div>
                                         <label class="text-[10px] font-bold text-gray-500 uppercase">Subtítulo (Opcional)</label>
                                         <input type="text" name="subtitle" value=${metadata.subtitle} onChange=${handleMetadataChange}
                                                class="w-full border-b border-gray-300 bg-transparent py-1 text-sm outline-none focus:border-indigo-600" />
                                     </div>
-
                                     ${metadata.docType === 'livro' && html`
                                         <${Fragment}>
                                             <div class="grid grid-cols-3 gap-3">
@@ -1078,7 +1048,6 @@
                                             </div>
                                         <//>
                                     `}
-
                                     ${metadata.docType === 'artigo' && html`
                                         <${Fragment}>
                                             <div>
@@ -1112,7 +1081,6 @@
                                             </div>
                                         <//>
                                     `}
-
                                     ${metadata.docType === 'site' && html`
                                         <${Fragment}>
                                             <div>
@@ -1136,8 +1104,6 @@
                                     `}
                                 </div>
                             </div>
-
-                            <!-- Painel de exportação (redimensionável) -->
                             <div style=${{ height: `${panelHeight}px` }}
                                  class="bg-slate-900 border-t-4 border-indigo-600 shrink-0 shadow-[0_-10px_20px_rgba(0,0,0,0.15)] flex flex-col relative transition-none z-50">
                                 <div class="w-full h-8 flex justify-center items-center cursor-ns-resize"
@@ -1176,7 +1142,6 @@
                             </div>
                         </div>
 
-                        <!-- Sidebar direita: Anotações -->
                         <div class=${`absolute top-0 right-0 h-full w-[350px] max-w-[85vw] bg-white shadow-[0_0_30px_rgba(0,0,0,0.2)] z-50 transform transition-transform duration-300 ease-in-out flex flex-col overflow-hidden ${isRightSidebarOpen ? 'translate-x-0' : 'translate-x-full'}`}>
                             <div class="bg-amber-500 text-white p-4 flex justify-between items-center shrink-0">
                                 <h2 class="font-bold tracking-wide text-sm drop-shadow-md">
@@ -1212,10 +1177,8 @@
                             </div>
                         </div>
 
-                        <!-- PDF Viewer -->
                         <div class="flex-1 flex flex-col relative w-full h-full bg-[#e5e5f7]"
                              style=${{ backgroundImage: 'radial-gradient(#cbd5e1 1px, transparent 1px)', backgroundSize: '20px 20px' }}>
-
                             ${numPages > 0 && html`
                                 <div class="absolute bottom-6 right-6 bg-white shadow-xl border border-gray-200 rounded-2xl px-4 py-2 flex items-center gap-3 z-20 opacity-90 hover:opacity-100 transition">
                                     <input type="number" value=${pageInputValue}
@@ -1229,7 +1192,6 @@
                                            class="w-24 accent-indigo-600 hidden sm:block" />
                                 </div>
                             `}
-
                             <div ref=${viewerRef}
                                  class="flex-1 overflow-y-auto p-4 md:p-8 custom-scroll relative z-10"
                                  id="pdf-viewer-container">
@@ -1264,13 +1226,11 @@
                                 ` : null}
                             </div>
                         </div>
-
                     </div>
                 </div>
             `;
         }
 
-        // ── Renderiza o app ──────────────────────────────────────────────────────
         render(html`<${App} />`, document.getElementById('fichador-app-root'));
     </script>
 </body>
