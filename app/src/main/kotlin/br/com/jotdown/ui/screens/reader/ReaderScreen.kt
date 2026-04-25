@@ -9,10 +9,10 @@ import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
+import androidx.compose.foundation.gestures.calculatePan
+import androidx.compose.foundation.gestures.calculateZoom
 import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.gestures.detectTapGestures
-import androidx.compose.foundation.gestures.rememberTransformableState
-import androidx.compose.foundation.gestures.transformable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.rememberLazyListState
@@ -195,13 +195,9 @@ fun PdfPage(
     var bitmap by remember { mutableStateOf<Bitmap?>(null) }
     var selectionRect by remember { mutableStateOf<Rect?>(null) }
     
-    // Estados do Zoom de Pinça
+    // 🛡️ NOVO MOTOR DE ZOOM INTELIGENTE (Não bloqueia o scroll da página)
     var scale by remember { mutableFloatStateOf(1f) }
     var offset by remember { mutableStateOf(Offset.Zero) }
-    val transformState = rememberTransformableState { zoomChange, offsetChange, _ ->
-        scale = (scale * zoomChange).coerceIn(1f, 4f)
-        if (scale > 1f) offset += offsetChange else offset = Offset.Zero
-    }
 
     BoxWithConstraints(modifier = Modifier.fillMaxWidth()) {
         val density = LocalDensity.current
@@ -253,7 +249,38 @@ fun PdfPage(
 
         Card(modifier = Modifier.fillMaxWidth().clipToBounds(), shape = RoundedCornerShape(12.dp), elevation = CardDefaults.cardElevation(4.dp), colors = CardDefaults.cardColors(containerColor = Color.White)) {
             Box(
-                modifier = Modifier.fillMaxWidth().transformable(state = transformState)
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .pointerInput(Unit) {
+                        awaitEachGesture {
+                            awaitFirstDown(requireUnconsumed = false)
+                            do {
+                                val event = awaitPointerEvent()
+                                val pointers = event.changes
+                                
+                                // Ignora Stylus para não interferir na escrita
+                                if (pointers.any { it.type == PointerType.Stylus || it.type == PointerType.Eraser }) {
+                                    continue
+                                }
+
+                                // 2 Dedos: Zoom Magnético
+                                if (pointers.size >= 2) {
+                                    val zoomChange = event.calculateZoom()
+                                    val panChange = event.calculatePan()
+                                    scale = (scale * zoomChange).coerceIn(1f, 4f)
+                                    if (scale > 1f) offset += panChange else offset = Offset.Zero
+                                    pointers.forEach { if (!it.isConsumed) it.consume() }
+                                } 
+                                // 1 Dedo e Zoom Ativado: Arrasta a imagem
+                                else if (scale > 1f && pointers.size == 1) {
+                                    val panChange = event.calculatePan()
+                                    offset += panChange
+                                    pointers.forEach { if (!it.isConsumed) it.consume() }
+                                }
+                                // Se for 1 dedo e SEM Zoom: Deixa o evento passar para rolar a lista verticalmente!
+                            } while (pointers.any { it.pressed })
+                        }
+                    }
                     .graphicsLayer(scaleX = scale, scaleY = scale, translationX = offset.x, translationY = offset.y)
             ) {
                 if (bitmap != null) {
@@ -282,11 +309,20 @@ fun DrawingLayer(
 
     Canvas(
         modifier = modifier.pointerInput(activeTool, strokeColor) {
-            if (activeTool == Tool.NONE) return@pointerInput
+            
+            // Correção Bug 2: Permite clicar em anotações mesmo SEM nenhuma ferramenta selecionada
+            if (activeTool == Tool.NONE) {
+                detectTapGestures { offset ->
+                    val clickedAnnot = annotationsRef.value.find { val dx = it.x - offset.x; val dy = it.y - offset.y; (dx * dx + dy * dy) < 2500f }
+                    if (clickedAnnot != null) onOpenAnnotation(clickedAnnot)
+                }
+                return@pointerInput
+            }
 
             if (activeTool == Tool.ANNOTATION) {
                 detectTapGestures { offset ->
-                    val clickedAnnot = annotationsRef.value.find { val dx = it.x - offset.x; val dy = it.y - offset.y; (dx * dx + dy * dy) < 1500f }
+                    // Área de clique aumentada (< 2500f) para capturar toques rápidos no balão
+                    val clickedAnnot = annotationsRef.value.find { val dx = it.x - offset.x; val dy = it.y - offset.y; (dx * dx + dy * dy) < 2500f }
                     if (clickedAnnot != null) onOpenAnnotation(clickedAnnot) else onAddAnnotation(offset.x, offset.y)
                 }
                 return@pointerInput
@@ -306,11 +342,9 @@ fun DrawingLayer(
                 return@pointerInput
             }
             
-            // 🛡️ NOVO MOTOR DE REJEIÇÃO DE PALMA
             awaitEachGesture {
                 val down = awaitFirstDown(requireUnconsumed = false)
                 
-                // Se for Dedo, aborta o desenho e permite que o sistema dê zoom ou faça o scroll
                 val isStylus = down.type == PointerType.Stylus || down.type == PointerType.Eraser
                 if (!isStylus) return@awaitEachGesture
                 
@@ -340,7 +374,6 @@ fun DrawingLayer(
         paths.forEach { drawDrawnPath(it) }
         currentPath?.let { drawDrawnPath(it) }
         
-        // Balão de Fala Vetorial
         annotations.forEach { annot ->
             val cx = annot.x; val cy = annot.y
             val w = 42f; val h = 26f; val radius = 8f; val tail = 10f
