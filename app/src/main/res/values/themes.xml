@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <style name="Theme.Jotdown" parent="android:Theme.Material.Light.NoActionBar">
+        <item name="android:statusBarColor">#1e1b4b</item>
+        <item name="android:navigationBarColor">#1e1b4b</item>
+        <item name="android:windowBackground">#f8fafc</item>
+    </style>
+</resources>

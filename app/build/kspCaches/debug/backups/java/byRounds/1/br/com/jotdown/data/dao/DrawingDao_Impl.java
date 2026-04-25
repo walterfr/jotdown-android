@@ -1,0 +1,214 @@
+package br.com.jotdown.data.dao;
+
+import android.database.Cursor;
+import androidx.annotation.NonNull;
+import androidx.room.CoroutinesRoom;
+import androidx.room.EntityDeletionOrUpdateAdapter;
+import androidx.room.EntityInsertionAdapter;
+import androidx.room.EntityUpsertionAdapter;
+import androidx.room.RoomDatabase;
+import androidx.room.RoomSQLiteQuery;
+import androidx.room.SharedSQLiteStatement;
+import androidx.room.util.CursorUtil;
+import androidx.room.util.DBUtil;
+import androidx.sqlite.db.SupportSQLiteStatement;
+import br.com.jotdown.data.entity.DrawingEntity;
+import java.lang.Class;
+import java.lang.Exception;
+import java.lang.Object;
+import java.lang.Override;
+import java.lang.String;
+import java.lang.SuppressWarnings;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+import java.util.concurrent.Callable;
+import javax.annotation.processing.Generated;
+import kotlin.Unit;
+import kotlin.coroutines.Continuation;
+import kotlinx.coroutines.flow.Flow;
+
+@Generated("androidx.room.RoomProcessor")
+@SuppressWarnings({"unchecked", "deprecation"})
+public final class DrawingDao_Impl implements DrawingDao {
+  private final RoomDatabase __db;
+
+  private final SharedSQLiteStatement __preparedStmtOfDeleteDrawingForPage;
+
+  private final SharedSQLiteStatement __preparedStmtOfDeleteAllForDocument;
+
+  private final EntityUpsertionAdapter<DrawingEntity> __upsertionAdapterOfDrawingEntity;
+
+  public DrawingDao_Impl(@NonNull final RoomDatabase __db) {
+    this.__db = __db;
+    this.__preparedStmtOfDeleteDrawingForPage = new SharedSQLiteStatement(__db) {
+      @Override
+      @NonNull
+      public String createQuery() {
+        final String _query = "DELETE FROM drawings WHERE documentId = ? AND page = ?";
+        return _query;
+      }
+    };
+    this.__preparedStmtOfDeleteAllForDocument = new SharedSQLiteStatement(__db) {
+      @Override
+      @NonNull
+      public String createQuery() {
+        final String _query = "DELETE FROM drawings WHERE documentId = ?";
+        return _query;
+      }
+    };
+    this.__upsertionAdapterOfDrawingEntity = new EntityUpsertionAdapter<DrawingEntity>(new EntityInsertionAdapter<DrawingEntity>(__db) {
+      @Override
+      @NonNull
+      protected String createQuery() {
+        return "INSERT INTO `drawings` (`id`,`documentId`,`page`,`pathsJson`) VALUES (nullif(?, 0),?,?,?)";
+      }
+
+      @Override
+      protected void bind(@NonNull final SupportSQLiteStatement statement,
+          @NonNull final DrawingEntity entity) {
+        statement.bindLong(1, entity.getId());
+        statement.bindString(2, entity.getDocumentId());
+        statement.bindLong(3, entity.getPage());
+        statement.bindString(4, entity.getPathsJson());
+      }
+    }, new EntityDeletionOrUpdateAdapter<DrawingEntity>(__db) {
+      @Override
+      @NonNull
+      protected String createQuery() {
+        return "UPDATE `drawings` SET `id` = ?,`documentId` = ?,`page` = ?,`pathsJson` = ? WHERE `id` = ?";
+      }
+
+      @Override
+      protected void bind(@NonNull final SupportSQLiteStatement statement,
+          @NonNull final DrawingEntity entity) {
+        statement.bindLong(1, entity.getId());
+        statement.bindString(2, entity.getDocumentId());
+        statement.bindLong(3, entity.getPage());
+        statement.bindString(4, entity.getPathsJson());
+        statement.bindLong(5, entity.getId());
+      }
+    });
+  }
+
+  @Override
+  public Object deleteDrawingForPage(final String documentId, final int page,
+      final Continuation<? super Unit> $completion) {
+    return CoroutinesRoom.execute(__db, true, new Callable<Unit>() {
+      @Override
+      @NonNull
+      public Unit call() throws Exception {
+        final SupportSQLiteStatement _stmt = __preparedStmtOfDeleteDrawingForPage.acquire();
+        int _argIndex = 1;
+        _stmt.bindString(_argIndex, documentId);
+        _argIndex = 2;
+        _stmt.bindLong(_argIndex, page);
+        try {
+          __db.beginTransaction();
+          try {
+            _stmt.executeUpdateDelete();
+            __db.setTransactionSuccessful();
+            return Unit.INSTANCE;
+          } finally {
+            __db.endTransaction();
+          }
+        } finally {
+          __preparedStmtOfDeleteDrawingForPage.release(_stmt);
+        }
+      }
+    }, $completion);
+  }
+
+  @Override
+  public Object deleteAllForDocument(final String documentId,
+      final Continuation<? super Unit> $completion) {
+    return CoroutinesRoom.execute(__db, true, new Callable<Unit>() {
+      @Override
+      @NonNull
+      public Unit call() throws Exception {
+        final SupportSQLiteStatement _stmt = __preparedStmtOfDeleteAllForDocument.acquire();
+        int _argIndex = 1;
+        _stmt.bindString(_argIndex, documentId);
+        try {
+          __db.beginTransaction();
+          try {
+            _stmt.executeUpdateDelete();
+            __db.setTransactionSuccessful();
+            return Unit.INSTANCE;
+          } finally {
+            __db.endTransaction();
+          }
+        } finally {
+          __preparedStmtOfDeleteAllForDocument.release(_stmt);
+        }
+      }
+    }, $completion);
+  }
+
+  @Override
+  public Object upsertDrawing(final DrawingEntity drawing,
+      final Continuation<? super Unit> $completion) {
+    return CoroutinesRoom.execute(__db, true, new Callable<Unit>() {
+      @Override
+      @NonNull
+      public Unit call() throws Exception {
+        __db.beginTransaction();
+        try {
+          __upsertionAdapterOfDrawingEntity.upsert(drawing);
+          __db.setTransactionSuccessful();
+          return Unit.INSTANCE;
+        } finally {
+          __db.endTransaction();
+        }
+      }
+    }, $completion);
+  }
+
+  @Override
+  public Flow<List<DrawingEntity>> getDrawingsForDocument(final String documentId) {
+    final String _sql = "SELECT * FROM drawings WHERE documentId = ? ORDER BY page ASC";
+    final RoomSQLiteQuery _statement = RoomSQLiteQuery.acquire(_sql, 1);
+    int _argIndex = 1;
+    _statement.bindString(_argIndex, documentId);
+    return CoroutinesRoom.createFlow(__db, false, new String[] {"drawings"}, new Callable<List<DrawingEntity>>() {
+      @Override
+      @NonNull
+      public List<DrawingEntity> call() throws Exception {
+        final Cursor _cursor = DBUtil.query(__db, _statement, false, null);
+        try {
+          final int _cursorIndexOfId = CursorUtil.getColumnIndexOrThrow(_cursor, "id");
+          final int _cursorIndexOfDocumentId = CursorUtil.getColumnIndexOrThrow(_cursor, "documentId");
+          final int _cursorIndexOfPage = CursorUtil.getColumnIndexOrThrow(_cursor, "page");
+          final int _cursorIndexOfPathsJson = CursorUtil.getColumnIndexOrThrow(_cursor, "pathsJson");
+          final List<DrawingEntity> _result = new ArrayList<DrawingEntity>(_cursor.getCount());
+          while (_cursor.moveToNext()) {
+            final DrawingEntity _item;
+            final long _tmpId;
+            _tmpId = _cursor.getLong(_cursorIndexOfId);
+            final String _tmpDocumentId;
+            _tmpDocumentId = _cursor.getString(_cursorIndexOfDocumentId);
+            final int _tmpPage;
+            _tmpPage = _cursor.getInt(_cursorIndexOfPage);
+            final String _tmpPathsJson;
+            _tmpPathsJson = _cursor.getString(_cursorIndexOfPathsJson);
+            _item = new DrawingEntity(_tmpId,_tmpDocumentId,_tmpPage,_tmpPathsJson);
+            _result.add(_item);
+          }
+          return _result;
+        } finally {
+          _cursor.close();
+        }
+      }
+
+      @Override
+      protected void finalize() {
+        _statement.release();
+      }
+    });
+  }
+
+  @NonNull
+  public static List<Class<?>> getRequiredConverters() {
+    return Collections.emptyList();
+  }
+}
