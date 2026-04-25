@@ -1,4 +1,5 @@
-﻿package br.com.jotdown.ui.viewmodel
+package br.com.jotdown.ui.viewmodel
+
 import android.content.Context
 import android.net.Uri
 import android.provider.OpenableColumns
@@ -70,9 +71,27 @@ class LibraryViewModel(private val repository: DocumentRepository) : ViewModel()
                 }
 
                 if (pdfFile.exists() && pdfFile.length() > 0L) {
+                    var cleanTitle = fileName.removeSuffix(".pdf").removeSuffix(".PDF")
+                    var extractedAuthor = ""
+                    var extractedYear = ""
+
+                    // Heuristica de Separacao: Divide o nome do arquivo por " - " ou "_"
+                    val parts = cleanTitle.split(Regex(" - |_")).map { it.trim() }.filter { it.isNotEmpty() }
+                    
+                    if (parts.size >= 2 && !parts[0].any { it.isDigit() }) {
+                        extractedAuthor = parts[0]
+                        if (parts[1].matches(Regex("\\d{4}"))) {
+                            extractedYear = parts[1]
+                            if (parts.size > 2) cleanTitle = parts.drop(2).joinToString(" - ")
+                        } else {
+                            cleanTitle = parts.drop(1).joinToString(" - ")
+                        }
+                    }
+
                     val doc = DocumentEntity(
-                        id = docId, fileName = fileName, title = fileName.removeSuffix(".pdf").removeSuffix(".PDF"),
-                        dateAdded = System.currentTimeMillis(), folderId = _currentFolder.value?.id, pdfFilePath = pdfFile.absolutePath
+                        id = docId, fileName = fileName, title = cleanTitle,
+                        dateAdded = System.currentTimeMillis(), folderId = _currentFolder.value?.id, pdfFilePath = pdfFile.absolutePath,
+                        authorLastName = extractedAuthor, year = extractedYear
                     )
                     repository.saveDocument(doc)
                 }
@@ -85,7 +104,17 @@ class LibraryViewModel(private val repository: DocumentRepository) : ViewModel()
         doc?.pdfFilePath?.let { File(it).delete() }
         repository.deleteDocument(id)
     }
+
+    // --- NOVAS FUNCOES DE BACKUP ---
+    fun exportBackup(context: Context) = viewModelScope.launch {
+        br.com.jotdown.util.BackupUtil.exportBackup(context)
+    }
+
+    fun importBackup(context: Context, uri: Uri) = viewModelScope.launch {
+        br.com.jotdown.util.BackupUtil.importBackup(context, uri)
+    }
 }
+
 class LibraryViewModelFactory(private val repository: DocumentRepository) : ViewModelProvider.Factory {
     override fun <T : ViewModel> create(modelClass: Class<T>): T {
         @Suppress("UNCHECKED_CAST")

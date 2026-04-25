@@ -1,4 +1,4 @@
-﻿package br.com.jotdown.ui.screens.library
+package br.com.jotdown.ui.screens.library
 
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -54,10 +54,10 @@ fun LibraryScreen(viewModel: LibraryViewModel, onOpenDocument: (String) -> Unit)
     var docToRename by remember { mutableStateOf<DocumentSummary?>(null) }
     var renameText by remember { mutableStateOf("") }
     
-    val pdfPicker = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri ->
-        uri ?: return@rememberLauncherForActivityResult
-        viewModel.importPdf(context, uri)
-    }
+    val pdfPicker = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri -> uri ?: return@rememberLauncherForActivityResult; viewModel.importPdf(context, uri) }
+    val backupPicker = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri -> uri ?: return@rememberLauncherForActivityResult; viewModel.importBackup(context, uri) }
+    var showMenu by remember { mutableStateOf(false) }
+    var showImportWarning by remember { mutableStateOf(false) }
 
     // Variaveis para rasteio do dedo (Arrastar e Soltar)
     var globalDragPos by remember { mutableStateOf(Offset.Zero) }
@@ -91,6 +91,13 @@ fun LibraryScreen(viewModel: LibraryViewModel, onOpenDocument: (String) -> Unit)
                 actions = {
                     if (currentFolder != null) {
                         IconButton(onClick = { showDeleteFolder = true }) { Icon(Icons.Default.DeleteOutline, contentDescription = "Apagar Pasta", tint = MaterialTheme.colorScheme.error) }
+                    }
+                    Box {
+                        IconButton(onClick = { showMenu = true }) { Icon(Icons.Default.MoreVert, contentDescription = "Menu") }
+                        DropdownMenu(expanded = showMenu, onDismissRequest = { showMenu = false }) {
+                            DropdownMenuItem(text = { Text("Exportar Backup", fontWeight = FontWeight.Bold) }, onClick = { showMenu = false; viewModel.exportBackup(context) })
+                            DropdownMenuItem(text = { Text("Importar Backup") }, onClick = { showMenu = false; showImportWarning = true })
+                        }
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.surface)
@@ -184,6 +191,15 @@ fun LibraryScreen(viewModel: LibraryViewModel, onOpenDocument: (String) -> Unit)
             onDismissRequest = { docToDelete = null }, title = { Text("Apagar documento?") }, text = { Text("\"${doc.title}\" sera removido permanentemente.") },
             confirmButton = { TextButton(onClick = { viewModel.deleteDocument(context, doc.id); docToDelete = null }) { Text("Apagar", color = MaterialTheme.colorScheme.error) } },
             dismissButton = { TextButton(onClick = { docToDelete = null }) { Text("Cancelar") } }
+        )
+    }
+
+    if (showImportWarning) {
+        AlertDialog(
+            onDismissRequest = { showImportWarning = false }, title = { Text("Importar Backup") },
+            text = { Text("ATENCAO: Ao restaurar um backup, toda a sua biblioteca atual sera substituida pelos dados do arquivo. O aplicativo sera reiniciado automaticamente apos a conclusao. Deseja continuar?") },
+            confirmButton = { TextButton(onClick = { showImportWarning = false; backupPicker.launch("application/zip") }) { Text("Sim, Importar", color = MaterialTheme.colorScheme.error, fontWeight = FontWeight.Bold) } },
+            dismissButton = { TextButton(onClick = { showImportWarning = false }) { Text("Cancelar") } }
         )
     }
 
