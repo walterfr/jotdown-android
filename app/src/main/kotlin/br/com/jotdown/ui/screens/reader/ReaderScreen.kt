@@ -59,7 +59,10 @@ fun ReaderScreen(viewModel: ReaderViewModel, onBack: () -> Unit) {
     var showAnnotations by remember { mutableStateOf(false) }
     val document        by viewModel.document.collectAsState()
 
-    var captureRequested by remember { mutableStateOf(false) }
+    // 🛡️ NOVO: Gatilho por Timestamp e Coordenador de Páginas
+    var captureTrigger       by remember { mutableLongStateOf(0L) }
+    var activeSelectionPage  by remember { mutableIntStateOf(-1) }
+
     var ocrResult        by remember { mutableStateOf<Pair<Int, String>?>(null) }
     var textToEdit       by remember { mutableStateOf("") }
 
@@ -85,7 +88,8 @@ fun ReaderScreen(viewModel: ReaderViewModel, onBack: () -> Unit) {
             ReaderTopBar(
                 activeTool = activeTool, strokeColor = strokeColor, onBack = onBack, onMenuClick = { showSidebar = true },
                 onToolSelect = { viewModel.toggleTool(it) }, onColorSelect = { viewModel.setStrokeColor(it) },
-                onAnnotations = { showAnnotations = true }, onCapture = { captureRequested = true }
+                onAnnotations = { showAnnotations = true }, 
+                onCapture = { captureTrigger = System.currentTimeMillis() } // Aciona o gatilho único!
             )
         }
     ) { padding ->
@@ -94,8 +98,9 @@ fun ReaderScreen(viewModel: ReaderViewModel, onBack: () -> Unit) {
             if (file != null && numPages > 0) {
                 PdfViewer(
                     pdfFile = file, numPages = numPages, currentPage = currentPage, activeTool = activeTool, strokeColor = strokeColor,
-                    annotations = annotations, captureRequested = captureRequested, scrollToPage = scrollToPage,
-                    onScrollDone = { scrollToPage = 0 }, onCaptureDone = { captureRequested = false },
+                    annotations = annotations, captureTrigger = captureTrigger, activeSelectionPage = activeSelectionPage, scrollToPage = scrollToPage,
+                    onScrollDone = { scrollToPage = 0 }, 
+                    onSelectionStarted = { activeSelectionPage = it }, // Atualiza o coordenador
                     onOcrSuccess = { page, text -> textToEdit = text; ocrResult = Pair(page, text) },
                     onPageChange = { viewModel.setCurrentPage(it) },
                     onAddAnnotation = { page, x, y -> pendingAnnotation = Triple(page, x, y); annotationText = "" },
@@ -163,8 +168,9 @@ fun ReaderScreen(viewModel: ReaderViewModel, onBack: () -> Unit) {
 
 @Composable
 fun PdfViewer(
-    pdfFile: File, numPages: Int, currentPage: Int, activeTool: Tool, strokeColor: Int, annotations: List<AnnotationEntity>, captureRequested: Boolean,
-    scrollToPage: Int = 0, onScrollDone: () -> Unit = {}, onCaptureDone: () -> Unit, onOcrSuccess: (Int, String) -> Unit, onPageChange: (Int) -> Unit,
+    pdfFile: File, numPages: Int, currentPage: Int, activeTool: Tool, strokeColor: Int, annotations: List<AnnotationEntity>, 
+    captureTrigger: Long, activeSelectionPage: Int, scrollToPage: Int = 0, onScrollDone: () -> Unit = {}, 
+    onOcrSuccess: (Int, String) -> Unit, onPageChange: (Int) -> Unit, onSelectionStarted: (Int) -> Unit,
     onAddAnnotation: (Int, Float, Float) -> Unit, onOpenAnnotation: (AnnotationEntity) -> Unit, onSaveDrawing: (Int, String) -> Unit
 ) {
     val listState = rememberLazyListState()
@@ -180,8 +186,9 @@ fun PdfViewer(
             val pageNumber = index + 1
             PdfPage(
                 pdfFile = pdfFile, pageNumber = pageNumber, activeTool = activeTool, strokeColor = strokeColor, annotations = annotations.filter { it.page == pageNumber },
-                captureRequested = captureRequested, onCaptureDone = onCaptureDone, onOcrSuccess = { text -> onOcrSuccess(pageNumber, text) },
-                onAddAnnotation = { x, y -> onAddAnnotation(pageNumber, x, y) }, onOpenAnnotation = onOpenAnnotation, onSaveDrawing = { json -> onSaveDrawing(pageNumber, json) }
+                captureTrigger = captureTrigger, activeSelectionPage = activeSelectionPage, onSelectionStarted = { onSelectionStarted(pageNumber) }, 
+                onOcrSuccess = { text -> onOcrSuccess(pageNumber, text) }, onAddAnnotation = { x, y -> onAddAnnotation(pageNumber, x, y) }, 
+                onOpenAnnotation = onOpenAnnotation, onSaveDrawing = { json -> onSaveDrawing(pageNumber, json) }
             )
         }
     }
@@ -189,15 +196,22 @@ fun PdfViewer(
 
 @Composable
 fun PdfPage(
-    pdfFile: File, pageNumber: Int, activeTool: Tool, strokeColor: Int, annotations: List<AnnotationEntity>, captureRequested: Boolean, onCaptureDone: () -> Unit,
-    onOcrSuccess: (String) -> Unit, onAddAnnotation: (Float, Float) -> Unit, onOpenAnnotation: (AnnotationEntity) -> Unit, onSaveDrawing: (String) -> Unit
+    pdfFile: File, pageNumber: Int, activeTool: Tool, strokeColor: Int, annotations: List<AnnotationEntity>, captureTrigger: Long,
+    activeSelectionPage: Int, onSelectionStarted: () -> Unit, onOcrSuccess: (String) -> Unit, onAddAnnotation: (Float, Float) -> Unit, 
+    onOpenAnnotation: (AnnotationEntity) -> Unit, onSaveDrawing: (String) -> Unit
 ) {
     var bitmap by remember { mutableStateOf<Bitmap?>(null) }
     var selectionRect by remember { mutableStateOf<Rect?>(null) }
     
-    // 🛡️ NOVO MOTOR DE ZOOM INTELIGENTE (Não bloqueia o scroll da página)
     var scale by remember { mutableFloatStateOf(1f) }
     var offset by remember { mutableStateOf(Offset.Zero) }
+
+    // 🛡️ Limpa a caixa azul se o utilizador for desenhar noutra página ou trocar de ferramenta
+    LaunchedEffect(activeSelectionPage, activeTool) {
+        if (activeSelectionPage != pageNumber || activeTool != Tool.SELECT) {
+            selectionRect = null
+        }
+    }
 
     BoxWithConstraints(modifier = Modifier.fillMaxWidth()) {
         val density = LocalDensity.current
@@ -221,8 +235,9 @@ fun PdfPage(
             }
         }
 
-        LaunchedEffect(captureRequested) {
-            if (captureRequested && selectionRect != null) {
+        // 🛡️ O verdadeiro gatilho de OCR imune a bloqueios
+        LaunchedEffect(captureTrigger) {
+            if (captureTrigger > 0L && selectionRect != null) {
                 if (bitmap != null) {
                     val bmp = bitmap!!
                     val rect = selectionRect!!
@@ -242,8 +257,7 @@ fun PdfPage(
                         )
                     } else { onOcrSuccess("\u00c1rea muito pequena. Tente novamente.") }
                 }
-                onCaptureDone()
-                selectionRect = null
+                selectionRect = null // Limpa automaticamente após capturar!
             }
         }
 
@@ -251,19 +265,15 @@ fun PdfPage(
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .pointerInput(Unit) {
+                    .pointerInput(activeTool) { // O motor de zoom agora tem consciência da ferramenta ativa
                         awaitEachGesture {
                             awaitFirstDown(requireUnconsumed = false)
                             do {
                                 val event = awaitPointerEvent()
                                 val pointers = event.changes
                                 
-                                // Ignora Stylus para não interferir na escrita
-                                if (pointers.any { it.type == PointerType.Stylus || it.type == PointerType.Eraser }) {
-                                    continue
-                                }
+                                if (pointers.any { it.type == PointerType.Stylus || it.type == PointerType.Eraser }) continue
 
-                                // 2 Dedos: Zoom Magnético
                                 if (pointers.size >= 2) {
                                     val zoomChange = event.calculateZoom()
                                     val panChange = event.calculatePan()
@@ -271,13 +281,12 @@ fun PdfPage(
                                     if (scale > 1f) offset += panChange else offset = Offset.Zero
                                     pointers.forEach { if (!it.isConsumed) it.consume() }
                                 } 
-                                // 1 Dedo e Zoom Ativado: Arrasta a imagem
-                                else if (scale > 1f && pointers.size == 1) {
+                                // 🛡️ SÓ permite mover a página (pan) se a ferramenta for "Nenhuma". Se for "Seleção", liberta o dedo para criar a caixa azul!
+                                else if (scale > 1f && pointers.size == 1 && activeTool == Tool.NONE) {
                                     val panChange = event.calculatePan()
                                     offset += panChange
                                     pointers.forEach { if (!it.isConsumed) it.consume() }
                                 }
-                                // Se for 1 dedo e SEM Zoom: Deixa o evento passar para rolar a lista verticalmente!
                             } while (pointers.any { it.pressed })
                         }
                     }
@@ -287,7 +296,7 @@ fun PdfPage(
                     Image(bitmap = bitmap!!.asImageBitmap(), contentDescription = null, modifier = Modifier.fillMaxWidth(), contentScale = ContentScale.FillWidth)
                     DrawingLayer(
                         modifier = Modifier.matchParentSize(), activeTool = activeTool, strokeColor = Color(strokeColor), annotations = annotations, selectionRect = selectionRect,
-                        onSelectionRectChange = { selectionRect = it }, onAddAnnotation = onAddAnnotation, onOpenAnnotation = onOpenAnnotation, onSaveDrawing = onSaveDrawing
+                        onSelectionStarted = onSelectionStarted, onSelectionRectChange = { selectionRect = it }, onAddAnnotation = onAddAnnotation, onOpenAnnotation = onOpenAnnotation, onSaveDrawing = onSaveDrawing
                     )
                 } else {
                     Box(modifier = Modifier.fillMaxWidth().height(600.dp), contentAlignment = Alignment.Center) { CircularProgressIndicator(color = Indigo600, modifier = Modifier.size(32.dp)) }
@@ -300,7 +309,8 @@ fun PdfPage(
 @Composable
 fun DrawingLayer(
     modifier: Modifier, activeTool: Tool, strokeColor: Color, annotations: List<AnnotationEntity>,
-    selectionRect: Rect?, onSelectionRectChange: (Rect?) -> Unit, onAddAnnotation: (Float, Float) -> Unit, onOpenAnnotation: (AnnotationEntity) -> Unit, onSaveDrawing: (String) -> Unit
+    selectionRect: Rect?, onSelectionStarted: () -> Unit, onSelectionRectChange: (Rect?) -> Unit, 
+    onAddAnnotation: (Float, Float) -> Unit, onOpenAnnotation: (AnnotationEntity) -> Unit, onSaveDrawing: (String) -> Unit
 ) {
     val paths = remember { mutableStateListOf<DrawnPath>() }
     var currentPath by remember { mutableStateOf<DrawnPath?>(null) }
@@ -310,7 +320,6 @@ fun DrawingLayer(
     Canvas(
         modifier = modifier.pointerInput(activeTool, strokeColor) {
             
-            // Correção Bug 2: Permite clicar em anotações mesmo SEM nenhuma ferramenta selecionada
             if (activeTool == Tool.NONE) {
                 detectTapGestures { offset ->
                     val clickedAnnot = annotationsRef.value.find { val dx = it.x - offset.x; val dy = it.y - offset.y; (dx * dx + dy * dy) < 2500f }
@@ -321,7 +330,6 @@ fun DrawingLayer(
 
             if (activeTool == Tool.ANNOTATION) {
                 detectTapGestures { offset ->
-                    // Área de clique aumentada (< 2500f) para capturar toques rápidos no balão
                     val clickedAnnot = annotationsRef.value.find { val dx = it.x - offset.x; val dy = it.y - offset.y; (dx * dx + dy * dy) < 2500f }
                     if (clickedAnnot != null) onOpenAnnotation(clickedAnnot) else onAddAnnotation(offset.x, offset.y)
                 }
@@ -329,7 +337,7 @@ fun DrawingLayer(
             }
             if (activeTool == Tool.SELECT) {
                 detectDragGestures(
-                    onDragStart = { offset -> startOffset = offset; onSelectionRectChange(Rect(offset, offset)) },
+                    onDragStart = { offset -> onSelectionStarted(); startOffset = offset; onSelectionRectChange(Rect(offset, offset)) },
                     onDrag = { change, _ ->
                         startOffset?.let { start ->
                             val left = minOf(start.x, change.position.x); val top = minOf(start.y, change.position.y)
@@ -344,7 +352,6 @@ fun DrawingLayer(
             
             awaitEachGesture {
                 val down = awaitFirstDown(requireUnconsumed = false)
-                
                 val isStylus = down.type == PointerType.Stylus || down.type == PointerType.Eraser
                 if (!isStylus) return@awaitEachGesture
                 
