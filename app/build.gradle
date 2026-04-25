@@ -6,6 +6,10 @@ plugins {
 }
 
 android {
+    dependenciesInfo {
+        includeInApk = false
+        includeInBundle = false
+    }
     namespace 'br.com.jotdown'
     compileSdk 34
 
@@ -24,7 +28,7 @@ android {
 
         testInstrumentationRunner 'androidx.test.runner.AndroidJUnitProcessor'
 
-        // Reduz tamanho: inclui apenas ABIs necessÃ¡rias
+        // Reduz tamanho: inclui apenas ABIs necessÃƒÂ¡rias
         ndk {
             abiFilters 'arm64-v8a', 'armeabi-v7a'
         }
@@ -42,7 +46,7 @@ android {
         }
     }
 
-    // Remove arquivos desnecessÃ¡rios do JAR/AAR que inflam a APK
+    // Remove arquivos desnecessÃƒÂ¡rios do JAR/AAR que inflam a APK
     packaging {
         resources {
             excludes += [
@@ -70,7 +74,7 @@ android {
 
     buildFeatures {
         compose true
-        buildConfig false   // NÃ£o usamos BuildConfig no cÃ³digo
+        buildConfig false   // NÃƒÂ£o usamos BuildConfig no cÃƒÂ³digo
     }
 
 }
@@ -103,7 +107,7 @@ dependencies {
     implementation 'androidx.core:core-ktx:1.13.1'
     implementation 'androidx.appcompat:appcompat:1.7.0'
 
-    // OCR â€” Google ML Kit
+    // OCR Ã¢â‚¬â€ Google ML Kit
     fullImplementation 'com.google.mlkit:text-recognition:16.0.1'
 
     // Debug
