@@ -1,21 +1,20 @@
-package br.com.jotdown.data.dao
-
+﻿package br.com.jotdown.data.dao
 import androidx.room.*
 import br.com.jotdown.data.entity.AnnotationEntity
 import kotlinx.coroutines.flow.Flow
 
 @Dao
-interface AnnotationDao {
-
+@JvmSuppressWildcards
+abstract class AnnotationDao {
     @Query("SELECT * FROM annotations WHERE documentId = :documentId ORDER BY page ASC")
-    fun getAnnotationsForDocument(documentId: String): Flow<List<AnnotationEntity>>
+    abstract fun getAnnotationsForDocument(documentId: String): Flow<List<AnnotationEntity>>
 
     @Upsert
-    suspend fun upsertAnnotation(annotation: AnnotationEntity)
+    abstract suspend fun upsertAnnotation(annotation: AnnotationEntity): Long
 
     @Query("DELETE FROM annotations WHERE id = :id")
-    suspend fun deleteAnnotation(id: Long)
+    abstract suspend fun deleteAnnotation(id: Long): Int
 
     @Query("DELETE FROM annotations WHERE documentId = :documentId")
-    suspend fun deleteAllForDocument(documentId: String)
+    abstract suspend fun deleteAllForDocument(documentId: String): Int
 }

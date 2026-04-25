@@ -7,6 +7,8 @@ import androidx.compose.animation.core.*
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.gestures.awaitEachGesture
+import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.gestures.rememberTransformableState
@@ -29,8 +31,8 @@ import androidx.compose.ui.geometry.RoundRect
 import androidx.compose.ui.graphics.*
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.drawscope.DrawScope
-import androidx.compose.ui.graphics.drawscope.Fill
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.input.pointer.PointerType
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalDensity
@@ -303,17 +305,42 @@ fun DrawingLayer(
                 )
                 return@pointerInput
             }
-            detectDragGestures(
-                onDragStart = { offset -> currentPath = DrawnPath(tool = activeTool, color = strokeColor, points = mutableListOf(offset)) },
-                onDrag = { change, _ -> currentPath?.points?.add(change.position) },
-                onDragEnd = { currentPath?.let { path -> paths.add(path); onSaveDrawing(paths.toJson()) }; currentPath = null }
-            )
+            
+            // 🛡️ NOVO MOTOR DE REJEIÇÃO DE PALMA
+            awaitEachGesture {
+                val down = awaitFirstDown(requireUnconsumed = false)
+                
+                // Se for Dedo, aborta o desenho e permite que o sistema dê zoom ou faça o scroll
+                val isStylus = down.type == PointerType.Stylus || down.type == PointerType.Eraser
+                if (!isStylus) return@awaitEachGesture
+                
+                down.consume()
+                var pathInProgress = DrawnPath(tool = activeTool, color = strokeColor, points = mutableListOf(down.position))
+                currentPath = pathInProgress
+                
+                do {
+                    val event = awaitPointerEvent()
+                    val drag = event.changes.firstOrNull { it.id == down.id }
+                    if (drag != null && drag.pressed) {
+                        drag.consume()
+                        val updatedPoints = ArrayList(pathInProgress.points).apply { add(drag.position) }
+                        pathInProgress = pathInProgress.copy(points = updatedPoints)
+                        currentPath = pathInProgress
+                    }
+                } while (drag != null && drag.pressed)
+                
+                currentPath?.let { path -> 
+                    paths.add(path)
+                    onSaveDrawing(paths.toJson())
+                }
+                currentPath = null
+            }
         }
     ) {
         paths.forEach { drawDrawnPath(it) }
         currentPath?.let { drawDrawnPath(it) }
         
-        // Novo Balão de Fala
+        // Balão de Fala Vetorial
         annotations.forEach { annot ->
             val cx = annot.x; val cy = annot.y
             val w = 42f; val h = 26f; val radius = 8f; val tail = 10f
@@ -325,17 +352,11 @@ fun DrawingLayer(
                 lineTo(cx + 6f, cy - tail)
             }
 
-            // Sombra
             val shadowPath = Path().apply { addPath(path, Offset(2f, 3f)) }
             drawPath(shadowPath, color = Color.Black.copy(alpha = 0.25f))
-
-            // Preenchimento Amarelo Vivo
             drawPath(path, color = Color(0xFFFDE047))
-
-            // Borda Âmbar
             drawPath(path, color = Color(0xFFEAB308), style = Stroke(width = 2.5f))
 
-            // Linhas internas a simular texto
             drawLine(color = Color(0xFFD97706), start = Offset(cx - 10f, cy - tail - 15f), end = Offset(cx + 10f, cy - tail - 15f), strokeWidth = 2.5f, cap = StrokeCap.Round)
             drawLine(color = Color(0xFFD97706), start = Offset(cx - 10f, cy - tail - 8f), end = Offset(cx + 2f, cy - tail - 8f), strokeWidth = 2.5f, cap = StrokeCap.Round)
         }

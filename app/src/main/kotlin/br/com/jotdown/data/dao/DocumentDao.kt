@@ -4,30 +4,31 @@ import br.com.jotdown.data.entity.DocumentEntity
 import kotlinx.coroutines.flow.Flow
 
 @Dao
-interface DocumentDao {
+@JvmSuppressWildcards
+abstract class DocumentDao {
     @Query("SELECT * FROM documents ORDER BY dateAdded DESC")
-    fun getAllDocuments(): Flow<List<DocumentEntity>>
+    abstract fun getAllDocuments(): Flow<List<DocumentEntity>>
 
     @Query("UPDATE documents SET folderId = :folderId WHERE id = :docId")
-    suspend fun setDocumentFolder(docId: String, folderId: Long?)
+    abstract suspend fun setDocumentFolder(docId: String, folderId: Long?): Int
 
     @Query("UPDATE documents SET folderId = NULL WHERE folderId = :folderId")
-    suspend fun clearFolder(folderId: Long)
+    abstract suspend fun clearFolder(folderId: Long): Int
 
     @Query("SELECT * FROM documents WHERE id = :id")
-    suspend fun getDocumentById(id: String): DocumentEntity?
+    abstract suspend fun getDocumentById(id: String): DocumentEntity?
 
     @Upsert
-    suspend fun upsertDocument(document: DocumentEntity)
+    abstract suspend fun upsertDocument(document: DocumentEntity): Long
 
     @Query("DELETE FROM documents WHERE id = :id")
-    suspend fun deleteDocument(id: String)
+    abstract suspend fun deleteDocument(id: String): Int
 
     @Query("UPDATE documents SET title = :newTitle WHERE id = :id")
-    suspend fun renameDocument(id: String, newTitle: String)
+    abstract suspend fun renameDocument(id: String, newTitle: String): Int
 
     @Query("SELECT id, fileName, title, dateAdded, docType, authorLastName, authorFirstName, (SELECT COUNT(*) FROM highlights h WHERE h.documentId = d.id) AS highlightCount, (SELECT COUNT(*) FROM annotations a WHERE a.documentId = d.id AND a.text != '') AS annotationCount FROM documents d WHERE (:folderId IS NULL AND d.folderId IS NULL) OR (d.folderId = :folderId) ORDER BY d.dateAdded DESC")
-    fun getDocumentSummariesByFolder(folderId: Long?): Flow<List<DocumentSummary>>
+    abstract fun getDocumentSummariesByFolder(folderId: Long?): Flow<List<DocumentSummary>>
 }
 
 data class DocumentSummary(
