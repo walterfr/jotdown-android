@@ -1,0 +1,1 @@
+﻿Offline PDF reader with OCR and academic notes.

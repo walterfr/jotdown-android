@@ -1,0 +1,1 @@
+﻿Jotdown is an open-source document manager and PDF reader built for researchers.
