@@ -1,4 +1,5 @@
 ﻿package br.com.jotdown.data.dao
+
 import androidx.room.*
 import br.com.jotdown.data.entity.DocumentEntity
 import kotlinx.coroutines.flow.Flow
@@ -27,12 +28,32 @@ abstract class DocumentDao {
     @Query("UPDATE documents SET title = :newTitle WHERE id = :id")
     abstract suspend fun renameDocument(id: String, newTitle: String): Int
 
-    @Query("SELECT id, fileName, title, dateAdded, docType, authorLastName, authorFirstName, (SELECT COUNT(*) FROM highlights h WHERE h.documentId = d.id) AS highlightCount, (SELECT COUNT(*) FROM annotations a WHERE a.documentId = d.id AND a.text != '') AS annotationCount FROM documents d WHERE (:folderId IS NULL AND d.folderId IS NULL) OR (d.folderId = :folderId) ORDER BY d.dateAdded DESC")
+    @Query("UPDATE documents SET isFavorite = :isFavorite WHERE id = :id")
+    abstract suspend fun updateFavoriteStatus(id: String, isFavorite: Boolean): Int
+
+    @Query("UPDATE documents SET isTrashed = :isTrashed WHERE id = :id")
+    abstract suspend fun updateTrashStatus(id: String, isTrashed: Boolean): Int
+
+    @Query("SELECT id, fileName, title, dateAdded, docType, authorLastName, authorFirstName, isFavorite, isTrashed, labels, (SELECT COUNT(*) FROM highlights h WHERE h.documentId = d.id) AS highlightCount, (SELECT COUNT(*) FROM annotations a WHERE a.documentId = d.id AND a.text != '') AS annotationCount FROM documents d WHERE isTrashed = 0 ORDER BY d.dateAdded DESC")
+    abstract fun getAllDocumentSummaries(): Flow<List<DocumentSummary>>
+
+    @Query("SELECT id, fileName, title, dateAdded, docType, authorLastName, authorFirstName, isFavorite, isTrashed, labels, (SELECT COUNT(*) FROM highlights h WHERE h.documentId = d.id) AS highlightCount, (SELECT COUNT(*) FROM annotations a WHERE a.documentId = d.id AND a.text != '') AS annotationCount FROM documents d WHERE isTrashed = 0 AND ((:folderId IS NULL AND d.folderId IS NULL) OR (d.folderId = :folderId)) ORDER BY d.dateAdded DESC")
     abstract fun getDocumentSummariesByFolder(folderId: Long?): Flow<List<DocumentSummary>>
+
+    @Query("SELECT id, fileName, title, dateAdded, docType, authorLastName, authorFirstName, isFavorite, isTrashed, labels, (SELECT COUNT(*) FROM highlights h WHERE h.documentId = d.id) AS highlightCount, (SELECT COUNT(*) FROM annotations a WHERE a.documentId = d.id AND a.text != '') AS annotationCount FROM documents d WHERE isTrashed = 0 AND isFavorite = 1 ORDER BY d.dateAdded DESC")
+    abstract fun getFavoriteDocumentSummaries(): Flow<List<DocumentSummary>>
+
+    @Query("SELECT id, fileName, title, dateAdded, docType, authorLastName, authorFirstName, isFavorite, isTrashed, labels, (SELECT COUNT(*) FROM highlights h WHERE h.documentId = d.id) AS highlightCount, (SELECT COUNT(*) FROM annotations a WHERE a.documentId = d.id AND a.text != '') AS annotationCount FROM documents d WHERE isTrashed = 1 ORDER BY d.dateAdded DESC")
+    abstract fun getTrashedDocumentSummaries(): Flow<List<DocumentSummary>>
+
+    @Query("UPDATE documents SET labels = :labels WHERE id = :id")
+    abstract suspend fun updateDocumentLabels(id: String, labels: String): Int
+
 }
 
 data class DocumentSummary(
     val id: String, val fileName: String, val title: String, val dateAdded: Long,
     val docType: String, val authorLastName: String, val authorFirstName: String,
+    val isFavorite: Boolean = false, val isTrashed: Boolean = false, val labels: String = "",
     val highlightCount: Int = 0, val annotationCount: Int = 0
 )

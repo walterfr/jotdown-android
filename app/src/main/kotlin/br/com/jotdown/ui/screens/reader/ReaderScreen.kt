@@ -59,7 +59,6 @@ fun ReaderScreen(viewModel: ReaderViewModel, onBack: () -> Unit) {
     var showAnnotations by remember { mutableStateOf(false) }
     val document        by viewModel.document.collectAsState()
 
-    // 🛡️ NOVO: Gatilho por Timestamp e Coordenador de Páginas
     var captureTrigger       by remember { mutableLongStateOf(0L) }
     var activeSelectionPage  by remember { mutableIntStateOf(-1) }
 
@@ -89,7 +88,7 @@ fun ReaderScreen(viewModel: ReaderViewModel, onBack: () -> Unit) {
                 activeTool = activeTool, strokeColor = strokeColor, onBack = onBack, onMenuClick = { showSidebar = true },
                 onToolSelect = { viewModel.toggleTool(it) }, onColorSelect = { viewModel.setStrokeColor(it) },
                 onAnnotations = { showAnnotations = true }, 
-                onCapture = { captureTrigger = System.currentTimeMillis() } // Aciona o gatilho único!
+                onCapture = { captureTrigger = System.currentTimeMillis() }
             )
         }
     ) { padding ->
@@ -100,7 +99,7 @@ fun ReaderScreen(viewModel: ReaderViewModel, onBack: () -> Unit) {
                     pdfFile = file, numPages = numPages, currentPage = currentPage, activeTool = activeTool, strokeColor = strokeColor,
                     annotations = annotations, captureTrigger = captureTrigger, activeSelectionPage = activeSelectionPage, scrollToPage = scrollToPage,
                     onScrollDone = { scrollToPage = 0 }, 
-                    onSelectionStarted = { activeSelectionPage = it }, // Atualiza o coordenador
+                    onSelectionStarted = { activeSelectionPage = it },
                     onOcrSuccess = { page, text -> textToEdit = text; ocrResult = Pair(page, text) },
                     onPageChange = { viewModel.setCurrentPage(it) },
                     onAddAnnotation = { page, x, y -> pendingAnnotation = Triple(page, x, y); annotationText = "" },
@@ -202,11 +201,11 @@ fun PdfPage(
 ) {
     var bitmap by remember { mutableStateOf<Bitmap?>(null) }
     var selectionRect by remember { mutableStateOf<Rect?>(null) }
+    var pageHeightPx by remember { mutableFloatStateOf(1f) }
     
     var scale by remember { mutableFloatStateOf(1f) }
     var offset by remember { mutableStateOf(Offset.Zero) }
 
-    // 🛡️ Limpa a caixa azul se o utilizador for desenhar noutra página ou trocar de ferramenta
     LaunchedEffect(activeSelectionPage, activeTool) {
         if (activeSelectionPage != pageNumber || activeTool != Tool.SELECT) {
             selectionRect = null
@@ -226,6 +225,8 @@ fun PdfPage(
                     val page = renderer.openPage(pageNumber - 1)
                     val scaleFactor = widthPx.toFloat() / page.width.coerceAtLeast(1)
                     val bmpH = (page.height * scaleFactor).toInt().coerceAtLeast(1)
+                    pageHeightPx = bmpH.toFloat()
+                    
                     val bmp = Bitmap.createBitmap(widthPx, bmpH, Bitmap.Config.ARGB_8888)
                     bmp.eraseColor(android.graphics.Color.WHITE)
                     page.render(bmp, null, null, PdfRenderer.Page.RENDER_MODE_FOR_DISPLAY)
@@ -235,7 +236,6 @@ fun PdfPage(
             }
         }
 
-        // 🛡️ O verdadeiro gatilho de OCR imune a bloqueios
         LaunchedEffect(captureTrigger) {
             if (captureTrigger > 0L && selectionRect != null) {
                 if (bitmap != null) {
@@ -257,7 +257,7 @@ fun PdfPage(
                         )
                     } else { onOcrSuccess("\u00c1rea muito pequena. Tente novamente.") }
                 }
-                selectionRect = null // Limpa automaticamente após capturar!
+                selectionRect = null 
             }
         }
 
@@ -265,7 +265,7 @@ fun PdfPage(
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .pointerInput(activeTool) { // O motor de zoom agora tem consciência da ferramenta ativa
+                    .pointerInput(activeTool) { 
                         awaitEachGesture {
                             awaitFirstDown(requireUnconsumed = false)
                             do {
@@ -278,14 +278,46 @@ fun PdfPage(
                                     val zoomChange = event.calculateZoom()
                                     val panChange = event.calculatePan()
                                     scale = (scale * zoomChange).coerceIn(1f, 4f)
-                                    if (scale > 1f) offset += panChange else offset = Offset.Zero
+                                    
+                                    if (scale > 1f) {
+                                        val maxX = (widthPx * (scale - 1)) / 2f
+                                        val maxY = (pageHeightPx * (scale - 1)) / 2f
+                                        val proposedX = offset.x + panChange.x
+                                        val proposedY = offset.y + panChange.y
+                                        offset = Offset(proposedX.coerceIn(-maxX, maxX), proposedY.coerceIn(-maxY, maxY))
+                                    } else {
+                                        offset = Offset.Zero
+                                    }
                                     pointers.forEach { if (!it.isConsumed) it.consume() }
                                 } 
-                                // 🛡️ SÓ permite mover a página (pan) se a ferramenta for "Nenhuma". Se for "Seleção", liberta o dedo para criar a caixa azul!
                                 else if (scale > 1f && pointers.size == 1 && activeTool == Tool.NONE) {
                                     val panChange = event.calculatePan()
-                                    offset += panChange
-                                    pointers.forEach { if (!it.isConsumed) it.consume() }
+                                    
+                                    val maxX = (widthPx * (scale - 1)) / 2f
+                                    val maxY = (pageHeightPx * (scale - 1)) / 2f
+                                    
+                                    val proposedX = offset.x + panChange.x
+                                    val proposedY = offset.y + panChange.y
+                                    
+                                    val clampedX = proposedX.coerceIn(-maxX, maxX)
+                                    val clampedY = proposedY.coerceIn(-maxY, maxY)
+                                    
+                                    val consumedX = clampedX != offset.x
+                                    val consumedY = clampedY != offset.y
+                                    
+                                    offset = Offset(clampedX, clampedY)
+                                    
+                                    val isMostlyVertical = kotlin.math.abs(panChange.y) > kotlin.math.abs(panChange.x)
+                                    
+                                    // 🛡️ DETECÇÃO DE BORDA INTELIGENTE
+                                    if (consumedX || consumedY) {
+                                        if (!consumedY && isMostlyVertical) {
+                                            // Bateu no teto/chão e continua arrastando! Não consome o toque.
+                                            // A LazyColumn vai receber este movimento e rolar a página para cima/baixo.
+                                        } else {
+                                            pointers.forEach { if (!it.isConsumed) it.consume() }
+                                        }
+                                    }
                                 }
                             } while (pointers.any { it.pressed })
                         }

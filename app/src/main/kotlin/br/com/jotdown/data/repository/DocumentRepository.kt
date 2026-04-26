@@ -36,4 +36,12 @@ class DocumentRepository(
     fun getDrawings(documentId: String): Flow<List<DrawingEntity>> = drawingDao.getDrawingsForDocument(documentId)
     suspend fun saveDrawing(drawing: DrawingEntity) = drawingDao.upsertDrawing(drawing)
     suspend fun deleteDrawingForPage(documentId: String, page: Int) = drawingDao.deleteDrawingForPage(documentId, page)
+
+    suspend fun updateFavoriteStatus(id: String, isFav: Boolean) = documentDao.updateFavoriteStatus(id, isFav)
+    suspend fun updateTrashStatus(id: String, isTrashed: Boolean) = documentDao.updateTrashStatus(id, isTrashed)
+    fun getAllDocumentSummaries() = documentDao.getAllDocumentSummaries()
+    fun getFavoriteDocumentSummaries() = documentDao.getFavoriteDocumentSummaries()
+    fun getTrashedDocumentSummaries() = documentDao.getTrashedDocumentSummaries()
+
+    suspend fun updateDocumentLabels(id: String, labels: String) = documentDao.updateDocumentLabels(id, labels)
 }

@@ -9,8 +9,8 @@ data class DocumentEntity(
     val fileName: String,
     val title: String,
     val dateAdded: Long,
-    val folderId: Long? = null, // nullable foreign key to FolderEntity – caminho do arquivo no disco
-    val pdfFilePath: String, // Path to stored PDF file
+    val folderId: Long? = null,
+    val pdfFilePath: String,
     val docType: String = "livro",
     val authorLastName: String = "",
     val authorFirstName: String = "",
@@ -23,5 +23,8 @@ data class DocumentEntity(
     val volume: String = "",
     val pages: String = "",
     val url: String = "",
-    val accessDate: String = ""
+    val accessDate: String = "",
+    val isFavorite: Boolean = false,
+    val isTrashed: Boolean = false, // <- O Segredo da Lixeira!
+    val labels: String = ""
 )

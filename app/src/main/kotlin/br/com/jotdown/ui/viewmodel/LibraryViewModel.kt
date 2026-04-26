@@ -21,18 +21,49 @@ class LibraryViewModel(private val repository: DocumentRepository) : ViewModel()
     private val _currentFolder = MutableStateFlow<FolderEntity?>(null)
     val currentFolder: StateFlow<FolderEntity?> = _currentFolder.asStateFlow()
 
+    private val _currentFilter = MutableStateFlow("Tudo")
+    val currentFilter: StateFlow<String> = _currentFilter.asStateFlow()
+
     val folders: StateFlow<List<FolderEntity>> = repository.getAllFolders()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
+    // 🏷️ NOVO: Extrai todas as tags únicas de todos os documentos
+    val availableTags: StateFlow<List<String>> = repository.getAllDocumentSummaries()
+        .map { docs ->
+            docs.flatMap { it.labels.split(",").map { t -> t.trim() }.filter { t -> t.isNotEmpty() } }
+                .distinct().sorted()
+        }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
     @OptIn(ExperimentalCoroutinesApi::class)
-    val documents: StateFlow<List<DocumentSummary>> = _currentFolder.flatMapLatest { folder ->
-        repository.getDocumentSummariesByFolder(folder?.id)
+    val displayDocuments: StateFlow<List<DocumentSummary>> = combine(_currentFilter, _currentFolder) { filter, folder ->
+        Pair(filter, folder)
+    }.flatMapLatest { (filter, folder) ->
+        when {
+            filter == "Recentes" -> repository.getAllDocumentSummaries()
+            filter == "Favoritos" -> repository.getFavoriteDocumentSummaries()
+            filter == "Lixo" -> repository.getTrashedDocumentSummaries()
+            filter.startsWith("Tag:") -> {
+                val tag = filter.removePrefix("Tag:")
+                repository.getAllDocumentSummaries().map { list ->
+                    list.filter { it.labels.split(",").map { l -> l.trim() }.contains(tag) }
+                }
+            }
+            else -> repository.getDocumentSummariesByFolder(folder?.id)
+        }
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     fun enterFolder(folder: FolderEntity?) { _currentFolder.value = folder }
+    fun setFilter(filter: String) {
+        _currentFilter.value = filter
+        if (filter != "Tudo") _currentFolder.value = null
+    }
 
     fun renameFolder(id: Long, newName: String) = viewModelScope.launch { repository.renameFolder(id, newName) }
     fun renameDocument(id: String, newTitle: String) = viewModelScope.launch { repository.renameDocument(id, newTitle) }
+    
+    // 🏷️ NOVO: Salva as etiquetas do documento
+    fun updateLabels(id: String, labels: String) = viewModelScope.launch { repository.updateDocumentLabels(id, labels) }
 
     fun mergeIntoFolder(doc1Id: String, doc2Id: String) = viewModelScope.launch {
         val folderId = repository.insertFolder(FolderEntity(name = "Nova Pasta"))
@@ -50,6 +81,13 @@ class LibraryViewModel(private val repository: DocumentRepository) : ViewModel()
         _currentFolder.value = null
     }
 
+    fun toggleFavorite(id: String, isFavorite: Boolean) = viewModelScope.launch { repository.updateFavoriteStatus(id, isFavorite) }
+    fun moveToTrash(id: String) = viewModelScope.launch {
+        repository.updateTrashStatus(id, true)
+        repository.setDocumentFolder(id, null)
+    }
+    fun restoreFromTrash(id: String) = viewModelScope.launch { repository.updateTrashStatus(id, false) }
+
     fun importPdf(context: Context, uri: Uri) = viewModelScope.launch {
         withContext(Dispatchers.IO) {
             try {
@@ -65,35 +103,27 @@ class LibraryViewModel(private val repository: DocumentRepository) : ViewModel()
                 val docId = UUID.randomUUID().toString()
                 val pdfDir = File(context.filesDir, "pdfs").also { it.mkdirs() }
                 val pdfFile = File(pdfDir, "$docId.pdf")
-
-                context.contentResolver.openInputStream(uri)?.use { input ->
-                    pdfFile.outputStream().use { output -> input.copyTo(output) }
-                }
+                context.contentResolver.openInputStream(uri)?.use { input -> pdfFile.outputStream().use { output -> input.copyTo(output) } }
 
                 if (pdfFile.exists() && pdfFile.length() > 0L) {
+                    val coverDir = File(context.filesDir, "covers").also { it.mkdirs() }
+                    val coverFile = File(coverDir, "$docId.jpg")
+                    br.com.jotdown.util.PdfCoverUtil.generateCover(pdfFile, coverFile)
+
                     var cleanTitle = fileName.removeSuffix(".pdf").removeSuffix(".PDF")
                     var extractedAuthor = ""
                     var extractedYear = ""
 
-                    // Heuristica de Separacao: Divide o nome do arquivo por " - " ou "_"
                     val parts = cleanTitle.split(Regex(" - |_")).map { it.trim() }.filter { it.isNotEmpty() }
-                    
                     if (parts.size >= 2 && !parts[0].any { it.isDigit() }) {
                         extractedAuthor = parts[0]
                         if (parts[1].matches(Regex("\\d{4}"))) {
                             extractedYear = parts[1]
                             if (parts.size > 2) cleanTitle = parts.drop(2).joinToString(" - ")
-                        } else {
-                            cleanTitle = parts.drop(1).joinToString(" - ")
-                        }
+                        } else { cleanTitle = parts.drop(1).joinToString(" - ") }
                     }
 
-                    val doc = DocumentEntity(
-                        id = docId, fileName = fileName, title = cleanTitle,
-                        dateAdded = System.currentTimeMillis(), folderId = _currentFolder.value?.id, pdfFilePath = pdfFile.absolutePath,
-                        authorLastName = extractedAuthor, year = extractedYear
-                    )
-                    repository.saveDocument(doc)
+                    repository.saveDocument(DocumentEntity(id = docId, fileName = fileName, title = cleanTitle, dateAdded = System.currentTimeMillis(), folderId = _currentFolder.value?.id, pdfFilePath = pdfFile.absolutePath, authorLastName = extractedAuthor, year = extractedYear))
                 }
             } catch (e: Exception) { Log.e("Jotdown", "Erro: ${e.message}") }
         }
@@ -102,17 +132,13 @@ class LibraryViewModel(private val repository: DocumentRepository) : ViewModel()
     fun deleteDocument(context: Context, id: String) = viewModelScope.launch {
         val doc = repository.getDocumentById(id)
         doc?.pdfFilePath?.let { File(it).delete() }
+        val coverFile = File(context.filesDir, "covers/$id.jpg")
+        if (coverFile.exists()) coverFile.delete()
         repository.deleteDocument(id)
     }
 
-    // --- NOVAS FUNCOES DE BACKUP ---
-    fun exportBackup(context: Context) = viewModelScope.launch {
-        br.com.jotdown.util.BackupUtil.exportBackup(context)
-    }
-
-    fun importBackup(context: Context, uri: Uri) = viewModelScope.launch {
-        br.com.jotdown.util.BackupUtil.importBackup(context, uri)
-    }
+    fun exportBackup(context: Context) = viewModelScope.launch { br.com.jotdown.util.BackupUtil.exportBackup(context) }
+    fun importBackup(context: Context, uri: Uri) = viewModelScope.launch { br.com.jotdown.util.BackupUtil.importBackup(context, uri) }
 }
 
 class LibraryViewModelFactory(private val repository: DocumentRepository) : ViewModelProvider.Factory {

@@ -4,6 +4,7 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -34,6 +35,10 @@ import br.com.jotdown.data.dao.DocumentSummary
 import br.com.jotdown.data.entity.FolderEntity
 import br.com.jotdown.ui.theme.*
 import br.com.jotdown.ui.viewmodel.LibraryViewModel
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import java.io.File
 import java.text.SimpleDateFormat
 import java.util.*
 import kotlin.math.roundToInt
@@ -42,24 +47,30 @@ import kotlin.math.roundToInt
 @Composable
 fun LibraryScreen(viewModel: LibraryViewModel, onOpenDocument: (String) -> Unit) {
     val context = LocalContext.current
-    val documents by viewModel.documents.collectAsState()
+    val displayDocuments by viewModel.displayDocuments.collectAsState()
     val folders by viewModel.folders.collectAsState()
     val currentFolder by viewModel.currentFolder.collectAsState()
+    val currentFilter by viewModel.currentFilter.collectAsState()
+    val availableTags by viewModel.availableTags.collectAsState() // 🏷️ Puxa as tags do ViewModel
     
+    val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
+    val scope = rememberCoroutineScope()
+
     var docToDelete by remember { mutableStateOf<DocumentSummary?>(null) }
     var showDeleteFolder by remember { mutableStateOf(false) }
-    
-    // Estados de Renomeacao
+
     var folderToRename by remember { mutableStateOf<FolderEntity?>(null) }
     var docToRename by remember { mutableStateOf<DocumentSummary?>(null) }
     var renameText by remember { mutableStateOf("") }
     
+    var docToTag by remember { mutableStateOf<DocumentSummary?>(null) }
+    var tagText by remember { mutableStateOf("") }
+
     val pdfPicker = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri -> uri ?: return@rememberLauncherForActivityResult; viewModel.importPdf(context, uri) }
     val backupPicker = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri -> uri ?: return@rememberLauncherForActivityResult; viewModel.importBackup(context, uri) }
     var showMenu by remember { mutableStateOf(false) }
     var showImportWarning by remember { mutableStateOf(false) }
 
-    // Variaveis para rasteio do dedo (Arrastar e Soltar)
     var globalDragPos by remember { mutableStateOf(Offset.Zero) }
     var draggingDocId by remember { mutableStateOf<String?>(null) }
     var targetDocId by remember { mutableStateOf<String?>(null) }
@@ -67,251 +78,259 @@ fun LibraryScreen(viewModel: LibraryViewModel, onOpenDocument: (String) -> Unit)
     val boundsMap = remember { mutableMapOf<String, Rect>() }
     val folderBoundsMap = remember { mutableMapOf<Long, Rect>() }
 
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = {
-                    if (currentFolder == null) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Box(modifier = Modifier.size(32.dp).clip(RoundedCornerShape(8.dp)).background(Indigo600), contentAlignment = Alignment.Center) { 
-                                Icon(Icons.Default.Edit, contentDescription = null, tint = Color.White, modifier = Modifier.size(18.dp)) 
-                            }
-                            Spacer(Modifier.width(10.dp))
-                            Text("Jotdown", fontWeight = FontWeight.Black, fontSize = 22.sp, color = Indigo900)
-                        }
-                    } else {
-                        Text(currentFolder!!.name, fontWeight = FontWeight.Black, fontSize = 20.sp, color = Indigo900)
-                    }
-                },
-                navigationIcon = {
-                    if (currentFolder != null) {
-                        IconButton(onClick = { viewModel.enterFolder(null) }) { Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Voltar") }
-                    }
-                },
-                actions = {
-                    if (currentFolder != null) {
-                        IconButton(onClick = { showDeleteFolder = true }) { Icon(Icons.Default.DeleteOutline, contentDescription = "Apagar Pasta", tint = MaterialTheme.colorScheme.error) }
-                    }
-                    Box {
-                        IconButton(onClick = { showMenu = true }) { Icon(Icons.Default.MoreVert, contentDescription = "Menu") }
-                        DropdownMenu(expanded = showMenu, onDismissRequest = { showMenu = false }) {
-                            DropdownMenuItem(text = { Text("Exportar Backup", fontWeight = FontWeight.Bold) }, onClick = { showMenu = false; viewModel.exportBackup(context) })
-                            DropdownMenuItem(text = { Text("Importar Backup") }, onClick = { showMenu = false; showImportWarning = true })
-                        }
-                    }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.surface)
-            )
-        },
-        floatingActionButton = {
-            ExtendedFloatingActionButton(
-                onClick = { pdfPicker.launch("application/pdf") },
-                icon = { Icon(Icons.Default.Add, contentDescription = null) },
-                text = { Text("Novo PDF", fontWeight = FontWeight.Bold) },
-                containerColor = Indigo600, contentColor = Color.White
-            )
-        }
-    ) { padding ->
-        Column(modifier = Modifier.fillMaxSize().padding(padding).padding(horizontal = 16.dp)) {
-            Spacer(Modifier.height(16.dp))
-            if (currentFolder == null) {
-                Text("Documentos Salvos", fontSize = 26.sp, fontWeight = FontWeight.Black, color = MaterialTheme.colorScheme.onBackground)
-                Text("Segure um PDF e arraste sobre outro para criar uma pasta.", fontSize = 13.sp, color = MaterialTheme.colorScheme.outline, modifier = Modifier.padding(top = 4.dp, bottom = 16.dp))
-            }
-
-            if (documents.isEmpty() && (folders.isEmpty() || currentFolder != null)) {
-                EmptyLibrary()
-            } else {
-                LazyVerticalGrid(
-                    columns = GridCells.Adaptive(minSize = 160.dp),
-                    horizontalArrangement = Arrangement.spacedBy(12.dp),
-                    verticalArrangement = Arrangement.spacedBy(12.dp),
-                    modifier = Modifier.fillMaxSize()
-                ) {
-                    if (currentFolder == null) {
-                        items(folders, key = { "folder_${it.id}" }) { folder ->
-                            FolderCard(
-                                folder = folder,
-                                isTarget = targetFolderId == folder.id,
-                                onClick = { viewModel.enterFolder(folder) },
-                                onRename = { folderToRename = folder; renameText = folder.name },
-                                onGloballyPositioned = { coordinates -> folderBoundsMap[folder.id] = coordinates }
-                            )
-                        }
-                    }
-                    items(documents, key = { it.id }) { doc ->
-                        DocumentCard(
-                            doc = doc, isDragging = draggingDocId == doc.id, isTarget = targetDocId == doc.id, inFolder = currentFolder != null,
-                            onCardClick = { onOpenDocument(doc.id) },
-                            onRename = { docToRename = doc; renameText = doc.title.ifBlank { doc.fileName } },
-                            onDelete = { docToDelete = doc },
-                            onRemoveFromFolder = { viewModel.removeFromFolder(doc.id) },
-                            onGloballyPositioned = { coordinates -> boundsMap[doc.id] = coordinates },
-                            onDragStart = { offset -> globalDragPos = boundsMap[doc.id]!!.topLeft + offset; draggingDocId = doc.id },
-                            onDrag = { dragAmount ->
-                                globalDragPos += dragAmount
-                                targetDocId = boundsMap.entries.find { it.key != doc.id && it.value.contains(globalDragPos) }?.key
-                                targetFolderId = folderBoundsMap.entries.find { it.value.contains(globalDragPos) }?.key
-                            },
-                            onDragEnd = {
-                                if (targetDocId != null) viewModel.mergeIntoFolder(doc.id, targetDocId!!)
-                                else if (targetFolderId != null) viewModel.moveToFolder(doc.id, targetFolderId!!)
-                                draggingDocId = null; targetDocId = null; targetFolderId = null
-                            }
+    ModalNavigationDrawer(
+        drawerState = drawerState,
+        drawerContent = {
+            ModalDrawerSheet {
+                Spacer(Modifier.height(16.dp))
+                Text("Jotdown", modifier = Modifier.padding(16.dp), fontWeight = FontWeight.Black, fontSize = 22.sp, color = Indigo900)
+                HorizontalDivider()
+                NavigationDrawerItem(icon = { Icon(Icons.Default.MenuBook, contentDescription = null) }, label = { Text("Tudo") }, selected = currentFilter == "Tudo", onClick = { viewModel.setFilter("Tudo"); scope.launch { drawerState.close() } })
+                NavigationDrawerItem(icon = { Icon(Icons.Default.Schedule, contentDescription = null) }, label = { Text("Recentes") }, selected = currentFilter == "Recentes", onClick = { viewModel.setFilter("Recentes"); scope.launch { drawerState.close() } })
+                NavigationDrawerItem(icon = { Icon(Icons.Default.Favorite, contentDescription = null) }, label = { Text("Favoritos") }, selected = currentFilter == "Favoritos", onClick = { viewModel.setFilter("Favoritos"); scope.launch { drawerState.close() } })
+                NavigationDrawerItem(icon = { Icon(Icons.Default.DeleteOutline, contentDescription = null) }, label = { Text("Lixo") }, selected = currentFilter == "Lixo", onClick = { viewModel.setFilter("Lixo"); scope.launch { drawerState.close() } })
+                
+                // 🏷️ NOVO: Seção Dinâmica de Rótulos
+                if (availableTags.isNotEmpty()) {
+                    HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
+                    Text("Meus Rótulos", modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp), fontWeight = FontWeight.Bold, fontSize = 13.sp, color = MaterialTheme.colorScheme.outline)
+                    availableTags.forEach { tag ->
+                        NavigationDrawerItem(
+                            icon = { Icon(Icons.Default.Label, contentDescription = null, tint = Color(0xFFF59E0B)) },
+                            label = { Text(tag) },
+                            selected = currentFilter == "Tag:$tag",
+                            onClick = { viewModel.setFilter("Tag:$tag"); scope.launch { drawerState.close() } }
                         )
                     }
-                    item { Spacer(Modifier.height(80.dp)) }
+                }
+            }
+        }
+    ) {
+        Scaffold(
+            topBar = {
+                TopAppBar(
+                    title = {
+                        if (currentFolder == null) {
+                            Text(if (currentFilter.startsWith("Tag:")) currentFilter.removePrefix("Tag:") else if (currentFilter == "Tudo") "Jotdown" else currentFilter, fontWeight = FontWeight.Black, fontSize = 22.sp, color = Indigo900)
+                        } else {
+                            Text(currentFolder!!.name, fontWeight = FontWeight.Black, fontSize = 20.sp, color = Indigo900)
+                        }
+                    },
+                    navigationIcon = {
+                        if (currentFolder != null) {
+                            IconButton(onClick = { viewModel.enterFolder(null) }) { Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Voltar") }
+                        } else {
+                            IconButton(onClick = { scope.launch { drawerState.open() } }) { Icon(Icons.Default.Menu, contentDescription = "Menu") }
+                        }
+                    },
+                    actions = {
+                        if (currentFolder != null) { IconButton(onClick = { showDeleteFolder = true }) { Icon(Icons.Default.DeleteOutline, contentDescription = "Apagar", tint = MaterialTheme.colorScheme.error) } }
+                        Box {
+                            IconButton(onClick = { showMenu = true }) { Icon(Icons.Default.MoreVert, contentDescription = "Menu") }
+                            DropdownMenu(expanded = showMenu, onDismissRequest = { showMenu = false }) {
+                                DropdownMenuItem(text = { Text("Exportar Backup", fontWeight = FontWeight.Bold) }, onClick = { showMenu = false; viewModel.exportBackup(context) })
+                                DropdownMenuItem(text = { Text("Importar Backup") }, onClick = { showMenu = false; showImportWarning = true })
+                            }
+                        }
+                    },
+                    colors = TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.surface)
+                )
+            },
+            floatingActionButton = {
+                ExtendedFloatingActionButton(onClick = { pdfPicker.launch("application/pdf") }, icon = { Icon(Icons.Default.Add, contentDescription = null) }, text = { Text("Novo PDF", fontWeight = FontWeight.Bold) }, containerColor = Indigo600, contentColor = Color.White)
+            }
+        ) { padding ->
+            Column(modifier = Modifier.fillMaxSize().padding(padding).padding(horizontal = 16.dp)) {
+                Spacer(Modifier.height(16.dp))
+                if (displayDocuments.isEmpty() && (folders.isEmpty() || currentFolder != null || currentFilter != "Tudo")) {
+                    EmptyLibrary(currentFilter)
+                } else {
+                    LazyVerticalGrid(
+                        columns = GridCells.Adaptive(minSize = 140.dp),
+                        horizontalArrangement = Arrangement.spacedBy(16.dp),
+                        verticalArrangement = Arrangement.spacedBy(24.dp),
+                        modifier = Modifier.fillMaxSize()
+                    ) {
+                        if (currentFolder == null && currentFilter == "Tudo") {
+                            items(folders, key = { "folder_${it.id}" }) { folder ->
+                                FolderCard(folder = folder, isTarget = targetFolderId == folder.id, onClick = { viewModel.enterFolder(folder) }, onRename = { folderToRename = folder; renameText = folder.name }, onGloballyPositioned = { coordinates -> folderBoundsMap[folder.id] = coordinates })
+                            }
+                        }
+                        items(displayDocuments, key = { it.id }) { doc ->
+                            DocumentCoverCard(
+                                doc = doc, isDragging = draggingDocId == doc.id, isTarget = targetDocId == doc.id, inFolder = currentFolder != null, currentFilter = currentFilter, context = context,
+                                onCardClick = { if (currentFilter != "Lixo") onOpenDocument(doc.id) },
+                                onRename = { docToRename = doc; renameText = doc.title.ifBlank { doc.fileName } },
+                                onEditTags = { docToTag = doc; tagText = doc.labels }, // 🏷️ NOVO
+                                onDelete = { docToDelete = doc },
+                                onRemoveFromFolder = { viewModel.removeFromFolder(doc.id) },
+                                onMoveToTrash = { viewModel.moveToTrash(doc.id) },
+                                onRestore = { viewModel.restoreFromTrash(doc.id) },
+                                onToggleFavorite = { viewModel.toggleFavorite(doc.id, !doc.isFavorite) },
+                                onGloballyPositioned = { coordinates -> boundsMap[doc.id] = coordinates },
+                                onDragStart = { offset -> globalDragPos = boundsMap[doc.id]!!.topLeft + offset; draggingDocId = doc.id },
+                                onDrag = { dragAmount ->
+                                    globalDragPos += dragAmount
+                                    targetDocId = boundsMap.entries.find { it.key != doc.id && it.value.contains(globalDragPos) }?.key
+                                    targetFolderId = folderBoundsMap.entries.find { it.value.contains(globalDragPos) }?.key
+                                },
+                                onDragEnd = {
+                                    if (targetDocId != null) viewModel.mergeIntoFolder(doc.id, targetDocId!!)
+                                    else if (targetFolderId != null) viewModel.moveToFolder(doc.id, targetFolderId!!)
+                                    draggingDocId = null; targetDocId = null; targetFolderId = null
+                                }
+                            )
+                        }
+                        item { Spacer(Modifier.height(80.dp)) }
+                    }
                 }
             }
         }
     }
 
-    // Modal Renomear Pasta
-    folderToRename?.let { folder ->
+    // Modal Renomear Pasta/Arquivo ... (mantidos)
+    folderToRename?.let { folder -> AlertDialog(onDismissRequest = { folderToRename = null }, title = { Text("Renomear Pasta") }, text = { OutlinedTextField(value = renameText, onValueChange = { renameText = it }, singleLine = true, label = { Text("Nome da pasta") }) }, confirmButton = { TextButton(onClick = { if (renameText.isNotBlank()) { viewModel.renameFolder(folder.id, renameText.trim()) }; folderToRename = null }) { Text("Salvar", color = Indigo600, fontWeight = FontWeight.Bold) } }, dismissButton = { TextButton(onClick = { folderToRename = null }) { Text("Cancelar") } }) }
+    docToRename?.let { doc -> AlertDialog(onDismissRequest = { docToRename = null }, title = { Text("Renomear Arquivo") }, text = { OutlinedTextField(value = renameText, onValueChange = { renameText = it }, singleLine = true, label = { Text("Novo titulo") }) }, confirmButton = { TextButton(onClick = { if (renameText.isNotBlank()) { viewModel.renameDocument(doc.id, renameText.trim()) }; docToRename = null }) { Text("Salvar", color = Indigo600, fontWeight = FontWeight.Bold) } }, dismissButton = { TextButton(onClick = { docToRename = null }) { Text("Cancelar") } }) }
+    docToDelete?.let { doc -> AlertDialog(onDismissRequest = { docToDelete = null }, title = { Text("Apagar Definitivamente?") }, text = { Text("\"${doc.title}\" será removido permanentemente do tablet.") }, confirmButton = { TextButton(onClick = { viewModel.deleteDocument(context, doc.id); docToDelete = null }) { Text("Apagar", color = MaterialTheme.colorScheme.error) } }, dismissButton = { TextButton(onClick = { docToDelete = null }) { Text("Cancelar") } }) }
+    
+    // 🏷️ NOVO: Modal para Editar Rótulos
+    docToTag?.let { doc ->
         AlertDialog(
-            onDismissRequest = { folderToRename = null }, title = { Text("Renomear Pasta") },
-            text = { OutlinedTextField(value = renameText, onValueChange = { renameText = it }, singleLine = true, label = { Text("Nome da pasta") }) },
-            confirmButton = { TextButton(onClick = { if (renameText.isNotBlank()) { viewModel.renameFolder(folder.id, renameText.trim()) }; folderToRename = null }) { Text("Salvar", color = Indigo600, fontWeight = FontWeight.Bold) } },
-            dismissButton = { TextButton(onClick = { folderToRename = null }) { Text("Cancelar") } }
+            onDismissRequest = { docToTag = null },
+            title = { Text("Editar Rótulos") },
+            text = { 
+                Column {
+                    Text("Separe os rótulos por vírgula (ex: Centro Vivido, Comércio Popular, História Oral).", fontSize = 12.sp, color = MaterialTheme.colorScheme.outline)
+                    Spacer(Modifier.height(8.dp))
+                    OutlinedTextField(value = tagText, onValueChange = { tagText = it }, label = { Text("Rótulos") }, modifier = Modifier.fillMaxWidth())
+                }
+            },
+            confirmButton = { TextButton(onClick = { viewModel.updateLabels(doc.id, tagText); docToTag = null }) { Text("Salvar", color = Indigo600, fontWeight = FontWeight.Bold) } },
+            dismissButton = { TextButton(onClick = { docToTag = null }) { Text("Cancelar") } }
         )
     }
 
-    // Modal Renomear Arquivo
-    docToRename?.let { doc ->
-        AlertDialog(
-            onDismissRequest = { docToRename = null }, title = { Text("Renomear Arquivo") },
-            text = { OutlinedTextField(value = renameText, onValueChange = { renameText = it }, singleLine = true, label = { Text("Novo titulo") }) },
-            confirmButton = { TextButton(onClick = { if (renameText.isNotBlank()) { viewModel.renameDocument(doc.id, renameText.trim()) }; docToRename = null }) { Text("Salvar", color = Indigo600, fontWeight = FontWeight.Bold) } },
-            dismissButton = { TextButton(onClick = { docToRename = null }) { Text("Cancelar") } }
-        )
-    }
-
-    docToDelete?.let { doc ->
-        AlertDialog(
-            onDismissRequest = { docToDelete = null }, title = { Text("Apagar documento?") }, text = { Text("\"${doc.title}\" sera removido permanentemente.") },
-            confirmButton = { TextButton(onClick = { viewModel.deleteDocument(context, doc.id); docToDelete = null }) { Text("Apagar", color = MaterialTheme.colorScheme.error) } },
-            dismissButton = { TextButton(onClick = { docToDelete = null }) { Text("Cancelar") } }
-        )
-    }
-
-    if (showImportWarning) {
-        AlertDialog(
-            onDismissRequest = { showImportWarning = false }, title = { Text("Importar Backup") },
-            text = { Text("ATENCAO: Ao restaurar um backup, toda a sua biblioteca atual sera substituida pelos dados do arquivo. O aplicativo sera reiniciado automaticamente apos a conclusao. Deseja continuar?") },
-            confirmButton = { TextButton(onClick = { showImportWarning = false; backupPicker.launch("application/zip") }) { Text("Sim, Importar", color = MaterialTheme.colorScheme.error, fontWeight = FontWeight.Bold) } },
-            dismissButton = { TextButton(onClick = { showImportWarning = false }) { Text("Cancelar") } }
-        )
-    }
-
-    if (showDeleteFolder) {
-        AlertDialog(
-            onDismissRequest = { showDeleteFolder = false }, title = { Text("Apagar Pasta?") }, text = { Text("A pasta sera apagada, mas os PDFs dentro dela voltarao para a biblioteca principal.") },
-            confirmButton = { TextButton(onClick = { viewModel.deleteCurrentFolder(); showDeleteFolder = false }) { Text("Apagar", color = MaterialTheme.colorScheme.error) } },
-            dismissButton = { TextButton(onClick = { showDeleteFolder = false }) { Text("Cancelar") } }
-        )
-    }
+    if (showImportWarning) { AlertDialog(onDismissRequest = { showImportWarning = false }, title = { Text("Importar Backup") }, text = { Text("ATENCAO: A sua biblioteca atual será substituída.") }, confirmButton = { TextButton(onClick = { showImportWarning = false; backupPicker.launch("application/zip") }) { Text("Sim, Importar", color = MaterialTheme.colorScheme.error, fontWeight = FontWeight.Bold) } }, dismissButton = { TextButton(onClick = { showImportWarning = false }) { Text("Cancelar") } }) }
+    if (showDeleteFolder) { AlertDialog(onDismissRequest = { showDeleteFolder = false }, title = { Text("Apagar Pasta?") }, text = { Text("Os PDFs voltarão para a biblioteca principal.") }, confirmButton = { TextButton(onClick = { viewModel.deleteCurrentFolder(); showDeleteFolder = false }) { Text("Apagar", color = MaterialTheme.colorScheme.error) } }, dismissButton = { TextButton(onClick = { showDeleteFolder = false }) { Text("Cancelar") } }) }
 }
 
 @Composable
 fun FolderCard(folder: FolderEntity, isTarget: Boolean, onClick: () -> Unit, onRename: () -> Unit, onGloballyPositioned: (Rect) -> Unit) {
-    Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .height(90.dp)
-            .border(if (isTarget) 2.dp else 0.dp, if (isTarget) Indigo600 else Color.Transparent, RoundedCornerShape(16.dp))
-            .onGloballyPositioned { coordinates -> onGloballyPositioned(coordinates.boundsInWindow()) }
-            .clickable { onClick() },
-        colors = CardDefaults.cardColors(containerColor = Indigo50)
-    ) {
-        Row(modifier = Modifier.fillMaxSize().padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
-            Icon(Icons.Default.Folder, contentDescription = null, tint = Indigo400, modifier = Modifier.size(36.dp))
-            Spacer(Modifier.width(12.dp))
-            Text(folder.name, fontWeight = FontWeight.Bold, color = Indigo900, fontSize = 15.sp, maxLines = 2, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
-            IconButton(onClick = onRename, modifier = Modifier.size(32.dp)) { Icon(Icons.Default.Edit, contentDescription = "Renomear", tint = Indigo400, modifier = Modifier.size(20.dp)) }
+    var expanded by remember { mutableStateOf(false) }
+    Card(modifier = Modifier.fillMaxWidth().aspectRatio(0.75f).border(if (isTarget) 2.dp else 0.dp, if (isTarget) Indigo600 else Color.Transparent, RoundedCornerShape(12.dp)).onGloballyPositioned { coordinates -> onGloballyPositioned(coordinates.boundsInWindow()) }.clickable { onClick() }, colors = CardDefaults.cardColors(containerColor = Indigo50)) {
+        Box(modifier = Modifier.fillMaxSize()) {
+            Column(modifier = Modifier.fillMaxSize().padding(16.dp), verticalArrangement = Arrangement.Center, horizontalAlignment = Alignment.CenterHorizontally) {
+                Icon(Icons.Default.Folder, contentDescription = null, tint = Indigo400, modifier = Modifier.size(48.dp))
+                Spacer(Modifier.height(12.dp))
+                Text(folder.name, fontWeight = FontWeight.Bold, color = Indigo900, fontSize = 15.sp, maxLines = 2, overflow = TextOverflow.Ellipsis)
+            }
+            Box(modifier = Modifier.align(Alignment.TopEnd)) {
+                IconButton(onClick = { expanded = true }) { Icon(Icons.Default.MoreVert, contentDescription = "Opções", tint = Indigo400) }
+                DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) { DropdownMenuItem(text = { Text("Renomear Pasta") }, onClick = { expanded = false; onRename() }) }
+            }
         }
     }
 }
 
 @Composable
-private fun DocumentCard(
-    doc: DocumentSummary, isDragging: Boolean, isTarget: Boolean, inFolder: Boolean,
-    onCardClick: () -> Unit, onRename: () -> Unit, onDelete: () -> Unit, onRemoveFromFolder: () -> Unit,
+private fun DocumentCoverCard(
+    doc: DocumentSummary, isDragging: Boolean, isTarget: Boolean, inFolder: Boolean, currentFilter: String, context: android.content.Context,
+    onCardClick: () -> Unit, onRename: () -> Unit, onEditTags: () -> Unit, onDelete: () -> Unit, onRemoveFromFolder: () -> Unit, onMoveToTrash: () -> Unit, onRestore: () -> Unit, onToggleFavorite: () -> Unit,
     onGloballyPositioned: (Rect) -> Unit, onDragStart: (Offset) -> Unit, onDrag: (Offset) -> Unit, onDragEnd: () -> Unit
 ) {
-    val dateFormat = remember { SimpleDateFormat("dd/MM/yyyy", Locale("pt", "BR")) }
-    
+    val dateFormat = remember { SimpleDateFormat("dd/MM/yy", Locale("pt", "BR")) }
+    var expanded by remember { mutableStateOf(false) }
+
     var dragOffset by remember { mutableStateOf(Offset.Zero) }
     val animatedScale by animateFloatAsState(if (isDragging) 1.05f else 1f, label = "scale")
     val animatedAlpha by animateFloatAsState(if (isDragging) 0.85f else 1f, label = "alpha")
     val animatedElevation by animateDpAsState(if (isDragging) 12.dp else 2.dp, label = "elevation")
+    
+    val coverFile = File(context.filesDir, "covers/${doc.id}.jpg")
+    var coverBitmap by remember { mutableStateOf<ImageBitmap?>(null) }
+    
+    LaunchedEffect(doc.id) {
+        withContext(Dispatchers.IO) {
+            if (coverFile.exists()) {
+                try { coverBitmap = android.graphics.BitmapFactory.decodeFile(coverFile.absolutePath)?.asImageBitmap() } catch (e: Exception) {}
+            }
+        }
+    }
 
-    Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .height(220.dp)
-            .offset { IntOffset(dragOffset.x.roundToInt(), dragOffset.y.roundToInt()) }
-            .graphicsLayer(alpha = animatedAlpha, scaleX = animatedScale, scaleY = animatedScale)
-            .border(if (isTarget) 2.dp else 0.dp, if (isTarget) Indigo600 else Color.Transparent, RoundedCornerShape(16.dp))
-            .onGloballyPositioned { coordinates -> onGloballyPositioned(coordinates.boundsInWindow()) }
+    Column(
+        modifier = Modifier.fillMaxWidth().offset { IntOffset(dragOffset.x.roundToInt(), dragOffset.y.roundToInt()) }.graphicsLayer(alpha = animatedAlpha, scaleX = animatedScale, scaleY = animatedScale).onGloballyPositioned { coordinates -> onGloballyPositioned(coordinates.boundsInWindow()) }
             .pointerInput(doc.id) {
-                detectDragGesturesAfterLongPress(
-                    onDragStart = { offset -> onDragStart(offset) },
-                    onDrag = { change, dragAmount -> 
-                        change.consume()
-                        dragOffset += dragAmount
-                        onDrag(dragAmount) 
-                    },
-                    onDragEnd = { dragOffset = Offset.Zero; onDragEnd() },
-                    onDragCancel = { dragOffset = Offset.Zero; onDragEnd() }
-                )
-            }
-            .clickable { onCardClick() },
-        shape = RoundedCornerShape(16.dp), 
-        elevation = CardDefaults.cardElevation(animatedElevation), 
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
+                if (currentFilter != "Lixo") {
+                    detectDragGesturesAfterLongPress(onDragStart = { offset -> onDragStart(offset) }, onDrag = { change, dragAmount -> change.consume(); dragOffset += dragAmount; onDrag(dragAmount) }, onDragEnd = { dragOffset = Offset.Zero; onDragEnd() }, onDragCancel = { dragOffset = Offset.Zero; onDragEnd() })
+                }
+            }.clickable { onCardClick() }
     ) {
-        Column(modifier = Modifier.fillMaxSize().padding(16.dp)) {
-            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                Box(modifier = Modifier.size(44.dp).clip(RoundedCornerShape(12.dp)).background(Color(0xFFFFE4E6)), contentAlignment = Alignment.Center) {
-                    Icon(Icons.Default.PictureAsPdf, contentDescription = null, tint = Color(0xFFEF4444), modifier = Modifier.size(26.dp))
-                }
-                Row {
-                    if (inFolder) {
-                        IconButton(onClick = onRemoveFromFolder, modifier = Modifier.size(32.dp)) { Icon(Icons.Default.Output, contentDescription = "Tirar", tint = Indigo600, modifier = Modifier.size(18.dp)) }
+        Card(modifier = Modifier.fillMaxWidth().aspectRatio(0.7f).border(if (isTarget) 2.dp else 0.dp, if (isTarget) Indigo600 else Color.Transparent, RoundedCornerShape(8.dp)), shape = RoundedCornerShape(8.dp), elevation = CardDefaults.cardElevation(animatedElevation), colors = CardDefaults.cardColors(containerColor = Color.White)) {
+            Box(modifier = Modifier.fillMaxSize()) {
+                if (coverBitmap != null) { Image(bitmap = coverBitmap!!, contentDescription = "Capa do PDF", modifier = Modifier.fillMaxSize(), contentScale = ContentScale.Crop) } else { Box(modifier = Modifier.fillMaxSize().background(Color(0xFFE5E7EB)), contentAlignment = Alignment.Center) { Icon(Icons.Default.PictureAsPdf, contentDescription = null, tint = Color.Gray, modifier = Modifier.size(48.dp)) } }
+                
+                IconButton(onClick = onToggleFavorite, modifier = Modifier.align(Alignment.TopStart).padding(4.dp)) { Icon(if (doc.isFavorite) Icons.Default.Favorite else Icons.Default.FavoriteBorder, contentDescription = "Favoritar", tint = if (doc.isFavorite) Color.Red else Color.DarkGray) }
+                
+                Box(modifier = Modifier.align(Alignment.TopEnd).padding(4.dp)) {
+                    IconButton(onClick = { expanded = true }, modifier = Modifier.size(32.dp).background(Color.White.copy(alpha = 0.85f), RoundedCornerShape(50))) { Icon(Icons.Default.MoreVert, contentDescription = "Opções", tint = Color.Black, modifier = Modifier.size(20.dp)) }
+                    DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
+                        if (currentFilter == "Lixo") {
+                            DropdownMenuItem(text = { Text("Restaurar") }, onClick = { expanded = false; onRestore() })
+                            DropdownMenuItem(text = { Text("Apagar Definitivamente", color = Color.Red) }, onClick = { expanded = false; onDelete() })
+                        } else {
+                            DropdownMenuItem(text = { Text("Renomear Arquivo") }, onClick = { expanded = false; onRename() })
+                            DropdownMenuItem(text = { Text("Editar Rótulos") }, onClick = { expanded = false; onEditTags() }) // 🏷️ NOVO
+                            if (inFolder) { DropdownMenuItem(text = { Text("Remover da Pasta") }, onClick = { expanded = false; onRemoveFromFolder() }) }
+                            DropdownMenuItem(text = { Text("Mover para o Lixo") }, onClick = { expanded = false; onMoveToTrash() })
+                        }
                     }
-                    IconButton(onClick = onRename, modifier = Modifier.size(32.dp)) { Icon(Icons.Default.Edit, contentDescription = "Renomear", tint = MaterialTheme.colorScheme.outline, modifier = Modifier.size(18.dp)) }
-                    IconButton(onClick = onDelete, modifier = Modifier.size(32.dp)) { Icon(Icons.Default.DeleteOutline, contentDescription = "Apagar", tint = MaterialTheme.colorScheme.outline, modifier = Modifier.size(18.dp)) }
                 }
             }
-            Spacer(Modifier.height(6.dp))
-            Text(doc.title.ifBlank { doc.fileName }, fontWeight = FontWeight.Bold, fontSize = 14.sp, maxLines = 2, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
-            if (doc.authorLastName.isNotBlank()) Text("${doc.authorLastName}${if (doc.authorFirstName.isNotBlank()) ", ${doc.authorFirstName}" else ""}", fontSize = 11.sp, color = MaterialTheme.colorScheme.outline, maxLines = 1, overflow = TextOverflow.Ellipsis)
-            Spacer(Modifier.height(8.dp))
-            HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.2f))
-            Spacer(Modifier.height(8.dp))
-            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
-                Box(modifier = Modifier.clip(RoundedCornerShape(6.dp)).background(Indigo600.copy(alpha = 0.1f)).padding(horizontal = 6.dp, vertical = 3.dp)) {
-                    Text("${doc.highlightCount} Cit.", fontSize = 9.sp, fontWeight = FontWeight.Bold, color = Indigo600)
+        }
+        
+        Spacer(Modifier.height(8.dp))
+        Text(doc.title.ifBlank { doc.fileName }, fontWeight = FontWeight.Medium, fontSize = 13.sp, maxLines = 2, overflow = TextOverflow.Ellipsis)
+        
+        // 🏷️ NOVO: Renderiza os Rótulos na Interface!
+        if (doc.labels.isNotBlank()) {
+            val tags = doc.labels.split(",").map { it.trim() }.filter { it.isNotEmpty() }
+            if (tags.isNotEmpty()) {
+                Row(modifier = Modifier.fillMaxWidth().padding(top = 4.dp), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                    tags.take(2).forEach { tag ->
+                        Box(modifier = Modifier.background(Color(0xFFFEF3C7), RoundedCornerShape(4.dp)).border(1.dp, Color(0xFFF59E0B), RoundedCornerShape(4.dp)).padding(horizontal = 4.dp, vertical = 2.dp)) {
+                            Text(tag, fontSize = 9.sp, fontWeight = FontWeight.Bold, color = Color(0xFFD97706))
+                        }
+                    }
+                    if (tags.size > 2) {
+                        Text("+${tags.size - 2}", fontSize = 9.sp, color = Color.Gray, modifier = Modifier.align(Alignment.CenterVertically))
+                    }
                 }
-                Box(modifier = Modifier.clip(RoundedCornerShape(6.dp)).background(Color(0xFFF59E0B).copy(alpha = 0.12f)).padding(horizontal = 6.dp, vertical = 3.dp)) {
-                    Text("${doc.annotationCount} Notas", fontSize = 9.sp, fontWeight = FontWeight.Bold, color = Color(0xFFF59E0B))
-                }
-                Spacer(Modifier.weight(1f))
-                Text(dateFormat.format(Date(doc.dateAdded)), fontSize = 9.sp, color = MaterialTheme.colorScheme.outline)
             }
+        }
+
+        Spacer(Modifier.height(4.dp))
+        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+             Text("${doc.highlightCount} Cit. \u2022 ${doc.annotationCount} Notas", fontSize = 11.sp, color = MaterialTheme.colorScheme.outline)
+             Text(dateFormat.format(Date(doc.dateAdded)), fontSize = 11.sp, color = MaterialTheme.colorScheme.outline)
         }
     }
 }
 
 @Composable
-private fun EmptyLibrary() {
+private fun EmptyLibrary(filter: String) {
+    val message = when {
+        filter == "Favoritos" -> "Nenhum PDF favoritado."
+        filter == "Lixo" -> "A lixeira está vazia."
+        filter.startsWith("Tag:") -> "Nenhum texto encontrado para esta etiqueta."
+        else -> "A sua estante está vazia."
+    }
     Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
             Box(modifier = Modifier.size(80.dp).clip(RoundedCornerShape(24.dp)).background(Indigo50), contentAlignment = Alignment.Center) {
-                Icon(Icons.Default.MenuBook, contentDescription = null, tint = Indigo200, modifier = Modifier.size(44.dp))
+                Icon(if (filter == "Lixo") Icons.Default.DeleteOutline else if (filter.startsWith("Tag:")) Icons.Default.Label else Icons.Default.MenuBook, contentDescription = null, tint = Indigo200, modifier = Modifier.size(44.dp))
             }
             Spacer(Modifier.height(16.dp))
-            Text("A sua estante esta vazia.", fontWeight = FontWeight.Bold, fontSize = 17.sp, color = MaterialTheme.colorScheme.onBackground)
+            Text(message, fontWeight = FontWeight.Bold, fontSize = 17.sp, color = MaterialTheme.colorScheme.onBackground)
         }
     }
 }
