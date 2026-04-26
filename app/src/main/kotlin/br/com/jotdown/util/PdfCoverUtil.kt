@@ -1,4 +1,4 @@
-package br.com.jotdown.util
+﻿package br.com.jotdown.util
 import android.graphics.Bitmap
 import android.graphics.pdf.PdfRenderer
 import android.os.ParcelFileDescriptor
@@ -7,13 +7,13 @@ import java.io.FileOutputStream
 
 object PdfCoverUtil {
     fun generateCover(pdfFile: File, coverFile: File) {
-        if (coverFile.exists()) return // Se a capa já existe, poupa processamento
+        if (coverFile.exists()) return // Se a capa jÃ¡ existe, poupa processamento
         try {
             val fd = ParcelFileDescriptor.open(pdfFile, ParcelFileDescriptor.MODE_READ_ONLY)
             val renderer = PdfRenderer(fd)
             if (renderer.pageCount > 0) {
                 val page = renderer.openPage(0)
-                // Renderiza numa escala otimizada para miniaturas (rápido e leve na memória)
+                // Renderiza numa escala otimizada para miniaturas (rÃ¡pido e leve na memÃ³ria)
                 val scale = 400f / page.width
                 val width = 400
                 val height = (page.height * scale).toInt()

@@ -44,3 +44,4 @@ abstract class JotdownDatabase : RoomDatabase() {
         }
     }
 }
+

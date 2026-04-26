@@ -23,12 +23,12 @@ android {
         applicationId 'br.com.jotdown'
         minSdk 26
         targetSdk 34
-        versionCode 2
+        versionCode 3
         versionName '2.0.0'
 
         testInstrumentationRunner 'androidx.test.runner.AndroidJUnitProcessor'
 
-        // Reduz tamanho: inclui apenas ABIs necessÃƒÆ’Ã‚Â¡rias
+        // Reduz tamanho: inclui apenas ABIs necessÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¡rias
         ndk {
             abiFilters 'arm64-v8a', 'armeabi-v7a'
         }
@@ -46,7 +46,7 @@ android {
         }
     }
 
-    // Remove arquivos desnecessÃƒÆ’Ã‚Â¡rios do JAR/AAR que inflam a APK
+    // Remove arquivos desnecessÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¡rios do JAR/AAR que inflam a APK
     packaging {
         resources {
             excludes += [
@@ -74,7 +74,7 @@ android {
 
     buildFeatures {
         compose true
-        buildConfig false   // NÃƒÆ’Ã‚Â£o usamos BuildConfig no cÃƒÆ’Ã‚Â³digo
+        buildConfig false   // NÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â£o usamos BuildConfig no cÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â³digo
     }
 
 }
@@ -107,7 +107,7 @@ dependencies {
     implementation 'androidx.core:core-ktx:1.13.1'
     implementation 'androidx.appcompat:appcompat:1.7.0'
 
-    // OCR ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â Google ML Kit
+    // OCR ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â Google ML Kit
     fullImplementation 'com.google.mlkit:text-recognition:16.0.1'
 
     // Debug

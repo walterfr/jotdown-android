@@ -1,4 +1,4 @@
-package br.com.jotdown
+﻿package br.com.jotdown
 
 import android.os.Bundle
 import androidx.activity.ComponentActivity
@@ -18,3 +18,4 @@ class MainActivity : ComponentActivity() {
         }
     }
 }
+

@@ -65,3 +65,4 @@ fun SplashScreen(onTimeout: () -> Unit) {
         }
     }
 }
+

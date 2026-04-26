@@ -18,3 +18,4 @@ abstract class AnnotationDao {
     @Query("DELETE FROM annotations WHERE documentId = :documentId")
     abstract suspend fun deleteAllForDocument(documentId: String): Int
 }
+

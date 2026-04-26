@@ -18,3 +18,4 @@ abstract class DrawingDao {
     @Query("DELETE FROM drawings WHERE documentId = :documentId")
     abstract suspend fun deleteAllForDocument(documentId: String): Int
 }
+

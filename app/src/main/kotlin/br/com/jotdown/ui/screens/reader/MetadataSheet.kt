@@ -1,4 +1,4 @@
-package br.com.jotdown.ui.screens.reader
+﻿package br.com.jotdown.ui.screens.reader
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*

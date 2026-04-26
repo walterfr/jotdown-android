@@ -1,4 +1,4 @@
-package br.com.jotdown.data.entity
+﻿package br.com.jotdown.data.entity
 
 import androidx.room.Entity
 import androidx.room.PrimaryKey
@@ -21,3 +21,4 @@ data class DrawingEntity(
     val page: Int,
     val pathsJson: String  // serializado como JSON
 )
+

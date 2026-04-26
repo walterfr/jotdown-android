@@ -1,4 +1,4 @@
-package br.com.jotdown.ui.theme
+﻿package br.com.jotdown.ui.theme
 
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
@@ -60,3 +60,4 @@ fun JotdownTheme(
         content     = content
     )
 }
+

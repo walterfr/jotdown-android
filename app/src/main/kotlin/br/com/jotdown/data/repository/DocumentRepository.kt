@@ -45,3 +45,4 @@ class DocumentRepository(
 
     suspend fun updateDocumentLabels(id: String, labels: String) = documentDao.updateDocumentLabels(id, labels)
 }
+

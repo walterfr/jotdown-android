@@ -1,4 +1,4 @@
-package br.com.jotdown.util
+﻿package br.com.jotdown.util
 
 import android.content.Context
 import android.content.Intent
@@ -28,7 +28,7 @@ object ExportUtil {
                 val pp = if (doc.pages.isNotBlank()) "p. ${doc.pages}, " else ""
                 "$lastName, ${doc.authorFirstName}. ${doc.title}$fSub. ${doc.journal}, ${doc.city}, $vv$pp${doc.year}."
             }
-            else -> "$lastName, ${doc.authorFirstName}. ${doc.title}$fSub. Disponível em: <${doc.url}>. Acesso em: ${doc.accessDate}."
+            else -> "$lastName, ${doc.authorFirstName}. ${doc.title}$fSub. DisponÃ­vel em: <${doc.url}>. Acesso em: ${doc.accessDate}."
         }
         return Triple(refText, authorFmt, doc.year)
     }
@@ -53,10 +53,10 @@ object ExportUtil {
         sb.appendLine()
         sb.appendLine("# ${doc.title}")
         sb.appendLine()
-        sb.appendLine("## Referência Bibliográfica")
+        sb.appendLine("## ReferÃªncia BibliogrÃ¡fica")
         sb.appendLine(ref)
         sb.appendLine()
-        sb.appendLine("## Destaques e Citações")
+        sb.appendLine("## Destaques e CitaÃ§Ãµes")
         sb.appendLine()
 
         highlights.forEach { h ->
@@ -120,13 +120,13 @@ object ExportUtil {
             fun addSpace(h: Float) = drawLines.add(Line(lineH = h))
             fun addDivider()      = drawLines.add(Line(isDivider = true, lineH = 6f))
 
-            // Conteúdo
+            // ConteÃºdo
             addText(doc.title, pTitle, 22f)
             addSpace(6f); addDivider(); addSpace(8f)
-            addText("REFERÊNCIA ABNT", pSection, 14f)
+            addText("REFERÃŠNCIA ABNT", pSection, 14f)
             addText(ref, pBody, 13f)
             addSpace(8f); addDivider(); addSpace(8f)
-            addText("CITAÇÕES DIRETAS (${highlights.size})", pSection, 16f)
+            addText("CITAÃ‡Ã•ES DIRETAS (${highlights.size})", pSection, 16f)
             highlights.forEachIndexed { i, h ->
                 addSpace(4f)
                 addText("[${i + 1}]  p. ${h.page}", pSmall, 12f)
@@ -134,7 +134,7 @@ object ExportUtil {
                 addText("($authorFmt, $year, p. ${h.page})", pSmall, 16f, indent = 8f)
             }
 
-            // Renderiza em páginas PDF
+            // Renderiza em pÃ¡ginas PDF
             val pdfDoc = PdfDocument()
             var pageNum = 1
             var page    = pdfDoc.startPage(PdfDocument.PageInfo.Builder(pageW.toInt(), pageH.toInt(), pageNum).create())
@@ -196,11 +196,11 @@ object ExportUtil {
         sb.appendLine("FICHAMENTO: ${doc.title}")
         sb.appendLine(sep)
         sb.appendLine()
-        sb.appendLine("REFERÊNCIA COMPLETA:")
+        sb.appendLine("REFERÃŠNCIA COMPLETA:")
         sb.appendLine(ref)
         sb.appendLine()
         sb.appendLine(dash)
-        sb.appendLine("CITAÇÕES DIRETAS:")
+        sb.appendLine("CITAÃ‡Ã•ES DIRETAS:")
         sb.appendLine()
         highlights.forEach { h ->
             sb.appendLine("\"${h.text}\" ($authorFmt, $year, p. ${h.page})")
@@ -240,3 +240,4 @@ object ExportUtil {
         }
     }
 }
+

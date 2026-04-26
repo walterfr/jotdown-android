@@ -18,3 +18,4 @@ abstract class FolderDao {
     @Query("UPDATE folders SET name = :newName WHERE id = :id")
     abstract suspend fun renameFolder(id: Long, newName: String): Int
 }
+

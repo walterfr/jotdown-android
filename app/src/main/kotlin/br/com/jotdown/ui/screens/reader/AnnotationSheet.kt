@@ -1,4 +1,4 @@
-package br.com.jotdown.ui.screens.reader
+﻿package br.com.jotdown.ui.screens.reader
 
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.background
@@ -9,6 +9,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -41,7 +42,7 @@ fun AnnotationSheet(
     ) {
         Column(modifier = Modifier.fillMaxWidth().fillMaxHeight(0.8f)) {
 
-            // Header âmbar estilo HTML
+            // Header Ã¢mbar estilo HTML
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -52,7 +53,7 @@ fun AnnotationSheet(
                     Icon(Icons.Default.StickyNote2, contentDescription = null,
                         tint = Color.White, modifier = Modifier.size(18.dp))
                     Spacer(Modifier.width(8.dp))
-                    Text("Minhas Anotações", fontWeight = FontWeight.Bold,
+                    Text("Minhas AnotaÃ§Ãµes", fontWeight = FontWeight.Bold,
                         fontSize = 15.sp, color = Color.White)
                     if (validAnnotations.isNotEmpty()) {
                         Spacer(Modifier.width(8.dp))
@@ -83,7 +84,7 @@ fun AnnotationSheet(
                         Icon(Icons.Default.ChatBubbleOutline, contentDescription = null,
                             tint = Color(0xFF4B5563), modifier = Modifier.size(52.dp))
                         Spacer(Modifier.height(12.dp))
-                        Text("Nenhuma anotação criada.", color = Color(0xFF6B7280),
+                        Text("Nenhuma anotaÃ§Ã£o criada.", color = Color(0xFF6B7280),
                             fontWeight = FontWeight.Bold, fontSize = 14.sp)
                     }
                 }
@@ -94,7 +95,7 @@ fun AnnotationSheet(
                     verticalArrangement = Arrangement.spacedBy(10.dp)
                 ) {
                     items(validAnnotations, key = { it.id }) { annot ->
-                        // Card estilo HTML: fundo branco, borda âmbar, clicável para navegar
+                        // Card estilo HTML: fundo branco, borda Ã¢mbar, clicÃ¡vel para navegar
                         Card(
                             onClick = { onGoToPage?.invoke(annot.page); onDismiss() },
                             shape = RoundedCornerShape(12.dp),
@@ -109,7 +110,7 @@ fun AnnotationSheet(
                                 verticalAlignment = Alignment.Top
                             ) {
                                 Column(modifier = Modifier.weight(1f)) {
-                                    // Badge de página âmbar
+                                    // Badge de pÃ¡gina Ã¢mbar
                                     Row(
                                         modifier = Modifier.fillMaxWidth(),
                                         horizontalArrangement = Arrangement.SpaceBetween,
@@ -121,10 +122,10 @@ fun AnnotationSheet(
                                                 .background(Color(0xFFFEF3C7))
                                                 .padding(horizontal = 8.dp, vertical = 3.dp)
                                         ) {
-                                            Text("Pág. ${annot.page}", fontSize = 10.sp,
+                                            Text("PÃ¡g. ${annot.page}", fontSize = 10.sp,
                                                 fontWeight = FontWeight.Bold, color = Color(0xFF92400E))
                                         }
-                                        Icon(Icons.Default.ArrowForward, contentDescription = null,
+                                        Icon(Icons.AutoMirrored.Filled.ArrowForward, contentDescription = null,
                                             tint = Color(0xFFF59E0B), modifier = Modifier.size(14.dp))
                                     }
                                     Spacer(Modifier.height(6.dp))
@@ -148,3 +149,5 @@ fun AnnotationSheet(
         }
     }
 }
+
+

@@ -18,3 +18,4 @@ abstract class HighlightDao {
     @Query("DELETE FROM highlights WHERE documentId = :documentId")
     abstract suspend fun deleteAllForDocument(documentId: String): Int
 }
+

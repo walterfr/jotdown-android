@@ -18,3 +18,4 @@ class JotdownApplication : Application() {
         )
     }
 }
+

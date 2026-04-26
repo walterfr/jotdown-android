@@ -1,4 +1,4 @@
-package br.com.jotdown.ui.screens.reader
+﻿package br.com.jotdown.ui.screens.reader
 import androidx.compose.ui.unit.sp
 
 import androidx.compose.foundation.background
@@ -47,7 +47,7 @@ fun ReaderTopBar(
                 horizontalArrangement = Arrangement.spacedBy(4.dp)
             ) {
                 ToolGroup {
-                    // Seleção de texto (toggle)
+                    // SeleÃ§Ã£o de texto (toggle)
                     ToolButton(
                         icon     = Icons.Default.TextFields,
                         selected = activeTool == Tool.SELECT,
@@ -64,7 +64,7 @@ fun ReaderTopBar(
                     ToolButton(
                         icon    = Icons.Default.Draw,
                         selected = activeTool == Tool.PENCIL,
-                        tooltip = "Lápis (traço fino)",
+                        tooltip = "LÃ¡pis (traÃ§o fino)",
                         onClick = { onToolSelect(Tool.PENCIL) }
                     )
                     ToolButton(
@@ -84,12 +84,12 @@ fun ReaderTopBar(
                         icon     = Icons.Default.StickyNote2,
                         selected = activeTool == Tool.ANNOTATION,
                         tint     = if (activeTool == Tool.ANNOTATION) Color(0xFFF59E0B) else null,
-                        tooltip  = "Post-it: toque no PDF para adicionar anotação",
+                        tooltip  = "Post-it: toque no PDF para adicionar anotaÃ§Ã£o",
                         onClick  = { onToolSelect(Tool.ANNOTATION) }
                     )
                 }
 
-                // Paleta de cores — visível quando uma ferramenta de desenho está ativa
+                // Paleta de cores â€” visÃ­vel quando uma ferramenta de desenho estÃ¡ ativa
                 if (activeTool == Tool.PEN || activeTool == Tool.PENCIL || activeTool == Tool.HIGHLIGHTER) {
                     Spacer(Modifier.width(4.dp))
                     Row(
@@ -115,7 +115,7 @@ fun ReaderTopBar(
                     }
                 }
 
-                // Botão Capturar — só aparece quando SELECT está ativo
+                // BotÃ£o Capturar â€” sÃ³ aparece quando SELECT estÃ¡ ativo
                 if (activeTool == Tool.SELECT) {
                     Spacer(Modifier.width(4.dp))
                     Button(
@@ -205,3 +205,5 @@ private fun ToolButton(
 private fun ToolDivider() {
     Box(modifier = Modifier.width(1.dp).height(20.dp).background(MaterialTheme.colorScheme.outline.copy(alpha = 0.3f)))
 }
+
+

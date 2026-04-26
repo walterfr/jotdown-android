@@ -7,3 +7,4 @@ sealed class Screen(val route: String) {
         fun createRoute(documentId: String) = "reader/$documentId"
     }
 }
+

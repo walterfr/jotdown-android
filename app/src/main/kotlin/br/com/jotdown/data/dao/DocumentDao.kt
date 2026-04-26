@@ -57,3 +57,4 @@ data class DocumentSummary(
     val isFavorite: Boolean = false, val isTrashed: Boolean = false, val labels: String = "",
     val highlightCount: Int = 0, val annotationCount: Int = 0
 )
+

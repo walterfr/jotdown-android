@@ -35,10 +35,20 @@ object BackupUtil {
                     }
                 }
 
-                // Backup dos PDFs físicos
+                // Backup dos PDFs fÃ­sicos
                 val pdfDir = File(context.filesDir, "pdfs")
                 if (pdfDir.exists()) {
-                    pdfDir.listFiles()?.forEach { pdf ->
+                                    // Backup das Capas (Novo v1.1)
+                val coverDir = File(context.filesDir, "covers")
+                if (coverDir.exists()) {
+                    coverDir.listFiles()?.forEach { cover ->
+                        out.putNextEntry(ZipEntry("covers/"))
+                        cover.inputStream().use { it.copyTo(out) }
+                        out.closeEntry()
+                    }
+                }
+                
+                pdfDir.listFiles()?.forEach { pdf ->
                         out.putNextEntry(ZipEntry("pdfs/${pdf.name}"))
                         pdf.inputStream().use { it.copyTo(out) }
                         out.closeEntry()
@@ -87,7 +97,7 @@ object BackupUtil {
                 }
                 zis.close()
 
-                // Sucesso na importação - Exige reinicialização para o Room carregar o novo DB
+                // Sucesso na importaÃ§Ã£o - Exige reinicializaÃ§Ã£o para o Room carregar o novo DB
                 withContext(Dispatchers.Main) {
                     Toast.makeText(context, "Backup restaurado! Reiniciando aplicativo...", Toast.LENGTH_LONG).show()
                 }
@@ -101,3 +111,4 @@ object BackupUtil {
         }
     }
 }
+
