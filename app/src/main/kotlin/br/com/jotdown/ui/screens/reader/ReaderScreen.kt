@@ -68,6 +68,9 @@ fun ReaderScreen(
     val prefs = remember { context.getSharedPreferences("pdf_prefs", android.content.Context.MODE_PRIVATE) }
     val docId = document?.id ?: ""
 
+    val isDarkModePref = prefs.getBoolean("dark_mode_$docId", false)
+    var isDarkMode by remember { mutableStateOf(isDarkModePref) }
+
     var numPages        by remember { mutableIntStateOf(0) }
     var showSidebar     by remember { mutableStateOf(false) }
     var showAnnotations by remember { mutableStateOf(false) }
@@ -142,7 +145,21 @@ fun ReaderScreen(
                     onToggleSearch = { isSearchActive = !isSearchActive; if (!isSearchActive) searchQuery = "" },
                     onSearchQueryChange = { searchQuery = it },
                     onAbntClick = { showAbntDialog = true },
-                    onExportClick = { showExportDialog = true }
+                    onExportClick = { showExportDialog = true },
+                    isDarkMode = isDarkMode,
+                    onToggleDarkMode = { 
+                        isDarkMode = !isDarkMode
+                        prefs.edit().putBoolean("dark_mode_$docId", isDarkMode).apply() 
+                    },
+                    onSharePdf = {
+                        val uri = androidx.core.content.FileProvider.getUriForFile(context, "${context.packageName}.provider", pdfFile!!)
+                        val intent = android.content.Intent(android.content.Intent.ACTION_SEND).apply {
+                            type = "application/pdf"
+                            putExtra(android.content.Intent.EXTRA_STREAM, uri)
+                            addFlags(android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                        }
+                        context.startActivity(android.content.Intent.createChooser(intent, "Compartilhar PDF"))
+                    }
                 )
             }
         },
@@ -182,6 +199,7 @@ fun ReaderScreen(
                     strokeWidthMultiplier = strokeWidthMultiplier,
                     pdfRenderer          = pdfRenderer,
                     renderMutex     = renderMutex,
+                    isDarkMode      = isDarkMode,
                     onScrollDone    = { scrollToPage = 0 },
                     onOcrSuccess    = { page, text ->
                         textToEdit = text
@@ -464,7 +482,7 @@ fun PdfViewer(
     pdfFile: File, numPages: Int, currentPage: Int, activeTool: Tool, strokeColor: Int,
     annotations: List<AnnotationEntity>, drawings: List<DrawingEntity>,
     scrollToPage: Int, undoTrigger: Long, redoTrigger: Long, strokeWidthMultiplier: Float,
-    pdfRenderer: PdfRenderer?, renderMutex: Mutex,
+    pdfRenderer: PdfRenderer?, renderMutex: Mutex, isDarkMode: Boolean,
     onScrollDone: () -> Unit, onOcrSuccess: (Int, String) -> Unit, onPageChange: (Int) -> Unit,
     onAddAnnotation: (Int, Float, Float) -> Unit, onOpenAnnotation: (AnnotationEntity) -> Unit, onSaveDrawing: (Int, String) -> Unit
 ) {
@@ -524,7 +542,7 @@ fun PdfViewer(
                     annotations = annotations.filter { it.page == pageNumber },
                     pageDrawingsJson = drawings.find { it.page == pageNumber }?.pathsJson,
                     undoTrigger = undoTrigger, redoTrigger = redoTrigger, strokeWidthMultiplier = strokeWidthMultiplier,
-                    pdfRenderer = pdfRenderer, renderMutex = renderMutex,
+                    pdfRenderer = pdfRenderer, renderMutex = renderMutex, isDarkMode = isDarkMode,
                     onOcrSuccess = { text -> onOcrSuccess(pageNumber, text) },
                     onAddAnnotation = { x, y -> onAddAnnotation(pageNumber, x, y) },
                     onOpenAnnotation = onOpenAnnotation,
@@ -540,7 +558,7 @@ fun PdfPage(
     pdfFile: File, pageNumber: Int, activeTool: Tool, strokeColor: Int,
     annotations: List<AnnotationEntity>, pageDrawingsJson: String?,
     undoTrigger: Long, redoTrigger: Long, strokeWidthMultiplier: Float,
-    pdfRenderer: PdfRenderer?, renderMutex: Mutex,
+    pdfRenderer: PdfRenderer?, renderMutex: Mutex, isDarkMode: Boolean,
     onOcrSuccess: (String) -> Unit, onAddAnnotation: (Float, Float) -> Unit, onOpenAnnotation: (AnnotationEntity) -> Unit, onSaveDrawing: (String) -> Unit
 ) {
     var bitmap by remember { mutableStateOf<Bitmap?>(null) }
@@ -580,7 +598,13 @@ fun PdfPage(
             Box(modifier = Modifier.fillMaxWidth()) {
                 val bmp = bitmap
                 if (bmp != null) {
-                    Image(bitmap = bmp.asImageBitmap(), contentDescription = null, modifier = Modifier.fillMaxWidth(), contentScale = ContentScale.FillWidth)
+                    val filter = if (isDarkMode) ColorFilter.colorMatrix(ColorMatrix(floatArrayOf(
+                        -1f, 0f, 0f, 0f, 255f,
+                        0f, -1f, 0f, 0f, 255f,
+                        0f, 0f, -1f, 0f, 255f,
+                        0f, 0f, 0f, 1f, 0f
+                    ))) else null
+                    Image(bitmap = bmp.asImageBitmap(), contentDescription = null, modifier = Modifier.fillMaxWidth(), contentScale = ContentScale.FillWidth, colorFilter = filter)
                     
                     DrawingLayer(
                         modifier = Modifier.matchParentSize(),

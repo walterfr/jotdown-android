@@ -85,6 +85,11 @@ fun LibraryScreen(viewModel: LibraryViewModel, onOpenDocument: (String) -> Unit)
     val boundsMap = remember { mutableMapOf<String, Rect>() }
     val folderBoundsMap = remember { mutableMapOf<Long, Rect>() }
 
+    val searchQuery by viewModel.searchQuery.collectAsState()
+    val sortOrder by viewModel.sortOrder.collectAsState()
+    var isSearchActive by remember { mutableStateOf(false) }
+    var showSortMenu by remember { mutableStateOf(false) }
+
     ModalNavigationDrawer(
         drawerState = drawerState,
         drawerContent = {
@@ -148,7 +153,7 @@ fun LibraryScreen(viewModel: LibraryViewModel, onOpenDocument: (String) -> Unit)
                 Spacer(Modifier.weight(1f))
                 HorizontalDivider()
                 Text(
-                    "v2.1.1",
+                    "v2.2.0",
                     modifier = Modifier.padding(horizontal = 20.dp, vertical = 14.dp),
                     fontSize = 11.sp,
                     color = MaterialTheme.colorScheme.outline
@@ -160,20 +165,44 @@ fun LibraryScreen(viewModel: LibraryViewModel, onOpenDocument: (String) -> Unit)
             topBar = {
                 TopAppBar(
                     title = {
-                        if (currentFolder == null) {
+                        if (isSearchActive) {
+                            TextField(
+                                value = searchQuery,
+                                onValueChange = { viewModel.setSearchQuery(it) },
+                                placeholder = { Text("Buscar arquivos...") },
+                                colors = TextFieldDefaults.colors(focusedContainerColor = Color.Transparent, unfocusedContainerColor = Color.Transparent, focusedIndicatorColor = Color.Transparent, unfocusedIndicatorColor = Color.Transparent),
+                                modifier = Modifier.fillMaxWidth()
+                            )
+                        } else if (currentFolder == null) {
                             Text(if (currentFilter.startsWith("Tag:")) currentFilter.removePrefix("Tag:") else if (currentFilter == "Tudo") "A Minha Biblioteca" else currentFilter, fontWeight = FontWeight.Black, fontSize = 22.sp, color = MaterialTheme.colorScheme.primary)
                         } else {
                             Text(currentFolder!!.name, fontWeight = FontWeight.Black, fontSize = 20.sp, color = MaterialTheme.colorScheme.primary)
                         }
                     },
                     navigationIcon = {
-                        if (currentFolder != null) {
+                        if (isSearchActive) {
+                            IconButton(onClick = { isSearchActive = false; viewModel.setSearchQuery("") }) { Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Fechar Busca") }
+                        } else if (currentFolder != null) {
                             IconButton(onClick = { viewModel.enterFolder(null) }) { Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Voltar") }
                         } else {
                             IconButton(onClick = { scope.launch { drawerState.open() } }) { Icon(Icons.Default.Menu, contentDescription = "Menu") }
                         }
                     },
                     actions = {
+                        if (!isSearchActive) {
+                            IconButton(onClick = { isSearchActive = true }) { Icon(Icons.Default.Search, contentDescription = "Buscar") }
+                            Box {
+                                IconButton(onClick = { showSortMenu = true }) { Icon(Icons.Default.Sort, contentDescription = "Ordenar") }
+                                DropdownMenu(expanded = showSortMenu, onDismissRequest = { showSortMenu = false }) {
+                                    listOf("Recentes", "A-Z", "Z-A", "Fichamentos", "Favoritos").forEach { opt ->
+                                        DropdownMenuItem(
+                                            text = { Text(opt, fontWeight = if (sortOrder == opt) FontWeight.Bold else FontWeight.Normal) },
+                                            onClick = { viewModel.setSortOrder(opt); showSortMenu = false }
+                                        )
+                                    }
+                                }
+                            }
+                        }
                         if (currentFolder != null) { IconButton(onClick = { showDeleteFolder = true }) { Icon(Icons.Default.DeleteOutline, contentDescription = "Apagar", tint = MaterialTheme.colorScheme.error) } }
                         Box {
                             IconButton(onClick = { showMenu = true }) { Icon(Icons.Default.MoreVert, contentDescription = "Menu") }

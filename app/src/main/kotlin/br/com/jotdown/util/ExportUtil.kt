@@ -6,6 +6,8 @@ import br.com.jotdown.data.entity.HighlightEntity
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.toArgb
 
 /**
  * Exporta as anotações e fichamentos de um documento para Markdown,
@@ -66,15 +68,31 @@ object ExportUtil {
             }
         }
 
-        // ── Anotações (post-its) ─────────────────────────────────────────────
-        val validAnnotations = annotations.filter { it.text.isNotBlank() }.sortedBy { it.page }
+        // ── Anotações (post-its) categorizadas por cor (I8) ────────────────
+        val validAnnotations = annotations.filter { it.text.isNotBlank() }
         if (validAnnotations.isNotEmpty()) {
-            appendLine("## 📝 Anotações")
+            appendLine("## \uD83D\uDCDD Anotações (Categorizadas)")
             appendLine()
-            validAnnotations.forEach { a ->
-                appendLine("- **p. ${a.page}** — ${a.text.trim()}")
+            
+            // Define categorias com base nas cores usadas no ReaderScreen
+            val categories = mapOf(
+                Color.Red.toArgb().toLong() to "Crítico / Revisar",
+                Color(0xFFEAB308).toArgb().toLong() to "Dúvidas / Detalhes",
+                Color.Blue.toArgb().toLong() to "Referências / Autores",
+                Color(0xFF22C55E).toArgb().toLong() to "Citações Importantes"
+            )
+            
+            // Agrupa por cor
+            val grouped = validAnnotations.groupBy { it.color.toLongOrNull() ?: androidx.compose.ui.graphics.Color.Black.toArgb().toLong() }
+            
+            grouped.forEach { (colorArgb, list) ->
+                val categoryName = categories[colorArgb] ?: "Geral / Outros"
+                appendLine("### $categoryName")
+                list.sortedBy { it.page }.forEach { a ->
+                    appendLine("- **p. ${a.page}** — ${a.text.trim()}")
+                }
+                appendLine()
             }
-            appendLine()
         }
     }
 

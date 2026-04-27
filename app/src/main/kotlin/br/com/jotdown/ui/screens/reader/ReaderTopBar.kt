@@ -37,6 +37,9 @@ fun ReaderTopBar(
     onSearchQueryChange: (String) -> Unit,
     onAbntClick: () -> Unit,
     onExportClick: () -> Unit,
+    isDarkMode: Boolean,
+    onToggleDarkMode: () -> Unit,
+    onSharePdf: () -> Unit,
 ) {
     var showOverflow by remember { mutableStateOf(false) }
 
@@ -83,6 +86,18 @@ fun ReaderTopBar(
                 IconButton(onClick = onToggleSearch) {
                     Icon(Icons.Default.Search, contentDescription = "Buscar")
                 }
+                // Metadados
+                IconButton(onClick = onMenuClick) {
+                    Icon(Icons.Default.MenuBook, contentDescription = "Metadados")
+                }
+                // Modo Escuro
+                IconButton(onClick = onToggleDarkMode) {
+                    Icon(if (isDarkMode) Icons.Default.LightMode else Icons.Default.DarkMode, contentDescription = "Modo Noturno")
+                }
+                // Tela cheia
+                IconButton(onClick = onToggleFullscreen) {
+                    Icon(if (isFullscreen) Icons.Default.FullscreenExit else Icons.Default.Fullscreen, contentDescription = "Tela Cheia")
+                }
                 // Anotações
                 IconButton(onClick = onAnnotations) {
                     BadgedBox(
@@ -90,13 +105,6 @@ fun ReaderTopBar(
                     ) {
                         Icon(Icons.AutoMirrored.Filled.Message, contentDescription = "Anotações")
                     }
-                }
-                // Tela cheia
-                IconButton(onClick = onToggleFullscreen) {
-                    Icon(
-                        if (isFullscreen) Icons.Default.FullscreenExit else Icons.Default.Fullscreen,
-                        contentDescription = if (isFullscreen) "Sair da tela cheia" else "Tela cheia"
-                    )
                 }
                 // Overflow menu
                 IconButton(onClick = { showOverflow = true }) {
@@ -109,18 +117,18 @@ fun ReaderTopBar(
                         onClick = { showOverflow = false; onAbntClick() }
                     )
                     DropdownMenuItem(
-                        text = { Text("Exportar para Markdown") },
-                        leadingIcon = { Icon(Icons.Default.Share, contentDescription = null) },
+                        text = { Text("Exportar Markdown") },
                         onClick = { showOverflow = false; onExportClick() }
                     )
-                    HorizontalDivider()
                     DropdownMenuItem(
-                        text = { Text("Mais opções") },
-                        leadingIcon = { Icon(Icons.Default.Settings, contentDescription = null) },
-                        onClick = { showOverflow = false; onMenuClick() }
+                        text = { Text("Compartilhar PDF Original") },
+                        onClick = { showOverflow = false; onSharePdf() }
                     )
                 }
-            }
+            },
+            colors = TopAppBarDefaults.topAppBarColors(
+                containerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.95f)
+            )
         )
     }
 }

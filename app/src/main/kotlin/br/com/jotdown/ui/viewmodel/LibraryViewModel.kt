@@ -28,6 +28,15 @@ class LibraryViewModel(private val repository: DocumentRepository) : ViewModel()
     private val _currentTab = MutableStateFlow("Tudo")
     val currentTab: StateFlow<String> = _currentTab.asStateFlow()
 
+    private val _searchQuery = MutableStateFlow("")
+    val searchQuery: StateFlow<String> = _searchQuery.asStateFlow()
+
+    private val _sortOrder = MutableStateFlow("Recentes") // "Recentes", "A-Z", "Z-A", "Fichamentos", "Favoritos"
+    val sortOrder: StateFlow<String> = _sortOrder.asStateFlow()
+
+    fun setSearchQuery(query: String) { _searchQuery.value = query }
+    fun setSortOrder(order: String) { _sortOrder.value = order }
+
     val folders: StateFlow<List<FolderEntity>> = repository.getAllFolders()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
@@ -36,9 +45,11 @@ class LibraryViewModel(private val repository: DocumentRepository) : ViewModel()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     @OptIn(ExperimentalCoroutinesApi::class)
-    val displayDocuments: StateFlow<List<DocumentSummary>> = combine(_currentFilter, _currentFolder, _currentTab) { filter, folder, tab ->
-        Triple(filter, folder, tab)
-    }.flatMapLatest { (filter, folder, tab) ->
+    val displayDocuments: StateFlow<List<DocumentSummary>> = combine(
+        _currentFilter, _currentFolder, _currentTab, _searchQuery, _sortOrder
+    ) { filter, folder, tab, query, sort ->
+        Tuple5(filter, folder, tab, query, sort)
+    }.flatMapLatest { (filter, folder, tab, query, sort) ->
         val rawDocs = when {
             filter == "Recentes" -> repository.getAllDocumentSummaries()
             filter == "Favoritos" -> repository.getFavoriteDocumentSummaries()
@@ -51,14 +62,36 @@ class LibraryViewModel(private val repository: DocumentRepository) : ViewModel()
         }
         
         rawDocs.map { list ->
-            when (tab) {
+            // Filtro por Tab
+            var filtered = when (tab) {
                 "PDF" -> list.filter { it.docType != "nota" } 
                 "Nota" -> list.filter { it.docType == "nota" || it.annotationCount > 0 || it.highlightCount > 0 }
                 "Pasta" -> emptyList()
                 else -> list
             }
+            
+            // Filtro por Busca
+            if (query.isNotBlank()) {
+                filtered = filtered.filter { 
+                    it.title.contains(query, ignoreCase = true) ||
+                    it.fileName.contains(query, ignoreCase = true) ||
+                    it.authorLastName.contains(query, ignoreCase = true) ||
+                    it.labels.contains(query, ignoreCase = true)
+                }
+            }
+            
+            // Ordenação
+            when (sort) {
+                "A-Z" -> filtered.sortedBy { it.title.ifBlank { it.fileName }.lowercase() }
+                "Z-A" -> filtered.sortedByDescending { it.title.ifBlank { it.fileName }.lowercase() }
+                "Fichamentos" -> filtered.sortedByDescending { it.highlightCount + it.annotationCount }
+                "Favoritos" -> filtered.sortedWith(compareByDescending<DocumentSummary> { it.isFavorite }.thenByDescending { it.dateAdded })
+                else -> filtered.sortedByDescending { it.dateAdded } // "Recentes"
+            }
         }
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    private data class Tuple5<A, B, C, D, E>(val a: A, val b: B, val c: C, val d: D, val e: E)
 
     fun enterFolder(folder: FolderEntity?) { _currentFolder.value = folder }
     fun setFilter(filter: String) { _currentFilter.value = filter; if (filter != "Tudo") _currentFolder.value = null }
