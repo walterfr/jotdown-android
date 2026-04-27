@@ -1,4 +1,5 @@
 package br.com.jotdown.data.dao
+
 import androidx.room.*
 import br.com.jotdown.data.entity.HighlightEntity
 import kotlinx.coroutines.flow.Flow

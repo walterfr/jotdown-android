@@ -44,11 +44,11 @@ class ReaderViewModel(private val repository: DocumentRepository, private val do
     fun setStrokeColor(color: Int) { _strokeColor.value = color }
     fun setCurrentPage(page: Int) { _currentPage.value = page }
 
-    // ÃƒÆ’Ã‚Â°Ãƒâ€¦Ã‚Â¸ÃƒÂ¢Ã¢â€šÂ¬Ã‚ÂºÃƒâ€šÃ‚Â¡ÃƒÆ’Ã‚Â¯Ãƒâ€šÃ‚Â¸Ãƒâ€šÃ‚Â A CORREÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¡ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢O MESTRA: Atualiza o registo existente em vez de duplicar
+    // ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â°ÃƒÆ’Ã¢â‚¬Â¦Ãƒâ€šÃ‚Â¸ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚ÂºÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¡ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¯ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¸ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â A CORREÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â¡ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢O MESTRA: Atualiza o registo existente em vez de duplicar
     fun saveDrawing(page: Int, json: String) = viewModelScope.launch(Dispatchers.IO) {
         val existing = drawings.value.find { it.page == page }
         if (existing != null) {
-            // Se jÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¡ desenhou nesta pÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¡gina antes, atualiza a mesma folha!
+            // Se jÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¡ desenhou nesta pÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¡gina antes, atualiza a mesma folha!
             repository.upsertDrawing(existing.copy(pathsJson = json))
         } else {
             // Primeira vez a desenhar nesta folha
@@ -57,7 +57,7 @@ class ReaderViewModel(private val repository: DocumentRepository, private val do
     }
 
     fun addAnnotation(page: Int, x: Float, y: Float, text: String) = viewModelScope.launch(Dispatchers.IO) {
-        repository.upsertAnnotation(AnnotationEntity(id = System.currentTimeMillis(), documentId = documentId, page = page, x = x, y = y, text = text))
+        repository.upsertAnnotation(AnnotationEntity(id = 0L, documentId = documentId, page = page, x = x, y = y, text = text))
     }
 
     fun updateAnnotation(id: Long, text: String) = viewModelScope.launch(Dispatchers.IO) {
@@ -70,7 +70,7 @@ class ReaderViewModel(private val repository: DocumentRepository, private val do
     fun updateHighlight(id: Long, text: String) = viewModelScope.launch(kotlinx.coroutines.Dispatchers.IO) { highlights.value.find { it.id == id }?.let { repository.insertHighlight(it.copy(text = text)) } }
     fun deleteHighlight(id: Long) = viewModelScope.launch(kotlinx.coroutines.Dispatchers.IO) { repository.deleteHighlight(id) }
     fun addHighlight(page: Int, text: String) = viewModelScope.launch(Dispatchers.IO) {
-        repository.insertHighlight(HighlightEntity(id = System.currentTimeMillis(), documentId = documentId, page = page, text = text))
+        repository.insertHighlight(HighlightEntity(id = 0L, documentId = documentId, page = page, text = text))
     }
 
     fun saveMetadata(docType: String, authorLastName: String, authorFirstName: String, title: String, subtitle: String, edition: String, city: String, publisher: String, year: String, journal: String, volume: String, pages: String, url: String, accessDate: String) = viewModelScope.launch(Dispatchers.IO) {

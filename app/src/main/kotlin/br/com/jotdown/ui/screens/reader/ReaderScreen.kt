@@ -36,6 +36,8 @@ import br.com.jotdown.ui.viewmodel.ReaderViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import org.json.JSONArray
 import java.io.File
 
@@ -62,9 +64,13 @@ fun ReaderScreen(viewModel: ReaderViewModel, onBack: () -> Unit) {
     var pageOffset by remember(docId) { mutableIntStateOf(if (docId.isNotBlank()) prefs.getInt("offset_$docId", 0) else 0) }
     var showOffsetDialog by remember { mutableStateOf(false) }
     
-    // Ã°Å¸â€ºÂ¡Ã¯Â¸Â UNDO / REDO STATE
     var undoTrigger by remember { mutableLongStateOf(0L) }
     var redoTrigger by remember { mutableLongStateOf(0L) }
+
+    // 🛡️ MOTOR DE PDF OTIMIZADO (BUG-05 FIX)
+    var pdfRenderer by remember { mutableStateOf<PdfRenderer?>(null) }
+    var fileDescriptor by remember { mutableStateOf<ParcelFileDescriptor?>(null) }
+    val renderMutex = remember { Mutex() }
 
     LaunchedEffect(pdfFile) {
         val file = pdfFile ?: return@LaunchedEffect
@@ -72,13 +78,20 @@ fun ReaderScreen(viewModel: ReaderViewModel, onBack: () -> Unit) {
             try {
                 val fd = ParcelFileDescriptor.open(file, ParcelFileDescriptor.MODE_READ_ONLY)
                 val renderer = PdfRenderer(fd)
+                fileDescriptor = fd
+                pdfRenderer = renderer
                 numPages = renderer.pageCount
-                renderer.close(); fd.close()
-            } catch (e: Exception) {}
+            } catch (e: Exception) { e.printStackTrace() }
         }
     }
 
-    // Ã°Å¸â€ºÂ¡Ã¯Â¸Â CORREÃƒâ€¡ÃƒÆ’O MESTRE: Carregar ÃƒÂºltima pÃƒÂ¡gina lida
+    DisposableEffect(pdfFile) {
+        onDispose {
+            pdfRenderer?.close()
+            fileDescriptor?.close()
+        }
+    }
+
     LaunchedEffect(numPages, docId) {
         if (numPages > 0 && docId.isNotBlank()) {
             val last = prefs.getInt("last_$docId", 1)
@@ -102,6 +115,7 @@ fun ReaderScreen(viewModel: ReaderViewModel, onBack: () -> Unit) {
                     pdfFile = pdfFile!!, numPages = numPages, currentPage = currentPage, activeTool = activeTool, 
                     strokeColor = strokeColor, annotations = annotations, drawings = drawings, 
                     scrollToPage = scrollToPage, undoTrigger = undoTrigger, redoTrigger = redoTrigger,
+                    pdfRenderer = pdfRenderer, renderMutex = renderMutex, // Passamos o motor seguro
                     onScrollDone = { scrollToPage = 0 }, 
                     onPageChange = { 
                         viewModel.setCurrentPage(it)
@@ -111,24 +125,33 @@ fun ReaderScreen(viewModel: ReaderViewModel, onBack: () -> Unit) {
                 )
             }
 
-            // Ã°Å¸â€ºÂ¡Ã¯Â¸Â NAVEGAÃƒâ€¡ÃƒÆ’O: SLIDER + CONTADOR
             if (numPages > 0) {
-                Column(modifier = Modifier.align(Alignment.BottomCenter).padding(bottom = 16.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-                    Slider(
-                        value = currentPage.toFloat(),
-                        onValueChange = { scrollToPage = it.toInt() },
-                        valueRange = 1f..numPages.toFloat(),
-                        modifier = Modifier.width(300.dp).padding(bottom = 8.dp)
-                    )
+                Row(
+                    modifier = Modifier.align(Alignment.BottomCenter).padding(bottom = 24.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.Center
+                ) {
                     Surface(
                         onClick = { showOffsetDialog = true },
                         shape = RoundedCornerShape(16.dp),
-                        color = Color.Black.copy(alpha = 0.7f)
+                        color = Color.Black.copy(alpha = 0.85f)
                     ) {
                         Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.padding(horizontal = 16.dp, vertical = 6.dp)) {
                             Text("PDF $currentPage de $numPages", color = Color.Gray, fontSize = 10.sp)
                             Text("Doc ${currentPage + pageOffset} de $numPages", color = Color.White, fontSize = 13.sp, fontWeight = FontWeight.Bold)
                         }
+                    }
+                    Spacer(modifier = Modifier.width(12.dp))
+                    Surface(
+                        shape = RoundedCornerShape(16.dp),
+                        color = Color.Black.copy(alpha = 0.5f)
+                    ) {
+                        Slider(
+                            value = currentPage.toFloat(),
+                            onValueChange = { scrollToPage = it.toInt() },
+                            valueRange = 1f..numPages.toFloat(),
+                            modifier = Modifier.width(130.dp).padding(horizontal = 12.dp)
+                        )
                     }
                 }
             }
@@ -151,18 +174,22 @@ fun PdfViewer(
     pdfFile: File, numPages: Int, currentPage: Int, activeTool: Tool, strokeColor: Int, 
     annotations: List<AnnotationEntity>, drawings: List<DrawingEntity>,
     scrollToPage: Int, undoTrigger: Long, redoTrigger: Long,
+    pdfRenderer: PdfRenderer?, renderMutex: Mutex,
     onScrollDone: () -> Unit, onPageChange: (Int) -> Unit, onSaveDrawing: (Int, String) -> Unit
 ) {
+    val isScrollEnabled = activeTool == Tool.NONE || activeTool == Tool.SELECT || activeTool == Tool.ANNOTATION
     val listState = rememberLazyListState()
+    
     LaunchedEffect(scrollToPage) { if (scrollToPage in 1..numPages) { listState.scrollToItem(scrollToPage - 1); onScrollDone() } }
     LaunchedEffect(listState.firstVisibleItemIndex) { onPageChange(listState.firstVisibleItemIndex + 1) }
 
-    LazyColumn(state = listState, modifier = Modifier.fillMaxSize().background(Color(0xFFF0F0F7))) {
+    LazyColumn(state = listState, userScrollEnabled = isScrollEnabled, modifier = Modifier.fillMaxSize().background(Color(0xFFF0F0F7))) {
         items(numPages) { index ->
             PdfPage(
                 pdfFile = pdfFile, pageNumber = index + 1, activeTool = activeTool, strokeColor = strokeColor,
                 pageDrawingsJson = drawings.find { it.page == index + 1 }?.pathsJson,
                 undoTrigger = undoTrigger, redoTrigger = redoTrigger,
+                pdfRenderer = pdfRenderer, renderMutex = renderMutex,
                 onSaveDrawing = { onSaveDrawing(index + 1, it) }
             )
         }
@@ -172,24 +199,32 @@ fun PdfViewer(
 @Composable
 fun PdfPage(
     pdfFile: File, pageNumber: Int, activeTool: Tool, strokeColor: Int,
-    pageDrawingsJson: String?, undoTrigger: Long, redoTrigger: Long, onSaveDrawing: (String) -> Unit
+    pageDrawingsJson: String?, undoTrigger: Long, redoTrigger: Long,
+    pdfRenderer: PdfRenderer?, renderMutex: Mutex,
+    onSaveDrawing: (String) -> Unit
 ) {
     var bitmap by remember { mutableStateOf<Bitmap?>(null) }
     var widthPx by remember { mutableIntStateOf(0) }
 
     BoxWithConstraints(modifier = Modifier.fillMaxWidth().padding(16.dp)) {
         widthPx = with(LocalDensity.current) { maxWidth.roundToPx() }
-        LaunchedEffect(widthPx) {
-            withContext(Dispatchers.IO) {
-                try {
-                    val fd = ParcelFileDescriptor.open(pdfFile, ParcelFileDescriptor.MODE_READ_ONLY)
-                    val renderer = PdfRenderer(fd); val page = renderer.openPage(pageNumber - 1)
-                    val h = (page.height * (widthPx.toFloat() / page.width)).toInt()
-                    val bmp = Bitmap.createBitmap(widthPx, h, Bitmap.Config.ARGB_8888)
-                    bmp.eraseColor(android.graphics.Color.WHITE)
-                    page.render(bmp, null, null, PdfRenderer.Page.RENDER_MODE_FOR_DISPLAY)
-                    bitmap = bmp; page.close(); renderer.close(); fd.close()
-                } catch (e: Exception) {}
+        
+        // 🛡️ CARREGAMENTO SEGURO E THREAD-SAFE DA PÁGINA
+        LaunchedEffect(widthPx, pdfRenderer) {
+            if (widthPx > 0 && pdfRenderer != null) {
+                withContext(Dispatchers.IO) {
+                    try {
+                        renderMutex.withLock {
+                            val page = pdfRenderer.openPage(pageNumber - 1)
+                            val h = (page.height * (widthPx.toFloat() / page.width)).toInt()
+                            val bmp = Bitmap.createBitmap(widthPx, h, Bitmap.Config.ARGB_8888)
+                            bmp.eraseColor(android.graphics.Color.WHITE)
+                            page.render(bmp, null, null, PdfRenderer.Page.RENDER_MODE_FOR_DISPLAY)
+                            bitmap = bmp
+                            page.close()
+                        }
+                    } catch (e: Exception) { e.printStackTrace() }
+                }
             }
         }
 
@@ -211,10 +246,9 @@ fun DrawingLayer(activeTool: Tool, strokeColor: Color, json: String?, undo: Long
     var currentPath by remember { mutableStateOf<DrawnPath?>(null) }
 
     LaunchedEffect(json) {
-        if (!json.isNullOrBlank() && paths.isEmpty()) { paths.addAll(parseDrawingsJson(json)) }
+        if (!json.isNullOrBlank()) { paths.clear(); paths.addAll(parseDrawingsJson(json)) }
     }
 
-    // Ã°Å¸â€ºÂ¡Ã¯Â¸Â LÃƒâ€œGICA UNDO / REDO
     LaunchedEffect(undo) { if (undo > 0 && paths.isNotEmpty()) { redoStack.add(paths.removeAt(paths.size - 1)); onSave(paths.toJson()) } }
     LaunchedEffect(redo) { if (redo > 0 && redoStack.isNotEmpty()) { paths.add(redoStack.removeAt(redoStack.size - 1)); onSave(paths.toJson()) } }
 
@@ -222,7 +256,7 @@ fun DrawingLayer(activeTool: Tool, strokeColor: Color, json: String?, undo: Long
         if (activeTool == Tool.NONE || activeTool == Tool.ANNOTATION || activeTool == Tool.SELECT) return@pointerInput
         awaitEachGesture {
             val down = awaitFirstDown()
-            // Trava de Stylus removida para permitir qualquer tipo de toque
+            down.consume()
             redoStack.clear()
             var pathInProgress = DrawnPath(activeTool, strokeColor, mutableListOf(PathPoint(down.position.x, down.position.y, down.pressure)))
             currentPath = pathInProgress
@@ -249,7 +283,6 @@ fun DrawScope.drawDrawnPath(path: DrawnPath) {
     if (path.points.size < 2) return
     val baseWidth = when(path.tool) { Tool.PEN -> 3f; Tool.PENCIL -> 4f; Tool.HIGHLIGHTER -> 25f; Tool.ERASER -> 30f; else -> 2f }
     
-    // Ã°Å¸â€ºÂ¡Ã¯Â¸Â CORREÃƒâ€¡ÃƒÆ’O MESTRE: Marca-texto translÃƒÂºcido com BlendMode
     val alpha = if (path.tool == Tool.HIGHLIGHTER) 0.35f else 0.9f
     val blend = if (path.tool == Tool.HIGHLIGHTER) BlendMode.Multiply else BlendMode.SrcOver
 

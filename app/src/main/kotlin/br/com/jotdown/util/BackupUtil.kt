@@ -1,4 +1,4 @@
-﻿package br.com.jotdown.util
+package br.com.jotdown.util
 
 import android.content.Context
 import android.content.Intent
@@ -42,7 +42,7 @@ object BackupUtil {
                 val coverDir = File(context.filesDir, "covers")
                 if (coverDir.exists()) {
                     coverDir.listFiles()?.forEach { cover ->
-                        out.putNextEntry(ZipEntry("covers/"))
+                        out.putNextEntry(ZipEntry("covers/${cover.name}"))
                         cover.inputStream().use { it.copyTo(out) }
                         out.closeEntry()
                     }
@@ -102,7 +102,7 @@ object BackupUtil {
                     Toast.makeText(context, "Backup restaurado! Reiniciando aplicativo...", Toast.LENGTH_LONG).show()
                 }
                 Thread.sleep(1500)
-                exitProcess(0)
+                android.os.Process.killProcess(android.os.Process.myPid())
             } catch (e: Exception) { 
                 withContext(Dispatchers.Main) {
                     Toast.makeText(context, "Erro ao restaurar: ${e.message}", Toast.LENGTH_LONG).show()
