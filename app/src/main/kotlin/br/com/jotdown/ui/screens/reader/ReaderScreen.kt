@@ -117,19 +117,22 @@ fun ReaderScreen(
     Scaffold(
         topBar = {
             ReaderTopBar(
+                annotationCount = annotations.size,
+                onBack          = onBack,
+                onMenuClick     = { showSidebar = true },
+                onAnnotations   = { showAnnotations = true },
+            )
+        },
+        bottomBar = {
+            ReaderToolsBar(
                 activeTool    = activeTool,
                 strokeColor   = strokeColor,
-                annotationCount = annotations.size,
-                onBack        = onBack,
-                onMenuClick   = { showSidebar = true },
                 onToolSelect  = { viewModel.toggleTool(it) },
                 onColorSelect = { viewModel.setStrokeColor(it) },
-                onAnnotations = { showAnnotations = true },
-                onCapture     = { },
                 onUndo        = { undoTrigger = System.currentTimeMillis() },
-                onRedo        = { redoTrigger = System.currentTimeMillis() }
+                onRedo        = { redoTrigger = System.currentTimeMillis() },
             )
-        }
+        },
     ) { padding ->
         Box(modifier = Modifier.fillMaxSize().padding(padding)) {
             val file = pdfFile
@@ -195,25 +198,30 @@ fun ReaderScreen(
                     modifier = Modifier
                         .align(Alignment.BottomCenter)
                         .fillMaxWidth()
-                        .padding(bottom = 24.dp, start = 16.dp, end = 16.dp)
+                        // A bottomBar do Scaffold já cria espaço suficiente;
+                        // o padding aqui apenas afasta a pílula do limite do conteúdo.
+                        .padding(bottom = 8.dp, start = 16.dp, end = 16.dp)
                 ) {
                     // Pílula centralizada
                     Surface(
                         onClick = { showOffsetDialog = true },
                         shape = RoundedCornerShape(16.dp),
-                        color = Color.Black.copy(alpha = 0.85f),
+                        color = MaterialTheme.colorScheme.inverseSurface.copy(alpha = 0.9f),
                         modifier = Modifier.align(Alignment.Center)
                     ) {
-                        Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.padding(horizontal = 16.dp, vertical = 6.dp)) {
-                            Text("PDF $currentPage de $numPages", color = Color.Gray, fontSize = 10.sp)
-                            Text("Doc ${currentPage + pageOffset} de $numPages", color = Color.White, fontSize = 13.sp, fontWeight = FontWeight.Bold)
+                        Column(
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            modifier = Modifier.padding(horizontal = 16.dp, vertical = 6.dp)
+                        ) {
+                            Text("PDF $currentPage de $numPages", color = MaterialTheme.colorScheme.inverseOnSurface.copy(alpha = 0.7f), fontSize = 10.sp)
+                            Text("Doc ${currentPage + pageOffset} de $numPages", color = MaterialTheme.colorScheme.inverseOnSurface, fontSize = 13.sp, fontWeight = FontWeight.Bold)
                         }
                     }
 
                     // Slider ancorado à direita
                     Surface(
                         shape = RoundedCornerShape(16.dp),
-                        color = Color.Black.copy(alpha = 0.5f),
+                        color = MaterialTheme.colorScheme.inverseSurface.copy(alpha = 0.5f),
                         modifier = Modifier.align(Alignment.CenterEnd)
                     ) {
                         Slider(
