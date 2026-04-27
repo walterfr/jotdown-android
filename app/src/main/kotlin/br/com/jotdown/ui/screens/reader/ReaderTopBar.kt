@@ -1,15 +1,12 @@
-﻿package br.com.jotdown.ui.screens.reader
-import androidx.compose.ui.unit.sp
+package br.com.jotdown.ui.screens.reader
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.automirrored.filled.Comment
+import androidx.compose.material.icons.automirrored.filled.*
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -20,190 +17,62 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import br.com.jotdown.ui.theme.*
-import br.com.jotdown.ui.viewmodel.Tool
+import androidx.compose.ui.unit.sp
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ReaderTopBar(
-    activeTool: Tool,
-    strokeColor: Int,
-    onBack: () -> Unit,
-    onMenuClick: () -> Unit,
-    onToolSelect: (Tool) -> Unit,
-    onColorSelect: (Int) -> Unit,
-    onAnnotations: () -> Unit,
-    onCapture: () -> Unit
+    activeTool: Tool, strokeColor: Int, annotationCount: Int,
+    onBack: () -> Unit, onMenuClick: () -> Unit,
+    onToolSelect: (Tool) -> Unit, onColorSelect: (Int) -> Unit,
+    onAnnotations: () -> Unit, onCapture: () -> Unit,
+    onUndo: () -> Unit, onRedo: () -> Unit // 🛡️ NOVOS
 ) {
-    val colors = listOf(
-        0xFF000000.toInt(), 0xFFEF4444.toInt(), 0xFF3B82F6.toInt(),
-        0xFF10B981.toInt(), 0xFFFDE047.toInt(), 0xFF8B5CF6.toInt()
-    )
-
     TopAppBar(
         title = {
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(4.dp)
-            ) {
-                ToolGroup {
-                    // SeleÃ§Ã£o de texto (toggle)
-                    ToolButton(
-                        icon     = Icons.Default.TextFields,
-                        selected = activeTool == Tool.SELECT,
-                        tooltip  = "Selecionar texto para captura (toque para ligar/desligar)",
-                        onClick  = { onToolSelect(Tool.SELECT) }
-                    )
-                    ToolDivider()
-                    ToolButton(
-                        icon    = Icons.Default.Edit,
-                        selected = activeTool == Tool.PEN,
-                        tooltip = "Caneta (desenho livre)",
-                        onClick = { onToolSelect(Tool.PEN) }
-                    )
-                    ToolButton(
-                        icon    = Icons.Default.Draw,
-                        selected = activeTool == Tool.PENCIL,
-                        tooltip = "LÃ¡pis (traÃ§o fino)",
-                        onClick = { onToolSelect(Tool.PENCIL) }
-                    )
-                    ToolButton(
-                        icon    = Icons.Default.Highlight,
-                        selected = activeTool == Tool.HIGHLIGHTER,
-                        tooltip = "Marcador de texto",
-                        onClick = { onToolSelect(Tool.HIGHLIGHTER) }
-                    )
-                    ToolButton(
-                        icon    = Icons.Default.AutoFixNormal,
-                        selected = activeTool == Tool.ERASER,
-                        tooltip = "Borracha",
-                        onClick = { onToolSelect(Tool.ERASER) }
-                    )
-                    ToolDivider()
-                    ToolButton(
-                        icon     = Icons.Default.StickyNote2,
-                        selected = activeTool == Tool.ANNOTATION,
-                        tint     = if (activeTool == Tool.ANNOTATION) Color(0xFFF59E0B) else null,
-                        tooltip  = "Post-it: toque no PDF para adicionar anotaÃ§Ã£o",
-                        onClick  = { onToolSelect(Tool.ANNOTATION) }
-                    )
-                }
-
-                // Paleta de cores â€” visÃ­vel quando uma ferramenta de desenho estÃ¡ ativa
-                if (activeTool == Tool.PEN || activeTool == Tool.PENCIL || activeTool == Tool.HIGHLIGHTER) {
-                    Spacer(Modifier.width(4.dp))
-                    Row(
-                        modifier = Modifier
-                            .clip(RoundedCornerShape(10.dp))
-                            .background(MaterialTheme.colorScheme.surfaceVariant)
-                            .padding(horizontal = 6.dp, vertical = 6.dp),
-                        horizontalArrangement = Arrangement.spacedBy(4.dp),
-                        verticalAlignment     = Alignment.CenterVertically
-                    ) {
-                        colors.forEach { color ->
-                            Box(
-                                modifier = Modifier
-                                    .size(20.dp)
-                                    .clip(CircleShape)
-                                    .background(Color(color))
-                                    .then(if (strokeColor == color)
-                                        Modifier.border(2.dp, Color.White, CircleShape)
-                                    else Modifier)
-                                    .clickable { onColorSelect(color) }
-                            )
-                        }
-                    }
-                }
-
-                // BotÃ£o Capturar â€” sÃ³ aparece quando SELECT estÃ¡ ativo
-                if (activeTool == Tool.SELECT) {
-                    Spacer(Modifier.width(4.dp))
-                    Button(
-                        onClick = onCapture,
-                        colors  = ButtonDefaults.buttonColors(containerColor = Color(0xFF16A34A)),
-                        contentPadding = PaddingValues(horizontal = 10.dp, vertical = 4.dp),
-                        modifier = Modifier.height(34.dp)
-                    ) {
-                        Icon(Icons.Default.FormatQuote, contentDescription = null,
-                            modifier = Modifier.size(16.dp))
-                        Spacer(Modifier.width(4.dp))
-                        Text("Capturar", fontSize = 11.sp, fontWeight = FontWeight.Bold)
-                    }
-                }
+            Row(horizontalArrangement = Arrangement.spacedBy(2.dp), verticalAlignment = Alignment.CenterVertically) {
+                ReaderTooltipButton("Selecionar", Icons.Default.Crop, activeTool == Tool.SELECT) { onToolSelect(Tool.SELECT) }
+                ReaderTooltipButton("Caneta", Icons.Default.Edit, activeTool == Tool.PEN) { onToolSelect(Tool.PEN) }
+                ReaderTooltipButton("Lápis", Icons.Default.Brush, activeTool == Tool.PENCIL) { onToolSelect(Tool.PENCIL) }
+                ReaderTooltipButton("Marca-texto", Icons.Default.BorderColor, activeTool == Tool.HIGHLIGHTER) { onToolSelect(Tool.HIGHLIGHTER) }
+                ReaderTooltipButton("Borracha", Icons.Default.AutoFixHigh, activeTool == Tool.ERASER) { onToolSelect(Tool.ERASER) }
+                ReaderTooltipButton("Post-it", Icons.AutoMirrored.Filled.StickyNote2, activeTool == Tool.ANNOTATION) { onToolSelect(Tool.ANNOTATION) }
+                
+                VerticalDivider(modifier = Modifier.height(24.dp).padding(horizontal = 4.dp))
+                
+                // 🛡️ BOTÕES UNDO / REDO
+                IconButton(onClick = onUndo) { Icon(Icons.AutoMirrored.Filled.Undo, contentDescription = "Desfazer") }
+                IconButton(onClick = onRedo) { Icon(Icons.AutoMirrored.Filled.Redo, contentDescription = "Refazer") }
             }
         },
-        navigationIcon = {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                IconButton(onClick = onBack) {
-                    Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Voltar")
-                }
-                IconButton(onClick = onMenuClick) {
-                    Icon(Icons.Default.Menu, contentDescription = "Menu")
-                }
-            }
-        },
+        navigationIcon = { ReaderTooltipButton("Voltar", Icons.AutoMirrored.Filled.ArrowBack, false, onBack) },
         actions = {
-            IconButton(onClick = onAnnotations) {
-                Icon(Icons.AutoMirrored.Filled.Comment, contentDescription = "Anotacoes",
-                    tint = MaterialTheme.colorScheme.onSurface)
+            if (activeTool == Tool.PEN || activeTool == Tool.PENCIL || activeTool == Tool.HIGHLIGHTER) {
+                Row(modifier = Modifier.padding(end = 8.dp)) {
+                    listOf(0xFF000000.toInt(), 0xFFEF4444.toInt(), 0xFF3B82F6.toInt(), 0xFF10B981.toInt(), 0xFFF59E0B.toInt()).forEach { color ->
+                        Box(modifier = Modifier.size(20.dp).clip(CircleShape).background(Color(color)).clickable { onColorSelect(color) }.padding(4.dp))
+                        Spacer(Modifier.width(4.dp))
+                    }
+                }
             }
-        },
-        colors = TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.surface)
-    )
-}
-
-@Composable
-private fun ToolGroup(content: @Composable RowScope.() -> Unit) {
-    Row(
-        modifier = Modifier
-            .clip(RoundedCornerShape(12.dp))
-            .background(MaterialTheme.colorScheme.surfaceVariant)
-            .padding(4.dp),
-        horizontalArrangement = Arrangement.spacedBy(2.dp),
-        verticalAlignment     = Alignment.CenterVertically,
-        content               = content
+            Button(onClick = onCapture, colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF10B981)), shape = RoundedCornerShape(8.dp), modifier = Modifier.height(36.dp)) {
+                Icon(Icons.Default.CropFree, contentDescription = null, modifier = Modifier.size(16.dp), tint = Color.White)
+                Text("Capturar", color = Color.White, fontSize = 12.sp, modifier = Modifier.padding(start = 4.dp))
+            }
+            IconButton(onClick = onAnnotations) {
+                BadgedBox(badge = { if (annotationCount > 0) Badge { Text(annotationCount.toString()) } }) {
+                    Icon(Icons.AutoMirrored.Filled.Message, contentDescription = null)
+                }
+            }
+            IconButton(onClick = onMenuClick) { Icon(Icons.Default.MoreVert, contentDescription = null) }
+        }
     )
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun ToolButton(
-    icon: ImageVector,
-    selected: Boolean,
-    tooltip: String,
-    tint: Color? = null,
-    onClick: () -> Unit
-) {
-    TooltipBox(
-        positionProvider = TooltipDefaults.rememberPlainTooltipPositionProvider(),
-        tooltip = {
-            PlainTooltip {
-                Text(tooltip, fontSize = 11.sp)
-            }
-        },
-        state = rememberTooltipState()
-    ) {
-        Box(
-            modifier = Modifier
-                .size(36.dp)
-                .clip(RoundedCornerShape(8.dp))
-                .background(if (selected) MaterialTheme.colorScheme.surface else Color.Transparent)
-                .clickable(onClick = onClick),
-            contentAlignment = Alignment.Center
-        ) {
-            Icon(
-                icon,
-                contentDescription = tooltip,
-                tint     = tint ?: if (selected) Indigo600 else MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.size(18.dp)
-            )
-        }
+fun ReaderTooltipButton(text: String, icon: ImageVector, isSelected: Boolean, onClick: () -> Unit) {
+    TooltipBox(positionProvider = TooltipDefaults.rememberPlainTooltipPositionProvider(), tooltip = { PlainTooltip { Text(text) } }, state = rememberTooltipState()) {
+        IconButton(onClick = onClick) { Icon(icon, contentDescription = text, tint = if (isSelected) MaterialTheme.colorScheme.primary else LocalContentColor.current) }
     }
 }
-
-@Composable
-private fun ToolDivider() {
-    Box(modifier = Modifier.width(1.dp).height(20.dp).background(MaterialTheme.colorScheme.outline.copy(alpha = 0.3f)))
-}
-
-

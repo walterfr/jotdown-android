@@ -12,6 +12,7 @@ import br.com.jotdown.data.entity.FolderEntity
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.*
+import kotlinx.coroutines.flow.flatMap
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.io.File
@@ -116,7 +117,7 @@ class LibraryViewModel(private val repository: DocumentRepository) : ViewModel()
         }
     }
 
-    // 📒 NOVO: Cria um PDF com pautas (estilo caderno)
+    // ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â°ÃƒÆ’Ã¢â‚¬Â¦Ãƒâ€šÃ‚Â¸ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã¢â‚¬Å“ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â‚¬Å¾Ã‚Â¢ NOVO: Cria um PDF com pautas (estilo caderno)
     fun createBlankNote(context: Context, title: String) = viewModelScope.launch {
         withContext(Dispatchers.IO) {
             try {

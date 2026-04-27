@@ -1,21 +1,20 @@
-﻿package br.com.jotdown.data.dao
+package br.com.jotdown.data.dao
 import androidx.room.*
 import br.com.jotdown.data.entity.FolderEntity
 import kotlinx.coroutines.flow.Flow
 
 @Dao
-@JvmSuppressWildcards
-abstract class FolderDao {
-    @Insert
-    abstract suspend fun insert(folder: FolderEntity): Long
+interface FolderDao {
+    @Query("SELECT * FROM folders ORDER BY name ASC")
+    fun getAllFolders(): Flow<List<FolderEntity>>
 
-    @Query("SELECT * FROM folders")
-    abstract fun getAllFolders(): Flow<List<FolderEntity>>
+    @Query("SELECT * FROM folders WHERE id = :id LIMIT 1")
+    fun getFolderById(id: Long): FolderEntity?
 
-    @Query("DELETE FROM folders WHERE id = :id")
-    abstract suspend fun deleteFolder(id: Long): Int
+    // 🛡️ Devolve o ID da nova pasta (Long)
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    fun upsertFolder(folder: FolderEntity): Long
 
-    @Query("UPDATE folders SET name = :newName WHERE id = :id")
-    abstract suspend fun renameFolder(id: Long, newName: String): Int
+    @Delete
+    fun deleteFolder(folder: FolderEntity)
 }
-
