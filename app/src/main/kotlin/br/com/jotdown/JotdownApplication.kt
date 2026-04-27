@@ -1,10 +1,15 @@
-﻿package br.com.jotdown
+package br.com.jotdown
 
 import android.app.Application
 import br.com.jotdown.data.db.JotdownDatabase
 import br.com.jotdown.data.repository.DocumentRepository
 
 class JotdownApplication : Application() {
+
+    override fun onCreate() {
+        super.onCreate()
+        com.tom_roush.pdfbox.android.PDFBoxResourceLoader.init(this)
+    }
 
     val database by lazy { JotdownDatabase.getInstance(this) }
 

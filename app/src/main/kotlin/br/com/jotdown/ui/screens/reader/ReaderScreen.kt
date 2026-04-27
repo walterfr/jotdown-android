@@ -100,6 +100,8 @@ fun ReaderScreen(
     var searchQuery by remember { mutableStateOf("") }
     var showAbntDialog by remember { mutableStateOf(false) }
     var showExportDialog by remember { mutableStateOf(false) }
+    var showOutline by remember { mutableStateOf(false) }
+    var pdfBookmarks by remember { mutableStateOf<List<br.com.jotdown.util.PdfBookmark>>(emptyList()) }
 
     LaunchedEffect(pdfFile) {
         val file = pdfFile ?: return@LaunchedEffect
@@ -110,6 +112,9 @@ fun ReaderScreen(
                 fileDescriptor = fd
                 pdfRenderer = renderer
                 numPages = renderer.pageCount
+                
+                // I2 - Carrega sumário (Bookmarks) pelo PDFBox
+                pdfBookmarks = br.com.jotdown.util.PdfOutlineUtil.getBookmarks(file)
             } catch (e: Exception) { e.printStackTrace() }
         }
     }
@@ -125,6 +130,14 @@ fun ReaderScreen(
         if (numPages > 0 && docId.isNotBlank()) {
             val last = prefs.getInt("last_$docId", 1)
             if (last > 1) { scrollToPage = last }
+            
+            // Registra a data de acesso atual (B8)
+            viewModel.saveMetadata(
+                document?.docType ?: "livro", document?.authorLastName ?: "", document?.authorFirstName ?: "", 
+                document?.title ?: "", document?.subtitle ?: "", document?.edition ?: "", document?.city ?: "", 
+                document?.publisher ?: "", document?.year ?: "", document?.journal ?: "", document?.volume ?: "", 
+                document?.pages ?: "", document?.url ?: "", accessDate = System.currentTimeMillis().toString()
+            )
         }
     }
 
@@ -161,7 +174,8 @@ fun ReaderScreen(
                             addFlags(android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION)
                         }
                         context.startActivity(android.content.Intent.createChooser(intent, "Compartilhar PDF"))
-                    }
+                    },
+                    onOutlineClick = { showOutline = true }
                 )
             }
         },
@@ -485,6 +499,55 @@ fun ReaderScreen(
                 TextButton(onClick = { showExportDialog = false }) { Text("Cancelar") }
             }
         )
+    }
+
+    if (showOutline) {
+        ModalBottomSheet(onDismissRequest = { showOutline = false }) {
+            Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp).padding(bottom = 32.dp)) {
+                Text("Sumário do Livro", fontSize = 20.sp, fontWeight = FontWeight.Black, color = Indigo600)
+                Spacer(Modifier.height(16.dp))
+                if (pdfBookmarks.isEmpty()) {
+                    Text("Nenhum sumário encontrado neste PDF.", color = MaterialTheme.colorScheme.outline)
+                } else {
+                    androidx.compose.foundation.lazy.LazyColumn {
+                        items(pdfBookmarks.size) { i ->
+                            BookmarkItem(bookmark = pdfBookmarks[i], depth = 0, onPageSelected = { p -> scrollToPage = p; showOutline = false })
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun BookmarkItem(bookmark: br.com.jotdown.util.PdfBookmark, depth: Int, onPageSelected: (Int) -> Unit) {
+    var expanded by remember { mutableStateOf(false) }
+    Column(modifier = Modifier.fillMaxWidth()) {
+        Row(
+            modifier = Modifier.fillMaxWidth().padding(start = (depth * 16).dp).clickable { if (bookmark.page > 0) onPageSelected(bookmark.page); expanded = !expanded }.padding(vertical = 12.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            if (bookmark.children.isNotEmpty()) {
+                Icon(if (expanded) Icons.Default.ExpandMore else Icons.Default.ChevronRight, contentDescription = null, tint = Indigo400, modifier = Modifier.size(20.dp))
+            } else {
+                Spacer(Modifier.width(20.dp))
+            }
+            Spacer(Modifier.width(8.dp))
+            Text(bookmark.title, fontSize = 14.sp, fontWeight = if (depth == 0) FontWeight.Bold else FontWeight.Normal, modifier = Modifier.weight(1f))
+            if (bookmark.page > 0) {
+                Text(bookmark.page.toString(), fontSize = 12.sp, color = MaterialTheme.colorScheme.outline)
+            }
+        }
+        HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
+        
+        AnimatedVisibility(visible = expanded) {
+            Column {
+                bookmark.children.forEach { child ->
+                    BookmarkItem(child, depth + 1, onPageSelected)
+                }
+            }
+        }
     }
 }
 

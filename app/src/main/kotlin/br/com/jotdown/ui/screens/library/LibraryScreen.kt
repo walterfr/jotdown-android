@@ -73,6 +73,7 @@ fun LibraryScreen(viewModel: LibraryViewModel, onOpenDocument: (String) -> Unit)
     var showCreateNoteDialog by remember { mutableStateOf(false) }
     var noteTitle by remember { mutableStateOf("") }
     var noteTemplate by remember { mutableStateOf("Pautado") }
+    var tagToRename by remember { mutableStateOf<String?>(null) }
 
     val pdfPicker = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri -> uri ?: return@rememberLauncherForActivityResult; viewModel.importPdf(context, uri) }
     val backupPicker = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri -> uri ?: return@rememberLauncherForActivityResult; viewModel.importBackup(context, uri) }
@@ -146,7 +147,17 @@ fun LibraryScreen(viewModel: LibraryViewModel, onOpenDocument: (String) -> Unit)
                     HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
                     Text("Meus Rótulos", modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp), fontWeight = FontWeight.Bold, fontSize = 13.sp, color = MaterialTheme.colorScheme.outline)
                     availableTags.forEach { tag ->
-                        NavigationDrawerItem(icon = { Icon(Icons.Default.Label, contentDescription = null, tint = Color(0xFFF59E0B)) }, label = { Text(tag) }, selected = currentFilter == "Tag:$tag", onClick = { viewModel.setFilter("Tag:$tag"); scope.launch { drawerState.close() } })
+                        NavigationDrawerItem(
+                            icon = { Icon(Icons.Default.Label, contentDescription = null, tint = Color(0xFFF59E0B)) }, 
+                            label = { 
+                                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                                    Text(tag)
+                                    IconButton(onClick = { tagToRename = tag; renameText = tag }, modifier = Modifier.size(24.dp)) { Icon(Icons.Default.Edit, contentDescription = "Renomear", modifier = Modifier.size(16.dp)) }
+                                }
+                            }, 
+                            selected = currentFilter == "Tag:$tag", 
+                            onClick = { viewModel.setFilter("Tag:$tag"); scope.launch { drawerState.close() } }
+                        )
                     }
                 }
 
@@ -377,6 +388,7 @@ fun LibraryScreen(viewModel: LibraryViewModel, onOpenDocument: (String) -> Unit)
 
     folderToRename?.let { folder -> AlertDialog(onDismissRequest = { folderToRename = null }, title = { Text("Renomear Pasta") }, text = { OutlinedTextField(value = renameText, onValueChange = { renameText = it }, singleLine = true, label = { Text("Nome da pasta") }) }, confirmButton = { TextButton(onClick = { if (renameText.isNotBlank()) { viewModel.renameFolder(folder.id, renameText.trim()) }; folderToRename = null }) { Text("Salvar", color = Indigo600, fontWeight = FontWeight.Bold) } }, dismissButton = { TextButton(onClick = { folderToRename = null }) { Text("Cancelar") } }) }
     docToRename?.let { doc -> AlertDialog(onDismissRequest = { docToRename = null }, title = { Text("Renomear Arquivo") }, text = { OutlinedTextField(value = renameText, onValueChange = { renameText = it }, singleLine = true, label = { Text("Novo título") }) }, confirmButton = { TextButton(onClick = { if (renameText.isNotBlank()) { viewModel.renameDocument(doc.id, renameText.trim()) }; docToRename = null }) { Text("Salvar", color = Indigo600, fontWeight = FontWeight.Bold) } }, dismissButton = { TextButton(onClick = { docToRename = null }) { Text("Cancelar") } }) }
+    tagToRename?.let { tag -> AlertDialog(onDismissRequest = { tagToRename = null }, title = { Text("Renomear Etiqueta") }, text = { OutlinedTextField(value = renameText, onValueChange = { renameText = it }, singleLine = true, label = { Text("Novo nome (em todos os arquivos)") }) }, confirmButton = { TextButton(onClick = { if (renameText.isNotBlank() && renameText != tag) { viewModel.renameTagGlobally(tag, renameText.trim()) }; tagToRename = null }) { Text("Salvar", color = Indigo600, fontWeight = FontWeight.Bold) } }, dismissButton = { TextButton(onClick = { tagToRename = null }) { Text("Cancelar") } }) }
     docToDelete?.let { doc -> AlertDialog(onDismissRequest = { docToDelete = null }, title = { Text("Apagar Definitivamente?") }, text = { Text("\"${doc.title}\" será removido permanentemente do tablet.") }, confirmButton = { TextButton(onClick = { viewModel.deleteDocument(context, doc.id); docToDelete = null }) { Text("Apagar", color = MaterialTheme.colorScheme.error) } }, dismissButton = { TextButton(onClick = { docToDelete = null }) { Text("Cancelar") } }) }
     docToTag?.let { doc -> AlertDialog(onDismissRequest = { docToTag = null }, title = { Text("Editar Rótulos") }, text = { Column { Text("Separe os rótulos por vírgula.", fontSize = 12.sp, color = MaterialTheme.colorScheme.outline); Spacer(Modifier.height(8.dp)); OutlinedTextField(value = tagText, onValueChange = { tagText = it }, label = { Text("Rótulos") }, modifier = Modifier.fillMaxWidth()) } }, confirmButton = { TextButton(onClick = { viewModel.updateLabels(doc.id, tagText); docToTag = null }) { Text("Salvar", color = Indigo600, fontWeight = FontWeight.Bold) } }, dismissButton = { TextButton(onClick = { docToTag = null }) { Text("Cancelar") } }) }
     if (showImportWarning) { AlertDialog(onDismissRequest = { showImportWarning = false }, title = { Text("Importar Backup") }, text = { Text("ATENÇÃO: A sua biblioteca atual será substituída.") }, confirmButton = { TextButton(onClick = { showImportWarning = false; backupPicker.launch("application/zip") }) { Text("Sim, Importar", color = MaterialTheme.colorScheme.error, fontWeight = FontWeight.Bold) } }, dismissButton = { TextButton(onClick = { showImportWarning = false }) { Text("Cancelar") } }) }
@@ -487,7 +499,8 @@ private fun DocumentCoverCard(
         Spacer(Modifier.height(4.dp))
         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
              Text("${doc.highlightCount} Cit. \u2022 ${doc.annotationCount} Notas", fontSize = 11.sp, color = MaterialTheme.colorScheme.outline)
-             Text(dateFormat.format(Date(doc.dateAdded)), fontSize = 11.sp, color = MaterialTheme.colorScheme.outline)
+             val dateToShow = if (doc.accessDate.isNotBlank()) "Lido: " + dateFormat.format(Date(doc.accessDate.toLongOrNull() ?: doc.dateAdded)) else dateFormat.format(Date(doc.dateAdded))
+             Text(dateToShow, fontSize = 11.sp, color = MaterialTheme.colorScheme.outline)
         }
     }
 }

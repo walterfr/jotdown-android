@@ -56,10 +56,11 @@ class DocumentRepository(
     }
 
     suspend fun renameDocument(id: String, newTitle: String) { getDocumentById(id)?.let { upsertDocument(it.copy(title = newTitle)) } }
-    suspend fun updateDocumentLabels(id: String, labels: String) { getDocumentById(id)?.let { upsertDocument(it.copy(labels = labels)) } }
+    suspend fun updateDocumentLabels(id: String, labels: String) { documentDao.updateDocumentLabels(id, labels) }
     suspend fun setDocumentFolder(docId: String, folderId: Long?) { getDocumentById(docId)?.let { upsertDocument(it.copy(folderId = folderId)) } }
     suspend fun clearFolder(folderId: Long) = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { documentDao.clearFolder(folderId) } 
-    suspend fun updateFavoriteStatus(id: String, isFavorite: Boolean) { getDocumentById(id)?.let { upsertDocument(it.copy(isFavorite = isFavorite)) } }
-    suspend fun updateTrashStatus(id: String, isTrashed: Boolean) { getDocumentById(id)?.let { upsertDocument(it.copy(isTrashed = isTrashed)) } }
+    suspend fun updateFavoriteStatus(id: String, isFavorite: Boolean) { documentDao.updateFavoriteStatus(id, isFavorite) }
+    suspend fun updateTrashStatus(id: String, isTrashed: Boolean) { documentDao.updateTrashStatus(id, isTrashed) }
+    suspend fun updateAccessDate(id: String, accessDate: String) { documentDao.updateAccessDate(id, accessDate) }
     suspend fun saveDocument(doc: DocumentEntity) = upsertDocument(doc)
 }

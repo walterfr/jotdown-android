@@ -1,4 +1,4 @@
-﻿package br.com.jotdown.data.dao
+package br.com.jotdown.data.dao
 
 import androidx.room.*
 import br.com.jotdown.data.entity.DocumentEntity
@@ -34,16 +34,19 @@ abstract class DocumentDao {
     @Query("UPDATE documents SET isTrashed = :isTrashed WHERE id = :id")
     abstract suspend fun updateTrashStatus(id: String, isTrashed: Boolean): Int
 
-    @Query("SELECT id, fileName, title, dateAdded, docType, authorLastName, authorFirstName, isFavorite, isTrashed, labels, (SELECT COUNT(*) FROM highlights h WHERE h.documentId = d.id) AS highlightCount, (SELECT COUNT(*) FROM annotations a WHERE a.documentId = d.id AND a.text != '') AS annotationCount FROM documents d WHERE isTrashed = 0 ORDER BY d.dateAdded DESC")
+    @Query("UPDATE documents SET accessDate = :accessDate WHERE id = :id")
+    abstract suspend fun updateAccessDate(id: String, accessDate: String): Int
+
+    @Query("SELECT id, fileName, title, dateAdded, accessDate, docType, authorLastName, authorFirstName, isFavorite, isTrashed, labels, (SELECT COUNT(*) FROM highlights h WHERE h.documentId = d.id) AS highlightCount, (SELECT COUNT(*) FROM annotations a WHERE a.documentId = d.id AND a.text != '') AS annotationCount FROM documents d WHERE isTrashed = 0 ORDER BY d.dateAdded DESC")
     abstract fun getAllDocumentSummaries(): Flow<List<DocumentSummary>>
 
-    @Query("SELECT id, fileName, title, dateAdded, docType, authorLastName, authorFirstName, isFavorite, isTrashed, labels, (SELECT COUNT(*) FROM highlights h WHERE h.documentId = d.id) AS highlightCount, (SELECT COUNT(*) FROM annotations a WHERE a.documentId = d.id AND a.text != '') AS annotationCount FROM documents d WHERE isTrashed = 0 AND ((:folderId IS NULL AND d.folderId IS NULL) OR (d.folderId = :folderId)) ORDER BY d.dateAdded DESC")
+    @Query("SELECT id, fileName, title, dateAdded, accessDate, docType, authorLastName, authorFirstName, isFavorite, isTrashed, labels, (SELECT COUNT(*) FROM highlights h WHERE h.documentId = d.id) AS highlightCount, (SELECT COUNT(*) FROM annotations a WHERE a.documentId = d.id AND a.text != '') AS annotationCount FROM documents d WHERE isTrashed = 0 AND ((:folderId IS NULL AND d.folderId IS NULL) OR (d.folderId = :folderId)) ORDER BY d.dateAdded DESC")
     abstract fun getDocumentSummariesByFolder(folderId: Long?): Flow<List<DocumentSummary>>
 
-    @Query("SELECT id, fileName, title, dateAdded, docType, authorLastName, authorFirstName, isFavorite, isTrashed, labels, (SELECT COUNT(*) FROM highlights h WHERE h.documentId = d.id) AS highlightCount, (SELECT COUNT(*) FROM annotations a WHERE a.documentId = d.id AND a.text != '') AS annotationCount FROM documents d WHERE isTrashed = 0 AND isFavorite = 1 ORDER BY d.dateAdded DESC")
+    @Query("SELECT id, fileName, title, dateAdded, accessDate, docType, authorLastName, authorFirstName, isFavorite, isTrashed, labels, (SELECT COUNT(*) FROM highlights h WHERE h.documentId = d.id) AS highlightCount, (SELECT COUNT(*) FROM annotations a WHERE a.documentId = d.id AND a.text != '') AS annotationCount FROM documents d WHERE isTrashed = 0 AND isFavorite = 1 ORDER BY d.dateAdded DESC")
     abstract fun getFavoriteDocumentSummaries(): Flow<List<DocumentSummary>>
 
-    @Query("SELECT id, fileName, title, dateAdded, docType, authorLastName, authorFirstName, isFavorite, isTrashed, labels, (SELECT COUNT(*) FROM highlights h WHERE h.documentId = d.id) AS highlightCount, (SELECT COUNT(*) FROM annotations a WHERE a.documentId = d.id AND a.text != '') AS annotationCount FROM documents d WHERE isTrashed = 1 ORDER BY d.dateAdded DESC")
+    @Query("SELECT id, fileName, title, dateAdded, accessDate, docType, authorLastName, authorFirstName, isFavorite, isTrashed, labels, (SELECT COUNT(*) FROM highlights h WHERE h.documentId = d.id) AS highlightCount, (SELECT COUNT(*) FROM annotations a WHERE a.documentId = d.id AND a.text != '') AS annotationCount FROM documents d WHERE isTrashed = 1 ORDER BY d.dateAdded DESC")
     abstract fun getTrashedDocumentSummaries(): Flow<List<DocumentSummary>>
 
     @Query("UPDATE documents SET labels = :labels WHERE id = :id")
@@ -52,7 +55,7 @@ abstract class DocumentDao {
 }
 
 data class DocumentSummary(
-    val id: String, val fileName: String, val title: String, val dateAdded: Long,
+    val id: String, val fileName: String, val title: String, val dateAdded: Long, val accessDate: String,
     val docType: String, val authorLastName: String, val authorFirstName: String,
     val isFavorite: Boolean = false, val isTrashed: Boolean = false, val labels: String = "",
     val highlightCount: Int = 0, val annotationCount: Int = 0

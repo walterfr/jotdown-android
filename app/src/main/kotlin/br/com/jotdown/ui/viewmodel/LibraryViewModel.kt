@@ -101,6 +101,22 @@ class LibraryViewModel(private val repository: DocumentRepository) : ViewModel()
     fun renameDocument(id: String, newTitle: String) = viewModelScope.launch { repository.renameDocument(id, newTitle) }
     fun updateLabels(id: String, labels: String) = viewModelScope.launch { repository.updateDocumentLabels(id, labels) }
 
+    fun renameTagGlobally(oldTag: String, newTag: String) = viewModelScope.launch {
+        withContext(Dispatchers.IO) {
+            try {
+                val allDocs = repository.getAllDocumentSummaries().first()
+                allDocs.forEach { doc ->
+                    if (doc.labels.contains(oldTag, ignoreCase = true)) {
+                        val tags = doc.labels.split(",").map { it.trim() }.filter { it.isNotEmpty() }
+                        val newTagsList = tags.map { if (it.equals(oldTag, ignoreCase = true)) newTag else it }
+                        val finalTags = newTagsList.joinToString(", ")
+                        repository.updateDocumentLabels(doc.id, finalTags)
+                    }
+                }
+            } catch (e: Exception) { e.printStackTrace() }
+        }
+    }
+
     fun mergeIntoFolder(doc1Id: String, doc2Id: String) = viewModelScope.launch {
         val folderId = repository.insertFolder(FolderEntity(name = "Nova Pasta"))
         repository.setDocumentFolder(doc1Id, folderId)

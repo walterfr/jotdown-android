@@ -40,6 +40,7 @@ fun ReaderTopBar(
     isDarkMode: Boolean,
     onToggleDarkMode: () -> Unit,
     onSharePdf: () -> Unit,
+    onOutlineClick: () -> Unit,
 ) {
     var showOverflow by remember { mutableStateOf(false) }
 
@@ -111,6 +112,11 @@ fun ReaderTopBar(
                     Icon(Icons.Default.MoreVert, contentDescription = "Menu")
                 }
                 DropdownMenu(expanded = showOverflow, onDismissRequest = { showOverflow = false }) {
+                    DropdownMenuItem(
+                        text = { Text("Sumário do Livro", fontWeight = androidx.compose.ui.text.font.FontWeight.Bold) },
+                        onClick = { showOverflow = false; onOutlineClick() },
+                        leadingIcon = { Icon(Icons.Default.FormatListBulleted, null) }
+                    )
                     DropdownMenuItem(
                         text = { Text("Citação ABNT") },
                         leadingIcon = { Icon(Icons.Default.FormatQuote, contentDescription = null) },
