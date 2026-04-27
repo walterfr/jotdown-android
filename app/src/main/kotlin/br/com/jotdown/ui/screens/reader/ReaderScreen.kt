@@ -62,7 +62,7 @@ fun ReaderScreen(viewModel: ReaderViewModel, onBack: () -> Unit) {
     var pageOffset by remember(docId) { mutableIntStateOf(if (docId.isNotBlank()) prefs.getInt("offset_$docId", 0) else 0) }
     var showOffsetDialog by remember { mutableStateOf(false) }
     
-    // 🛡️ UNDO / REDO STATE
+    // Ã°Å¸â€ºÂ¡Ã¯Â¸Â UNDO / REDO STATE
     var undoTrigger by remember { mutableLongStateOf(0L) }
     var redoTrigger by remember { mutableLongStateOf(0L) }
 
@@ -78,7 +78,7 @@ fun ReaderScreen(viewModel: ReaderViewModel, onBack: () -> Unit) {
         }
     }
 
-    // 🛡️ CORREÇÃO MESTRE: Carregar última página lida
+    // Ã°Å¸â€ºÂ¡Ã¯Â¸Â CORREÃƒâ€¡ÃƒÆ’O MESTRE: Carregar ÃƒÂºltima pÃƒÂ¡gina lida
     LaunchedEffect(numPages, docId) {
         if (numPages > 0 && docId.isNotBlank()) {
             val last = prefs.getInt("last_$docId", 1)
@@ -111,7 +111,7 @@ fun ReaderScreen(viewModel: ReaderViewModel, onBack: () -> Unit) {
                 )
             }
 
-            // 🛡️ NAVEGAÇÃO: SLIDER + CONTADOR
+            // Ã°Å¸â€ºÂ¡Ã¯Â¸Â NAVEGAÃƒâ€¡ÃƒÆ’O: SLIDER + CONTADOR
             if (numPages > 0) {
                 Column(modifier = Modifier.align(Alignment.BottomCenter).padding(bottom = 16.dp), horizontalAlignment = Alignment.CenterHorizontally) {
                     Slider(
@@ -214,7 +214,7 @@ fun DrawingLayer(activeTool: Tool, strokeColor: Color, json: String?, undo: Long
         if (!json.isNullOrBlank() && paths.isEmpty()) { paths.addAll(parseDrawingsJson(json)) }
     }
 
-    // 🛡️ LÓGICA UNDO / REDO
+    // Ã°Å¸â€ºÂ¡Ã¯Â¸Â LÃƒâ€œGICA UNDO / REDO
     LaunchedEffect(undo) { if (undo > 0 && paths.isNotEmpty()) { redoStack.add(paths.removeAt(paths.size - 1)); onSave(paths.toJson()) } }
     LaunchedEffect(redo) { if (redo > 0 && redoStack.isNotEmpty()) { paths.add(redoStack.removeAt(redoStack.size - 1)); onSave(paths.toJson()) } }
 
@@ -222,7 +222,7 @@ fun DrawingLayer(activeTool: Tool, strokeColor: Color, json: String?, undo: Long
         if (activeTool == Tool.NONE || activeTool == Tool.ANNOTATION || activeTool == Tool.SELECT) return@pointerInput
         awaitEachGesture {
             val down = awaitFirstDown()
-            if (down.type != PointerType.Stylus && down.type != PointerType.Eraser) return@awaitEachGesture
+            // Trava de Stylus removida para permitir qualquer tipo de toque
             redoStack.clear()
             var pathInProgress = DrawnPath(activeTool, strokeColor, mutableListOf(PathPoint(down.position.x, down.position.y, down.pressure)))
             currentPath = pathInProgress
@@ -249,7 +249,7 @@ fun DrawScope.drawDrawnPath(path: DrawnPath) {
     if (path.points.size < 2) return
     val baseWidth = when(path.tool) { Tool.PEN -> 3f; Tool.PENCIL -> 4f; Tool.HIGHLIGHTER -> 25f; Tool.ERASER -> 30f; else -> 2f }
     
-    // 🛡️ CORREÇÃO MESTRE: Marca-texto translúcido com BlendMode
+    // Ã°Å¸â€ºÂ¡Ã¯Â¸Â CORREÃƒâ€¡ÃƒÆ’O MESTRE: Marca-texto translÃƒÂºcido com BlendMode
     val alpha = if (path.tool == Tool.HIGHLIGHTER) 0.35f else 0.9f
     val blend = if (path.tool == Tool.HIGHLIGHTER) BlendMode.Multiply else BlendMode.SrcOver
 
