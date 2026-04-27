@@ -71,6 +71,8 @@ fun ReaderScreen(
     val isDarkModePref = prefs.getBoolean("dark_mode_$docId", false)
     var isDarkMode by remember { mutableStateOf(isDarkModePref) }
 
+    val initialScrollOffset = prefs.getInt("offset_$docId", 0)
+
     var numPages        by remember { mutableIntStateOf(0) }
     var showSidebar     by remember { mutableStateOf(false) }
     var showAnnotations by remember { mutableStateOf(false) }
@@ -200,14 +202,20 @@ fun ReaderScreen(
                     pdfRenderer          = pdfRenderer,
                     renderMutex     = renderMutex,
                     isDarkMode      = isDarkMode,
+                    initialScrollOffset = initialScrollOffset,
                     onScrollDone    = { scrollToPage = 0 },
                     onOcrSuccess    = { page, text ->
                         textToEdit = text
                         ocrResult = Pair(page, text)
                     },
-                    onPageChange    = { 
-                        viewModel.setCurrentPage(it)
-                        if (docId.isNotBlank()) prefs.edit().putInt("last_$docId", it).apply()
+                    onScrollChange  = { page, offset -> 
+                        viewModel.setCurrentPage(page)
+                        if (docId.isNotBlank()) {
+                            prefs.edit()
+                                .putInt("last_$docId", page)
+                                .putInt("offset_$docId", offset)
+                                .apply()
+                        }
                     },
                     onAddAnnotation = { page, x, y ->
                         pendingAnnotation = Triple(page, x, y)
@@ -449,10 +457,13 @@ fun ReaderScreen(
     }
 
     if (showExportDialog && document != null) {
+        val wordCount = annotations.sumOf { it.text.trim().split(Regex("\\s+")).count { word -> word.isNotBlank() } } +
+                        highlights.sumOf { it.text.trim().split(Regex("\\s+")).count { word -> word.isNotBlank() } }
+
         AlertDialog(
             onDismissRequest = { showExportDialog = false },
-            title = { Text("Exportar para Markdown") },
-            text = { Text("Deseja exportar as notas e fichamentos para um arquivo Markdown?") },
+            title = { Text("Exportar Notas") },
+            text = { Text("Seu fichamento contém aproximadamente $wordCount palavras.\n\nDeseja exportar as notas para Markdown?") },
             confirmButton = {
                 Button(onClick = {
                     val mdContent = ExportUtil.toMarkdown(document!!, annotations, highlights)
@@ -482,15 +493,20 @@ fun PdfViewer(
     pdfFile: File, numPages: Int, currentPage: Int, activeTool: Tool, strokeColor: Int,
     annotations: List<AnnotationEntity>, drawings: List<DrawingEntity>,
     scrollToPage: Int, undoTrigger: Long, redoTrigger: Long, strokeWidthMultiplier: Float,
-    pdfRenderer: PdfRenderer?, renderMutex: Mutex, isDarkMode: Boolean,
-    onScrollDone: () -> Unit, onOcrSuccess: (Int, String) -> Unit, onPageChange: (Int) -> Unit,
+    pdfRenderer: PdfRenderer?, renderMutex: Mutex, isDarkMode: Boolean, initialScrollOffset: Int,
+    onScrollDone: () -> Unit, onOcrSuccess: (Int, String) -> Unit, onScrollChange: (Int, Int) -> Unit,
     onAddAnnotation: (Int, Float, Float) -> Unit, onOpenAnnotation: (AnnotationEntity) -> Unit, onSaveDrawing: (Int, String) -> Unit
 ) {
     var scale by remember { mutableFloatStateOf(1f) }
     var offset by remember { mutableStateOf(androidx.compose.ui.geometry.Offset.Zero) }
 
     val isScrollEnabled = (activeTool == Tool.NONE || activeTool == Tool.SELECT || activeTool == Tool.ANNOTATION) && scale == 1f
-    val listState = rememberLazyListState()
+    
+    // Inicia o LazyList com a página e a exata altura da rolagem do último acesso
+    val listState = rememberLazyListState(
+        initialFirstVisibleItemIndex = (currentPage - 1).coerceAtLeast(0),
+        initialFirstVisibleItemScrollOffset = initialScrollOffset
+    )
 
     LaunchedEffect(scrollToPage) {
         if (scrollToPage in 1..numPages) {
@@ -499,7 +515,10 @@ fun PdfViewer(
         }
     }
 
-    LaunchedEffect(listState.firstVisibleItemIndex) { onPageChange(listState.firstVisibleItemIndex + 1) }
+    // Dispara atualizações de scroll em tempo real
+    LaunchedEffect(listState.firstVisibleItemIndex, listState.firstVisibleItemScrollOffset) { 
+        onScrollChange(listState.firstVisibleItemIndex + 1, listState.firstVisibleItemScrollOffset) 
+    }
 
     Box(
         modifier = Modifier

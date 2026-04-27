@@ -72,6 +72,7 @@ fun LibraryScreen(viewModel: LibraryViewModel, onOpenDocument: (String) -> Unit)
     var showFabMenu by remember { mutableStateOf(false) }
     var showCreateNoteDialog by remember { mutableStateOf(false) }
     var noteTitle by remember { mutableStateOf("") }
+    var noteTemplate by remember { mutableStateOf("Pautado") }
 
     val pdfPicker = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri -> uri ?: return@rememberLauncherForActivityResult; viewModel.importPdf(context, uri) }
     val backupPicker = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri -> uri ?: return@rememberLauncherForActivityResult; viewModel.importBackup(context, uri) }
@@ -345,8 +346,31 @@ fun LibraryScreen(viewModel: LibraryViewModel, onOpenDocument: (String) -> Unit)
         AlertDialog(
             onDismissRequest = { showCreateNoteDialog = false },
             title = { Text("Novo Caderno em Branco") },
-            text = { OutlinedTextField(value = noteTitle, onValueChange = { noteTitle = it }, singleLine = true, label = { Text("Título do Caderno") }, modifier = Modifier.fillMaxWidth()) },
-            confirmButton = { TextButton(onClick = { if (noteTitle.isNotBlank()) { viewModel.createBlankNote(context, noteTitle.trim()) }; showCreateNoteDialog = false }) { Text("Criar", color = Indigo600, fontWeight = FontWeight.Bold) } },
+            text = { 
+                Column(modifier = Modifier.fillMaxWidth()) {
+                    OutlinedTextField(value = noteTitle, onValueChange = { noteTitle = it }, singleLine = true, label = { Text("Título do Caderno") }, modifier = Modifier.fillMaxWidth()) 
+                    Spacer(Modifier.height(16.dp))
+                    Text("Template de Folha:", fontSize = 14.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Spacer(Modifier.height(8.dp))
+                    
+                    val templates = listOf("Pautado", "Quadriculado", "Fichamento", "Branco")
+                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        templates.chunked(2).forEach { row ->
+                            Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
+                                row.forEach { t ->
+                                    FilterChip(
+                                        selected = noteTemplate == t,
+                                        onClick = { noteTemplate = t },
+                                        label = { Text(t, fontSize = 12.sp) },
+                                        modifier = Modifier.weight(1f)
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            confirmButton = { TextButton(onClick = { if (noteTitle.isNotBlank()) { viewModel.createBlankNote(context, noteTitle.trim(), noteTemplate) }; showCreateNoteDialog = false }) { Text("Criar", color = Indigo600, fontWeight = FontWeight.Bold) } },
             dismissButton = { TextButton(onClick = { showCreateNoteDialog = false }) { Text("Cancelar") } }
         )
     }

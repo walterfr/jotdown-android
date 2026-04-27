@@ -150,8 +150,8 @@ class LibraryViewModel(private val repository: DocumentRepository) : ViewModel()
         }
     }
 
-    // ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â°ÃƒÆ’Ã¢â‚¬Â¦Ãƒâ€šÃ‚Â¸ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã¢â‚¬Å“ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â‚¬Å¾Ã‚Â¢ NOVO: Cria um PDF com pautas (estilo caderno)
-    fun createBlankNote(context: Context, title: String) = viewModelScope.launch {
+    // 📝 NOVO: Cria um PDF com pautas (estilo caderno) e suporte a templates
+    fun createBlankNote(context: Context, title: String, template: String = "Pautado") = viewModelScope.launch {
         withContext(Dispatchers.IO) {
             try {
                 val docId = UUID.randomUUID().toString()
@@ -163,26 +163,54 @@ class LibraryViewModel(private val repository: DocumentRepository) : ViewModel()
                 val page = pdfDocument.startPage(pageInfo)
                 val canvas = page.canvas
 
-                // 1. Fundo da folha (tom levemente "off-white")
-                canvas.drawColor(android.graphics.Color.parseColor("#FAFAFA"))
+                // 1. Fundo da folha
+                val bgColor = if (template == "Fichamento" || template == "Branco") "#FFFFFF" else "#FAFAFA"
+                canvas.drawColor(android.graphics.Color.parseColor(bgColor))
 
-                // 2. Prepara o pincel para as pautas
-                val paint = android.graphics.Paint().apply {
-                    color = android.graphics.Color.parseColor("#D1D5DB") // Cinza claro
-                    strokeWidth = 1f
+                val paint = android.graphics.Paint()
+
+                when (template) {
+                    "Pautado" -> {
+                        paint.color = android.graphics.Color.parseColor("#D1D5DB")
+                        paint.strokeWidth = 1f
+                        var y = 80f
+                        while (y < 842f) { canvas.drawLine(0f, y, 595f, y, paint); y += 30f }
+                        paint.color = android.graphics.Color.parseColor("#FCA5A5")
+                        paint.strokeWidth = 2f
+                        canvas.drawLine(80f, 0f, 80f, 842f, paint)
+                    }
+                    "Quadriculado" -> {
+                        paint.color = android.graphics.Color.parseColor("#E5E7EB")
+                        paint.strokeWidth = 1f
+                        var step = 20f
+                        while (step < 842f) { canvas.drawLine(0f, step, 595f, step, paint); step += 20f }
+                        step = 20f
+                        while (step < 595f) { canvas.drawLine(step, 0f, step, 842f, paint); step += 20f }
+                    }
+                    "Fichamento" -> {
+                        paint.color = android.graphics.Color.parseColor("#374151")
+                        paint.textSize = 14f
+                        paint.isAntiAlias = true
+                        canvas.drawText("FICHAMENTO DE LEITURA", 210f, 60f, paint)
+                        paint.strokeWidth = 2f
+                        canvas.drawLine(50f, 80f, 545f, 80f, paint)
+                        
+                        paint.textSize = 10f
+                        paint.color = android.graphics.Color.parseColor("#9CA3AF")
+                        canvas.drawText("Referência ABNT:", 50f, 110f, paint)
+                        paint.strokeWidth = 1f
+                        canvas.drawLine(50f, 130f, 545f, 130f, paint)
+                        
+                        canvas.drawText("Ideias Centrais:", 50f, 160f, paint)
+                        canvas.drawLine(50f, 180f, 545f, 180f, paint)
+                        canvas.drawLine(50f, 210f, 545f, 210f, paint)
+                        canvas.drawLine(50f, 240f, 545f, 240f, paint)
+                        
+                        canvas.drawText("Citações Importantes:", 50f, 290f, paint)
+                        canvas.drawLine(50f, 310f, 545f, 310f, paint)
+                    }
+                    // "Branco" não desenha linhas adicionais
                 }
-
-                // 3. Desenha as linhas horizontais
-                var y = 80f
-                while (y < 842f) {
-                    canvas.drawLine(0f, y, 595f, y, paint)
-                    y += 30f
-                }
-
-                // 4. Desenha a margem lateral (estilo caderno escolar)
-                paint.color = android.graphics.Color.parseColor("#FCA5A5") // Vermelho suave
-                paint.strokeWidth = 2f
-                canvas.drawLine(80f, 0f, 80f, 842f, paint)
 
                 pdfDocument.finishPage(page)
                 
