@@ -7,6 +7,7 @@ import androidx.compose.animation.core.*
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.gestures.awaitEachGesture
@@ -547,79 +548,94 @@ fun DrawingLayer(
     LaunchedEffect(undoTrigger) { if (undoTrigger > 0 && paths.isNotEmpty()) { redoStack.add(paths.removeAt(paths.size - 1)); onSaveDrawing(paths.toJson()) } }
     LaunchedEffect(redoTrigger) { if (redoTrigger > 0 && redoStack.isNotEmpty()) { paths.add(redoStack.removeAt(redoStack.size - 1)); onSaveDrawing(paths.toJson()) } }
 
-    Canvas(
-        // O graphicsLayer cria um layer de composição dedicado, necessário para que
-        // BlendMode.Clear funcione corretamente (apaga apenas os pixels deste layer).
-        modifier = modifier
-            .graphicsLayer(compositingStrategy = CompositingStrategy.Offscreen)
-            .pointerInput(activeTool, strokeColor) {
-            if (activeTool == Tool.NONE || activeTool == Tool.SELECT) return@pointerInput
+    // Box envolve o Canvas de desenho + os ícones de anotação como composables reais.
+    // Isso permite que os balões tenham área de toque grande e abrام a nota correta
+    // independente da ferramenta ativa.
+    Box(modifier = modifier) {
+        Canvas(
+            // graphicsLayer Offscreen é necessário para BlendMode.Clear da borracha.
+            modifier = Modifier
+                .matchParentSize()
+                .graphicsLayer(compositingStrategy = CompositingStrategy.Offscreen)
+                .pointerInput(activeTool, strokeColor) {
+                if (activeTool == Tool.NONE || activeTool == Tool.SELECT) return@pointerInput
 
-            if (activeTool == Tool.ANNOTATION) {
-                detectTapGestures { offset ->
-                    val clickedAnnot = annotationsRef.value.find {
-                        val dx = it.x - offset.x; val dy = it.y - offset.y
-                        (dx * dx + dy * dy) < 1500f
-                    }
-                    if (clickedAnnot != null) onOpenAnnotation(clickedAnnot) else onAddAnnotation(offset.x, offset.y)
+                if (activeTool == Tool.ANNOTATION) {
+                    // Toque em espaço vazio → nova anotação.
+                    // Toque em balão existente → tratado pelo composable clicável abaixo.
+                    detectTapGestures { offset -> onAddAnnotation(offset.x, offset.y) }
+                    return@pointerInput
                 }
-                return@pointerInput
-            }
 
-            awaitEachGesture {
-                val down = awaitFirstDown()
-                down.consume()
-                redoStack.clear()
-                var pathInProgress = DrawnPath(activeTool, strokeColor, mutableListOf(PathPoint(down.position.x, down.position.y, down.pressure)))
-                currentPath = pathInProgress
-                do {
-                    val event = awaitPointerEvent()
-                    val drag = event.changes.firstOrNull { it.id == down.id }
-                    if (drag != null && drag.pressed) {
-                        drag.consume()
-                        val pts = ArrayList(pathInProgress.points).apply { add(PathPoint(drag.position.x, drag.position.y, drag.pressure)) }
-                        pathInProgress = pathInProgress.copy(points = pts); currentPath = pathInProgress
-                        // Atualiza posição do cursor da borracha
-                        if (activeTool == Tool.ERASER) eraserCursorPos = drag.position
-                    }
-                } while (drag != null && drag.pressed)
-                currentPath?.let { paths.add(it); onSaveDrawing(paths.toJson()) }
-                currentPath = null
-                eraserCursorPos = null  // Esconde o cursor ao soltar
+                awaitEachGesture {
+                    val down = awaitFirstDown()
+                    down.consume()
+                    redoStack.clear()
+                    var pathInProgress = DrawnPath(activeTool, strokeColor, mutableListOf(PathPoint(down.position.x, down.position.y, down.pressure)))
+                    currentPath = pathInProgress
+                    do {
+                        val event = awaitPointerEvent()
+                        val drag = event.changes.firstOrNull { it.id == down.id }
+                        if (drag != null && drag.pressed) {
+                            drag.consume()
+                            val pts = ArrayList(pathInProgress.points).apply { add(PathPoint(drag.position.x, drag.position.y, drag.pressure)) }
+                            pathInProgress = pathInProgress.copy(points = pts); currentPath = pathInProgress
+                            if (activeTool == Tool.ERASER) eraserCursorPos = drag.position
+                        }
+                    } while (drag != null && drag.pressed)
+                    currentPath?.let { paths.add(it); onSaveDrawing(paths.toJson()) }
+                    currentPath = null
+                    eraserCursorPos = null
+                }
             }
-        }
-    ) {
-        paths.forEach { drawDrawnPath(it) }
-        currentPath?.let { drawDrawnPath(it) }
+        ) {
+            paths.forEach { drawDrawnPath(it) }
+            currentPath?.let { drawDrawnPath(it) }
 
-        // Cursor circular da borracha
-        if (activeTool == Tool.ERASER) {
-            eraserCursorPos?.let { pos ->
-                val r = 15.dp.toPx()
-                drawCircle(
-                    color = Color(0xFF666666),
-                    radius = r,
-                    center = pos,
-                    style = Stroke(width = 1.5.dp.toPx())
-                )
-                drawCircle(
-                    color = Color(0x22000000),
-                    radius = r,
-                    center = pos
-                )
+            // Cursor circular da borracha
+            if (activeTool == Tool.ERASER) {
+                eraserCursorPos?.let { pos ->
+                    val r = 15.dp.toPx()
+                    drawCircle(color = Color(0xFF666666), radius = r, center = pos, style = Stroke(width = 1.5.dp.toPx()))
+                    drawCircle(color = Color(0x22000000), radius = r, center = pos)
+                }
             }
         }
 
+        // Balões de anotação como composables clicáveis.
+        // Sempre visíveis e sempre clicáveis, independente da ferramenta ativa.
+        val density = LocalDensity.current
         annotations.forEach { annot ->
-            val cx = annot.x; val cy = annot.y
-            val r      = 14.dp.toPx() / 3f
-            val tailH  = r * 0.65f
-            val bodyY  = cy - tailH * 0.45f
-
-            drawCircle(color = Color(0xFFF59E0B), radius = r, center = Offset(cx, bodyY))
-            val tailPath = Path().apply { moveTo(cx - r * 0.32f, bodyY + r * 0.72f); lineTo(cx, bodyY + r * 0.72f + tailH); lineTo(cx + r * 0.32f, bodyY + r * 0.72f); close() }
-            drawPath(tailPath, color = Color(0xFFF59E0B))
-            drawCircle(color = Color(0xFFB45309), radius = r, center = Offset(cx, bodyY), style = Stroke(width = 1.dp.toPx()))
+            val iconSize = 40.dp
+            val iconSizePx = with(density) { iconSize.toPx() }
+            Box(
+                modifier = Modifier
+                    .offset {
+                        // Centraliza o ícone horizontalmente e posiciona acima do ponto tocado
+                        IntOffset(
+                            x = (annot.x - iconSizePx / 2f).toInt(),
+                            y = (annot.y - iconSizePx).toInt()
+                        )
+                    }
+                    .size(iconSize)
+                    .clickable { onOpenAnnotation(annot) },
+                contentAlignment = Alignment.Center
+            ) {
+                // Sombra (ícone levemente maior e escuro atrás)
+                Icon(
+                    imageVector = Icons.Default.ChatBubble,
+                    contentDescription = null,
+                    tint = Color(0xFF92400E).copy(alpha = 0.25f),
+                    modifier = Modifier.fillMaxSize().offset(1.dp, 2.dp)
+                )
+                // Balão principal
+                Icon(
+                    imageVector = Icons.Default.ChatBubble,
+                    contentDescription = "Abrir anotação",
+                    tint = Color(0xFFF59E0B),
+                    modifier = Modifier.fillMaxSize()
+                )
+            }
         }
     }
 }
