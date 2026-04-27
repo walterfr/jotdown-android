@@ -567,7 +567,9 @@ fun DrawingLayer(
             modifier = Modifier
                 .matchParentSize()
                 .graphicsLayer(compositingStrategy = CompositingStrategy.Offscreen)
-                .pointerInput(activeTool, strokeColor) {
+                // Três chaves: o bloco relança quando qualquer uma delas muda,
+                // garantindo que strokeWidthMultiplier capturado nunca fique stale.
+                .pointerInput(activeTool, strokeColor, strokeWidthMultiplier) {
                 if (activeTool == Tool.NONE || activeTool == Tool.SELECT) return@pointerInput
 
                 if (activeTool == Tool.ANNOTATION) {

@@ -44,7 +44,9 @@ class DocumentRepository(
     fun getAllDocumentSummaries() = documentDao.getAllDocumentSummaries()
     fun getFavoriteDocumentSummaries() = documentDao.getFavoriteDocumentSummaries()
     fun getTrashedDocumentSummaries() = documentDao.getTrashedDocumentSummaries()
-    fun getDocumentSummariesByFolder(folderId: Long?) = if (folderId == null) documentDao.getAllDocumentSummaries() else documentDao.getDocumentSummariesByFolder(folderId)
+    // Usa sempre a query do DAO que trata NULL com IS NULL — não AllDocumentSummaries,
+    // que retornaria todos os docs inclusive os dentro de pastas.
+    fun getDocumentSummariesByFolder(folderId: Long?) = documentDao.getDocumentSummariesByFolder(folderId)
 
     // ÃƒÂ°Ã…Â¸Ã¢â‚¬ÂºÃ‚Â¡ÃƒÂ¯Ã‚Â¸Ã‚Â O funil 100% alargado para receber todos os campos da ABNT!
     suspend fun updateMetadata(id: String, type: String, last: String, first: String, title: String, subtitle: String, edition: String, city: String, publisher: String, year: String, journal: String, volume: String, pages: String, url: String, accessDate: String) { 
