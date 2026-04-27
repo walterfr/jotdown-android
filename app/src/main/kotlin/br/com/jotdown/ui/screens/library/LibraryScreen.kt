@@ -10,6 +10,7 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.*
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.grid.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -87,14 +88,53 @@ fun LibraryScreen(viewModel: LibraryViewModel, onOpenDocument: (String) -> Unit)
         drawerState = drawerState,
         drawerContent = {
             ModalDrawerSheet(drawerContainerColor = MaterialTheme.colorScheme.surface) {
-                Spacer(Modifier.height(16.dp))
-                Text("Jotdown", modifier = Modifier.padding(16.dp), fontWeight = FontWeight.Black, fontSize = 22.sp, color = MaterialTheme.colorScheme.primary)
-                HorizontalDivider()
+                // ── Cabeçalho com avatar ───────────────────────────────────
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .background(
+                            Brush.verticalGradient(
+                                listOf(Indigo600, Color(0xFF7C3AED))
+                            )
+                        )
+                        .padding(horizontal = 20.dp, vertical = 28.dp)
+                ) {
+                    Column {
+                        // Avatar com a inicial
+                        Box(
+                            modifier = Modifier
+                                .size(56.dp)
+                                .clip(androidx.compose.foundation.shape.CircleShape)
+                                .background(Color.White.copy(alpha = 0.25f)),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(
+                                "J",
+                                fontSize = 26.sp,
+                                fontWeight = FontWeight.Black,
+                                color = Color.White
+                            )
+                        }
+                        Spacer(Modifier.height(14.dp))
+                        Text(
+                            "Jotdown",
+                            fontWeight = FontWeight.Black,
+                            fontSize = 22.sp,
+                            color = Color.White
+                        )
+                        Text(
+                            "Fichador Acadêmico",
+                            fontSize = 12.sp,
+                            color = Color.White.copy(alpha = 0.75f)
+                        )
+                    }
+                }
+                Spacer(Modifier.height(8.dp))
                 NavigationDrawerItem(icon = { Icon(Icons.AutoMirrored.Filled.MenuBook, contentDescription = null) }, label = { Text("Tudo") }, selected = currentFilter == "Tudo", onClick = { viewModel.setFilter("Tudo"); scope.launch { drawerState.close() } })
                 NavigationDrawerItem(icon = { Icon(Icons.Default.Schedule, contentDescription = null) }, label = { Text("Recentes") }, selected = currentFilter == "Recentes", onClick = { viewModel.setFilter("Recentes"); scope.launch { drawerState.close() } })
                 NavigationDrawerItem(icon = { Icon(Icons.Default.Favorite, contentDescription = null) }, label = { Text("Favoritos") }, selected = currentFilter == "Favoritos", onClick = { viewModel.setFilter("Favoritos"); scope.launch { drawerState.close() } })
                 NavigationDrawerItem(icon = { Icon(Icons.Default.DeleteOutline, contentDescription = null) }, label = { Text("Lixo") }, selected = currentFilter == "Lixo", onClick = { viewModel.setFilter("Lixo"); scope.launch { drawerState.close() } })
-                
+
                 if (availableTags.isNotEmpty()) {
                     HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
                     Text("Meus Rótulos", modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp), fontWeight = FontWeight.Bold, fontSize = 13.sp, color = MaterialTheme.colorScheme.outline)
@@ -102,6 +142,16 @@ fun LibraryScreen(viewModel: LibraryViewModel, onOpenDocument: (String) -> Unit)
                         NavigationDrawerItem(icon = { Icon(Icons.Default.Label, contentDescription = null, tint = Color(0xFFF59E0B)) }, label = { Text(tag) }, selected = currentFilter == "Tag:$tag", onClick = { viewModel.setFilter("Tag:$tag"); scope.launch { drawerState.close() } })
                     }
                 }
+
+                // ── Rodapé com versão ────────────────────────────────────
+                Spacer(Modifier.weight(1f))
+                HorizontalDivider()
+                Text(
+                    "v2.1.1",
+                    modifier = Modifier.padding(horizontal = 20.dp, vertical = 14.dp),
+                    fontSize = 11.sp,
+                    color = MaterialTheme.colorScheme.outline
+                )
             }
         }
     ) {
@@ -190,12 +240,31 @@ fun LibraryScreen(viewModel: LibraryViewModel, onOpenDocument: (String) -> Unit)
         ) { padding ->
             Column(modifier = Modifier.fillMaxSize().padding(padding).padding(horizontal = 16.dp).clickable(indication = null, interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() }) { showFabMenu = false }) {
                 
-                val tabs = listOf("Tudo", "PDF", "Nota", "Pasta")
-                val selectedTabIndex = tabs.indexOf(currentTab).coerceAtLeast(0)
-                
-                ScrollableTabRow(selectedTabIndex = selectedTabIndex, edgePadding = 0.dp, containerColor = Color.Transparent, divider = {}) {
-                    tabs.forEachIndexed { index, title ->
-                        Tab(selected = selectedTabIndex == index, onClick = { viewModel.setTab(title) }, text = { Text(title, fontWeight = if (selectedTabIndex == index) FontWeight.Bold else FontWeight.Normal, color = if (selectedTabIndex == index) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline) })
+                // FilterChips — mais modernos e compatíveis com Material 3
+                LazyRow(
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    contentPadding = PaddingValues(horizontal = 2.dp)
+                ) {
+                    val chipTabs = listOf("Tudo", "PDF", "Nota", "Pasta")
+                    items(chipTabs.size) { index ->
+                        val title = chipTabs[index]
+                        FilterChip(
+                            selected = currentTab == title,
+                            onClick = { viewModel.setTab(title) },
+                            label = {
+                                Text(
+                                    title,
+                                    fontWeight = if (currentTab == title) FontWeight.Bold else FontWeight.Normal
+                                )
+                            },
+                            leadingIcon = if (currentTab == title) ({
+                                Icon(
+                                    Icons.Default.Check,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(16.dp)
+                                )
+                            }) else null
+                        )
                     }
                 }
                 
@@ -322,7 +391,8 @@ private fun DocumentCoverCard(
                     else { AutoGeneratedCover(title = doc.title.ifBlank { doc.fileName }, docType = doc.docType) }
                     
                     // 🛡️ Lombada do Livro (Book Spine)
-                    Box(modifier = Modifier.fillMaxHeight().width(14.dp).align(Alignment.CenterStart).background(Brush.horizontalGradient(colors = listOf(Color.Black.copy(alpha = 0.45f), Color.Black.copy(alpha = 0.1f), Color.Transparent))))
+                    // BlendMode.Multiply escurece proporcionalmente: discreto em capas escuras, visível em claras.
+                    Box(modifier = Modifier.fillMaxHeight().width(14.dp).align(Alignment.CenterStart).graphicsLayer(compositingStrategy = CompositingStrategy.Offscreen).background(Brush.horizontalGradient(colors = listOf(Color(0xFF888888), Color(0xFFCCCCCC), Color.White)), blendMode = BlendMode.Multiply))
                     
                     IconButton(onClick = onToggleFavorite, modifier = Modifier.align(Alignment.TopStart).padding(4.dp)) { Icon(if (doc.isFavorite) Icons.Default.Favorite else Icons.Default.FavoriteBorder, contentDescription = "Favoritar", tint = if (doc.isFavorite) Color.Red else Color.DarkGray) }
                     Box(modifier = Modifier.align(Alignment.TopEnd).padding(4.dp)) {

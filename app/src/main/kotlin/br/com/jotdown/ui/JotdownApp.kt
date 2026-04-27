@@ -1,5 +1,7 @@
-﻿package br.com.jotdown.ui
+package br.com.jotdown.ui
 
+import androidx.compose.animation.*
+import androidx.compose.animation.core.tween
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -15,6 +17,7 @@ import br.com.jotdown.ui.viewmodel.LibraryViewModelFactory
 import br.com.jotdown.ui.viewmodel.ReaderViewModel
 import br.com.jotdown.ui.viewmodel.ReaderViewModelFactory
 
+@OptIn(ExperimentalAnimationApi::class)
 @Composable
 fun JotdownApp() {
     val navController = rememberNavController()
@@ -23,7 +26,12 @@ fun JotdownApp() {
 
     NavHost(
         navController    = navController,
-        startDestination = Screen.Splash.route
+        startDestination = Screen.Splash.route,
+        // Transição padrão entre telas: slide horizontal
+        enterTransition  = { slideInHorizontally(initialOffsetX = { it }, animationSpec = tween(320)) + fadeIn(tween(320)) },
+        exitTransition   = { slideOutHorizontally(targetOffsetX = { -it / 3 }, animationSpec = tween(320)) + fadeOut(tween(200)) },
+        popEnterTransition  = { slideInHorizontally(initialOffsetX = { -it / 3 }, animationSpec = tween(320)) + fadeIn(tween(320)) },
+        popExitTransition   = { slideOutHorizontally(targetOffsetX = { it }, animationSpec = tween(320)) + fadeOut(tween(200)) },
     ) {
         composable(Screen.Splash.route) {
             SplashScreen(onTimeout = {
@@ -45,4 +53,3 @@ fun JotdownApp() {
         }
     }
 }
-

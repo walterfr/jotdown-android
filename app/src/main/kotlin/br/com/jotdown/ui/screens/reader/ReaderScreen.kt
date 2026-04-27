@@ -536,6 +536,8 @@ fun DrawingLayer(
     val paths = remember { mutableStateListOf<DrawnPath>() }
     val redoStack = remember { mutableStateListOf<DrawnPath>() }
     var currentPath by remember { mutableStateOf<DrawnPath?>(null) }
+    // Posição do cursor da borracha (null = não está apagando)
+    var eraserCursorPos by remember { mutableStateOf<Offset?>(null) }
     val annotationsRef = rememberUpdatedState(annotations)
 
     LaunchedEffect(pageDrawingsJson) {
@@ -577,14 +579,36 @@ fun DrawingLayer(
                         drag.consume()
                         val pts = ArrayList(pathInProgress.points).apply { add(PathPoint(drag.position.x, drag.position.y, drag.pressure)) }
                         pathInProgress = pathInProgress.copy(points = pts); currentPath = pathInProgress
+                        // Atualiza posição do cursor da borracha
+                        if (activeTool == Tool.ERASER) eraserCursorPos = drag.position
                     }
                 } while (drag != null && drag.pressed)
-                currentPath?.let { paths.add(it); onSaveDrawing(paths.toJson()) }; currentPath = null
+                currentPath?.let { paths.add(it); onSaveDrawing(paths.toJson()) }
+                currentPath = null
+                eraserCursorPos = null  // Esconde o cursor ao soltar
             }
         }
     ) {
         paths.forEach { drawDrawnPath(it) }
         currentPath?.let { drawDrawnPath(it) }
+
+        // Cursor circular da borracha
+        if (activeTool == Tool.ERASER) {
+            eraserCursorPos?.let { pos ->
+                val r = 15.dp.toPx()
+                drawCircle(
+                    color = Color(0xFF666666),
+                    radius = r,
+                    center = pos,
+                    style = Stroke(width = 1.5.dp.toPx())
+                )
+                drawCircle(
+                    color = Color(0x22000000),
+                    radius = r,
+                    center = pos
+                )
+            }
+        }
 
         annotations.forEach { annot ->
             val cx = annot.x; val cy = annot.y
