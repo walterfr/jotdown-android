@@ -3,15 +3,13 @@ package br.com.jotdown.ui.screens.reader
 import android.graphics.Bitmap
 import android.graphics.pdf.PdfRenderer
 import android.os.ParcelFileDescriptor
+import androidx.compose.animation.*
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.gestures.detectDragGestures
-import androidx.compose.foundation.gestures.detectTapGestures
-import androidx.compose.foundation.gestures.awaitEachGesture
-import androidx.compose.foundation.gestures.awaitFirstDown
+import androidx.compose.foundation.gestures.*
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.rememberLazyListState
@@ -37,6 +35,9 @@ import androidx.compose.ui.unit.*
 import br.com.jotdown.data.entity.*
 import br.com.jotdown.ui.theme.*
 import br.com.jotdown.ui.viewmodel.*
+import br.com.jotdown.util.AbntUtil
+import br.com.jotdown.util.ExportUtil
+import br.com.jotdown.util.OcrUtil
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -89,6 +90,12 @@ fun ReaderScreen(
     var fileDescriptor by remember { mutableStateOf<ParcelFileDescriptor?>(null) }
     val renderMutex = remember { Mutex() }
 
+    var isFullscreen by remember { mutableStateOf(false) }
+    var isSearchActive by remember { mutableStateOf(false) }
+    var searchQuery by remember { mutableStateOf("") }
+    var showAbntDialog by remember { mutableStateOf(false) }
+    var showExportDialog by remember { mutableStateOf(false) }
+
     LaunchedEffect(pdfFile) {
         val file = pdfFile ?: return@LaunchedEffect
         withContext(Dispatchers.IO) {
@@ -118,27 +125,47 @@ fun ReaderScreen(
 
     Scaffold(
         topBar = {
-            ReaderTopBar(
-                annotationCount = annotations.size,
-                onBack          = onBack,
-                onMenuClick     = { showSidebar = true },
-                onAnnotations   = { showAnnotations = true },
-            )
+            AnimatedVisibility(
+                visible = !isFullscreen,
+                enter = slideInHorizontally() + fadeIn(),
+                exit = slideOutHorizontally() + fadeOut()
+            ) {
+                ReaderTopBar(
+                    annotationCount = annotations.size,
+                    isFullscreen = isFullscreen,
+                    isSearchActive = isSearchActive,
+                    searchQuery = searchQuery,
+                    onBack = onBack,
+                    onMenuClick = { showSidebar = true },
+                    onAnnotations = { showAnnotations = true },
+                    onToggleFullscreen = { isFullscreen = !isFullscreen },
+                    onToggleSearch = { isSearchActive = !isSearchActive; if (!isSearchActive) searchQuery = "" },
+                    onSearchQueryChange = { searchQuery = it },
+                    onAbntClick = { showAbntDialog = true },
+                    onExportClick = { showExportDialog = true }
+                )
+            }
         },
         bottomBar = {
-            ReaderToolsBar(
-                activeTool            = activeTool,
-                strokeColor           = strokeColor,
-                strokeWidthMultiplier = strokeWidthMultiplier,
-                onToolSelect          = { viewModel.toggleTool(it) },
-                onColorSelect         = { viewModel.setStrokeColor(it) },
-                onWidthSelect         = { viewModel.setStrokeWidthMultiplier(it) },
-                onUndo                = { undoTrigger = System.currentTimeMillis() },
-                onRedo                = { redoTrigger = System.currentTimeMillis() },
-            )
+            AnimatedVisibility(
+                visible = !isFullscreen,
+                enter = slideInHorizontally() + fadeIn(),
+                exit = slideOutHorizontally() + fadeOut()
+            ) {
+                ReaderToolsBar(
+                    activeTool            = activeTool,
+                    strokeColor           = strokeColor,
+                    strokeWidthMultiplier = strokeWidthMultiplier,
+                    onToolSelect          = { viewModel.toggleTool(it) },
+                    onColorSelect         = { viewModel.setStrokeColor(it) },
+                    onWidthSelect         = { viewModel.setStrokeWidthMultiplier(it) },
+                    onUndo                = { undoTrigger = System.currentTimeMillis() },
+                    onRedo                = { redoTrigger = System.currentTimeMillis() },
+                )
+            }
         },
     ) { padding ->
-        Box(modifier = Modifier.fillMaxSize().padding(padding)) {
+        Box(modifier = Modifier.fillMaxSize().padding(if (isFullscreen) PaddingValues(0.dp) else padding)) {
             val file = pdfFile
             if (file != null && numPages > 0) {
                 PdfViewer(
@@ -176,7 +203,56 @@ fun ReaderScreen(
                 )
             } else {
                 Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    CircularProgressIndicator(color = Indigo600)
+                    CircularProgressIndicator(color = Color(0xFF4F46E5))
+                }
+            }
+
+            // ── Overlay de Busca Offline (I1) ──────────────────────────────────
+            AnimatedVisibility(
+                visible = isSearchActive && searchQuery.isNotBlank(),
+                enter = fadeIn(), exit = fadeOut()
+            ) {
+                val matchingAnns = annotations.filter { it.text.contains(searchQuery, ignoreCase = true) }
+                val matchingHighs = highlights.filter { it.text.contains(searchQuery, ignoreCase = true) }
+
+                Surface(modifier = Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.surface) {
+                    androidx.compose.foundation.lazy.LazyColumn(contentPadding = PaddingValues(16.dp)) {
+                        if (matchingAnns.isEmpty() && matchingHighs.isEmpty()) {
+                            item { Text("Nenhum resultado encontrado.", modifier = Modifier.padding(16.dp)) }
+                        }
+                        if (matchingAnns.isNotEmpty()) {
+                            item { Text("Anotações (Post-its)", fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary, modifier = Modifier.padding(vertical = 8.dp)) }
+                            items(matchingAnns.size) { i ->
+                                val a = matchingAnns[i]
+                                Card(
+                                    onClick = { scrollToPage = a.page; isSearchActive = false; searchQuery = "" },
+                                    modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
+                                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
+                                ) {
+                                    Column(Modifier.padding(16.dp)) {
+                                        Text("Página ${a.page}", fontWeight = FontWeight.Bold, fontSize = 12.sp, color = MaterialTheme.colorScheme.primary)
+                                        Text(a.text, maxLines = 3, modifier = Modifier.padding(top = 4.dp))
+                                    }
+                                }
+                            }
+                        }
+                        if (matchingHighs.isNotEmpty()) {
+                            item { Text("Fichamentos", fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary, modifier = Modifier.padding(vertical = 8.dp)) }
+                            items(matchingHighs.size) { i ->
+                                val h = matchingHighs[i]
+                                Card(
+                                    onClick = { scrollToPage = h.page; isSearchActive = false; searchQuery = "" },
+                                    modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
+                                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
+                                ) {
+                                    Column(Modifier.padding(16.dp)) {
+                                        Text("Página ${h.page}", fontWeight = FontWeight.Bold, fontSize = 12.sp, color = MaterialTheme.colorScheme.primary)
+                                        Text(h.text, maxLines = 3, modifier = Modifier.padding(top = 4.dp))
+                                    }
+                                }
+                            }
+                        }
+                    }
                 }
             }
 
@@ -335,6 +411,52 @@ fun ReaderScreen(
             }
         )
     }
+    if (showAbntDialog && document != null) {
+        AlertDialog(
+            onDismissRequest = { showAbntDialog = false },
+            title = { Text("Citação ABNT") },
+            text = {
+                val abntText = AbntUtil.format(document!!)
+                OutlinedTextField(
+                    value = abntText,
+                    onValueChange = {},
+                    readOnly = true,
+                    modifier = Modifier.fillMaxWidth().height(150.dp)
+                )
+            },
+            confirmButton = {
+                Button(onClick = { showAbntDialog = false }) { Text("OK") }
+            }
+        )
+    }
+
+    if (showExportDialog && document != null) {
+        AlertDialog(
+            onDismissRequest = { showExportDialog = false },
+            title = { Text("Exportar para Markdown") },
+            text = { Text("Deseja exportar as notas e fichamentos para um arquivo Markdown?") },
+            confirmButton = {
+                Button(onClick = {
+                    val mdContent = ExportUtil.toMarkdown(document!!, annotations, highlights)
+                    val fileName = ExportUtil.suggestedFileName(document!!)
+                    val file = java.io.File(context.cacheDir, fileName)
+                    file.writeText(mdContent)
+                    
+                    val uri = androidx.core.content.FileProvider.getUriForFile(context, "${context.packageName}.provider", file)
+                    val intent = android.content.Intent(android.content.Intent.ACTION_SEND).apply {
+                        type = "text/markdown"
+                        putExtra(android.content.Intent.EXTRA_STREAM, uri)
+                        addFlags(android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                    }
+                    context.startActivity(android.content.Intent.createChooser(intent, "Exportar Markdown"))
+                    showExportDialog = false
+                }) { Text("Compartilhar") }
+            },
+            dismissButton = {
+                TextButton(onClick = { showExportDialog = false }) { Text("Cancelar") }
+            }
+        )
+    }
 }
 
 @Composable
@@ -346,7 +468,10 @@ fun PdfViewer(
     onScrollDone: () -> Unit, onOcrSuccess: (Int, String) -> Unit, onPageChange: (Int) -> Unit,
     onAddAnnotation: (Int, Float, Float) -> Unit, onOpenAnnotation: (AnnotationEntity) -> Unit, onSaveDrawing: (Int, String) -> Unit
 ) {
-    val isScrollEnabled = activeTool == Tool.NONE || activeTool == Tool.SELECT || activeTool == Tool.ANNOTATION
+    var scale by remember { mutableFloatStateOf(1f) }
+    var offset by remember { mutableStateOf(androidx.compose.ui.geometry.Offset.Zero) }
+
+    val isScrollEnabled = (activeTool == Tool.NONE || activeTool == Tool.SELECT || activeTool == Tool.ANNOTATION) && scale == 1f
     val listState = rememberLazyListState()
 
     LaunchedEffect(scrollToPage) {
@@ -358,27 +483,54 @@ fun PdfViewer(
 
     LaunchedEffect(listState.firstVisibleItemIndex) { onPageChange(listState.firstVisibleItemIndex + 1) }
 
-    LazyColumn(
-        state = listState,
-        userScrollEnabled = isScrollEnabled,
-        modifier = Modifier.fillMaxSize().background(Color(0xFFE5E5F7)),
-        verticalArrangement = Arrangement.spacedBy(16.dp),
-        contentPadding = PaddingValues(16.dp)
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(Color(0xFFE5E5F7))
+            .pointerInput(Unit) {
+                detectTransformGestures { _, pan, zoom, _ ->
+                    scale = (scale * zoom).coerceIn(1f, 4f)
+                    if (scale > 1f) {
+                        val maxX = (size.width * (scale - 1)) / 2
+                        val maxY = (size.height * (scale - 1)) / 2
+                        offset = Offset(
+                            x = (offset.x + pan.x * scale).coerceIn(-maxX, maxX),
+                            y = (offset.y + pan.y * scale).coerceIn(-maxY, maxY)
+                        )
+                    } else {
+                        offset = Offset.Zero
+                    }
+                }
+            }
     ) {
-        items(numPages) { index ->
-            val pageNumber = index + 1
-            PdfPage(
-                pdfFile = pdfFile, pageNumber = pageNumber, activeTool = activeTool, strokeColor = strokeColor,
-                annotations = annotations.filter { it.page == pageNumber },
-                pageDrawingsJson = drawings.find { it.page == pageNumber }?.pathsJson,
-                undoTrigger = undoTrigger, redoTrigger = redoTrigger,
-                strokeWidthMultiplier = strokeWidthMultiplier,
-                pdfRenderer = pdfRenderer, renderMutex = renderMutex,
-                onOcrSuccess = { text -> onOcrSuccess(pageNumber, text) },
-                onAddAnnotation = { x, y -> onAddAnnotation(pageNumber, x, y) },
-                onOpenAnnotation = onOpenAnnotation,
-                onSaveDrawing = { json -> onSaveDrawing(pageNumber, json) }
-            )
+        LazyColumn(
+            state = listState,
+            userScrollEnabled = isScrollEnabled,
+            modifier = Modifier
+                .fillMaxSize()
+                .graphicsLayer(
+                    scaleX = scale,
+                    scaleY = scale,
+                    translationX = offset.x,
+                    translationY = offset.y
+                ),
+            verticalArrangement = Arrangement.spacedBy(16.dp),
+            contentPadding = PaddingValues(16.dp)
+        ) {
+            items(numPages) { index ->
+                val pageNumber = index + 1
+                PdfPage(
+                    pdfFile = pdfFile, pageNumber = pageNumber, activeTool = activeTool, strokeColor = strokeColor,
+                    annotations = annotations.filter { it.page == pageNumber },
+                    pageDrawingsJson = drawings.find { it.page == pageNumber }?.pathsJson,
+                    undoTrigger = undoTrigger, redoTrigger = redoTrigger, strokeWidthMultiplier = strokeWidthMultiplier,
+                    pdfRenderer = pdfRenderer, renderMutex = renderMutex,
+                    onOcrSuccess = { text -> onOcrSuccess(pageNumber, text) },
+                    onAddAnnotation = { x, y -> onAddAnnotation(pageNumber, x, y) },
+                    onOpenAnnotation = onOpenAnnotation,
+                    onSaveDrawing = { json -> onSaveDrawing(pageNumber, json) }
+                )
+            }
         }
     }
 }
@@ -506,11 +658,11 @@ fun PdfPage(
                                                 
                                                 if (safeWidth > 0 && safeHeight > 0) {
                                                     val crop = Bitmap.createBitmap(bmp, safeLeft, safeTop, safeWidth, safeHeight)
-                                                    val recognizer = com.google.mlkit.vision.text.TextRecognition.getClient(com.google.mlkit.vision.text.latin.TextRecognizerOptions.DEFAULT_OPTIONS)
-                                                    val image = com.google.mlkit.vision.common.InputImage.fromBitmap(crop, 0)
-                                                    recognizer.process(image).addOnSuccessListener { visionText ->
-                                                        if (visionText.text.isNotBlank()) onOcrSuccess(visionText.text)
-                                                    }
+                                                    OcrUtil.extractTextFromBitmap(
+                                                        bitmap = crop,
+                                                        onSuccess = { text -> if (text.isNotBlank()) onOcrSuccess(text) },
+                                                        onError = { e -> e.printStackTrace() }
+                                                    )
                                                     selectionRect = null
                                                 }
                                             } catch (e: Exception) { e.printStackTrace() }
