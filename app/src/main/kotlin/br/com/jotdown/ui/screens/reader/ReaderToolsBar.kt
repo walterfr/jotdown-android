@@ -24,6 +24,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 
 // Paleta de cores das ferramentas de desenho
@@ -34,6 +35,13 @@ private val toolPalette = listOf(
     0xFF10B981.toInt(),
     0xFFF59E0B.toInt(),
     0xFF8B5CF6.toInt(),
+)
+
+// Espessuras pré-definidas: (multiplicador, tamanho visual do indicador)
+private val strokeWidths = listOf(
+    Triple(0.5f,  6.dp,  "Fino"),
+    Triple(1.0f,  10.dp, "Médio"),
+    Triple(2.0f,  15.dp, "Grosso"),
 )
 
 // Ferramentas disponíveis: (enum, ícone, rótulo tooltip)
@@ -49,23 +57,25 @@ private val toolButtons = listOf(
 /**
  * Barra de ferramentas flutuante inferior do leitor.
  *
- * Exibe os botões de ferramenta como uma pílula elevada.
- * Quando a ferramenta ativa suporta cor (caneta, lápis, marca-texto),
- * anima a exibição do seletor de cores acima da barra.
+ * - Ferramentas de desenho/borracha: exibe seletor de cor + seletor de espessura.
+ * - Borracha: exibe apenas seletor de espessura.
+ * - A espessura é um multiplicador sobre a largura base de cada ferramenta;
+ *   a pressão da caneta continua afetando individualmente cada ponto do traço.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ReaderToolsBar(
     activeTool: Tool,
     strokeColor: Int,
+    strokeWidthMultiplier: Float,
     onToolSelect: (Tool) -> Unit,
     onColorSelect: (Int) -> Unit,
+    onWidthSelect: (Float) -> Unit,
     onUndo: () -> Unit,
     onRedo: () -> Unit,
 ) {
-    val showColorPicker = activeTool == Tool.PEN
-            || activeTool == Tool.PENCIL
-            || activeTool == Tool.HIGHLIGHTER
+    val showColorPicker     = activeTool == Tool.PEN || activeTool == Tool.PENCIL || activeTool == Tool.HIGHLIGHTER
+    val showThicknessPicker = showColorPicker || activeTool == Tool.ERASER
 
     Column(
         modifier = Modifier
@@ -75,29 +85,63 @@ fun ReaderToolsBar(
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
-        // ── Seletor de cores (aparece/some com animação) ──────────────────
+        // ── Seletores de cor e/ou espessura ──────────────────────────────
         AnimatedVisibility(
-            visible = showColorPicker,
+            visible = showThicknessPicker,
             enter = fadeIn() + expandVertically(expandFrom = Alignment.Top),
             exit  = fadeOut() + shrinkVertically(shrinkTowards = Alignment.Top),
         ) {
-            Surface(
-                shape         = RoundedCornerShape(50),
-                color         = MaterialTheme.colorScheme.surfaceVariant,
-                tonalElevation = 6.dp,
-                shadowElevation = 6.dp,
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalAlignment = Alignment.CenterVertically,
             ) {
-                Row(
-                    modifier = Modifier.padding(horizontal = 20.dp, vertical = 10.dp),
-                    horizontalArrangement = Arrangement.spacedBy(10.dp),
-                    verticalAlignment = Alignment.CenterVertically,
+                // Seletor de cores (apenas para ferramentas de desenho, não borracha)
+                if (showColorPicker) {
+                    Surface(
+                        shape = RoundedCornerShape(50),
+                        color = MaterialTheme.colorScheme.surfaceVariant,
+                        tonalElevation = 6.dp,
+                        shadowElevation = 6.dp,
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(horizontal = 16.dp, vertical = 10.dp),
+                            horizontalArrangement = Arrangement.spacedBy(10.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            toolPalette.forEach { color ->
+                                ColorDot(
+                                    color      = Color(color),
+                                    isSelected = strokeColor == color,
+                                    onClick    = { onColorSelect(color) },
+                                )
+                            }
+                        }
+                    }
+                }
+
+                // Seletor de espessura (para desenho e borracha)
+                Surface(
+                    shape = RoundedCornerShape(50),
+                    color = MaterialTheme.colorScheme.surfaceVariant,
+                    tonalElevation = 6.dp,
+                    shadowElevation = 6.dp,
                 ) {
-                    toolPalette.forEach { color ->
-                        ColorDot(
-                            color      = Color(color),
-                            isSelected = strokeColor == color,
-                            onClick    = { onColorSelect(color) },
-                        )
+                    Row(
+                        modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp),
+                        horizontalArrangement = Arrangement.spacedBy(10.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        strokeWidths.forEach { (multiplier, dotSize, label) ->
+                            ThicknessDot(
+                                visualSize = dotSize,
+                                isSelected = strokeWidthMultiplier == multiplier,
+                                label      = label,
+                                dotColor   = if (activeTool == Tool.ERASER)
+                                                 MaterialTheme.colorScheme.onSurfaceVariant
+                                             else Color(strokeColor),
+                                onClick    = { onWidthSelect(multiplier) },
+                            )
+                        }
                     }
                 }
             }
@@ -169,6 +213,39 @@ private fun ColorDot(color: Color, isSelected: Boolean, onClick: () -> Unit) {
             )
             .clickable { onClick() },
     )
+}
+
+/**
+ * Indicador de espessura: círculo sólido na cor atual da ferramenta,
+ * com borda de seleção quando ativo. Tamanho fixo de toque (32dp),
+ * o círculo visual cresce conforme a espessura representada.
+ */
+@Composable
+private fun ThicknessDot(
+    visualSize: Dp,
+    isSelected: Boolean,
+    label: String,
+    dotColor: Color,
+    onClick: () -> Unit,
+) {
+    Box(
+        modifier = Modifier
+            .size(32.dp)
+            .clickable { onClick() },
+        contentAlignment = Alignment.Center,
+    ) {
+        Box(
+            modifier = Modifier
+                .size(visualSize)
+                .clip(CircleShape)
+                .background(dotColor)
+                .then(
+                    if (isSelected)
+                        Modifier.border(2.dp, MaterialTheme.colorScheme.primary, CircleShape)
+                    else Modifier
+                ),
+        )
+    }
 }
 
 /** Botão de ferramenta com fundo circular + borda quando selecionado (Material 3 selected state). */

@@ -44,6 +44,10 @@ class ReaderViewModel(private val repository: DocumentRepository, private val do
     fun setStrokeColor(color: Int) { _strokeColor.value = color }
     fun setCurrentPage(page: Int) { _currentPage.value = page }
 
+    private val _strokeWidthMultiplier = MutableStateFlow(1.0f)
+    val strokeWidthMultiplier: StateFlow<Float> = _strokeWidthMultiplier
+    fun setStrokeWidthMultiplier(v: Float) { _strokeWidthMultiplier.value = v }
+
     // ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â°ÃƒÆ’Ã¢â‚¬Â¦Ãƒâ€šÃ‚Â¸ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚ÂºÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¡ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¯ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¸ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â A CORREÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â¡ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢O MESTRA: Atualiza o registo existente em vez de duplicar
     fun saveDrawing(page: Int, json: String) = viewModelScope.launch(Dispatchers.IO) {
         val existing = drawings.value.find { it.page == page }

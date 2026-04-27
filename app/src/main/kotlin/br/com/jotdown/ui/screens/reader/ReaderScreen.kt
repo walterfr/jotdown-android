@@ -61,6 +61,7 @@ fun ReaderScreen(
     val highlights      by viewModel.highlights.collectAsState()
     val drawings        by viewModel.drawings.collectAsState()
     val document        by viewModel.document.collectAsState()
+    val strokeWidthMultiplier by viewModel.strokeWidthMultiplier.collectAsState()
 
     val context = LocalContext.current
     val prefs = remember { context.getSharedPreferences("pdf_prefs", android.content.Context.MODE_PRIVATE) }
@@ -126,12 +127,14 @@ fun ReaderScreen(
         },
         bottomBar = {
             ReaderToolsBar(
-                activeTool    = activeTool,
-                strokeColor   = strokeColor,
-                onToolSelect  = { viewModel.toggleTool(it) },
-                onColorSelect = { viewModel.setStrokeColor(it) },
-                onUndo        = { undoTrigger = System.currentTimeMillis() },
-                onRedo        = { redoTrigger = System.currentTimeMillis() },
+                activeTool            = activeTool,
+                strokeColor           = strokeColor,
+                strokeWidthMultiplier = strokeWidthMultiplier,
+                onToolSelect          = { viewModel.toggleTool(it) },
+                onColorSelect         = { viewModel.setStrokeColor(it) },
+                onWidthSelect         = { viewModel.setStrokeWidthMultiplier(it) },
+                onUndo                = { undoTrigger = System.currentTimeMillis() },
+                onRedo                = { redoTrigger = System.currentTimeMillis() },
             )
         },
     ) { padding ->
@@ -147,9 +150,10 @@ fun ReaderScreen(
                     annotations     = annotations,
                     drawings        = drawings,
                     scrollToPage    = scrollToPage,
-                    undoTrigger     = undoTrigger,
-                    redoTrigger     = redoTrigger,
-                    pdfRenderer     = pdfRenderer,
+                    undoTrigger          = undoTrigger,
+                    redoTrigger          = redoTrigger,
+                    strokeWidthMultiplier = strokeWidthMultiplier,
+                    pdfRenderer          = pdfRenderer,
                     renderMutex     = renderMutex,
                     onScrollDone    = { scrollToPage = 0 },
                     onOcrSuccess    = { page, text ->
@@ -337,7 +341,7 @@ fun ReaderScreen(
 fun PdfViewer(
     pdfFile: File, numPages: Int, currentPage: Int, activeTool: Tool, strokeColor: Int,
     annotations: List<AnnotationEntity>, drawings: List<DrawingEntity>,
-    scrollToPage: Int, undoTrigger: Long, redoTrigger: Long,
+    scrollToPage: Int, undoTrigger: Long, redoTrigger: Long, strokeWidthMultiplier: Float,
     pdfRenderer: PdfRenderer?, renderMutex: Mutex,
     onScrollDone: () -> Unit, onOcrSuccess: (Int, String) -> Unit, onPageChange: (Int) -> Unit,
     onAddAnnotation: (Int, Float, Float) -> Unit, onOpenAnnotation: (AnnotationEntity) -> Unit, onSaveDrawing: (Int, String) -> Unit
@@ -368,6 +372,7 @@ fun PdfViewer(
                 annotations = annotations.filter { it.page == pageNumber },
                 pageDrawingsJson = drawings.find { it.page == pageNumber }?.pathsJson,
                 undoTrigger = undoTrigger, redoTrigger = redoTrigger,
+                strokeWidthMultiplier = strokeWidthMultiplier,
                 pdfRenderer = pdfRenderer, renderMutex = renderMutex,
                 onOcrSuccess = { text -> onOcrSuccess(pageNumber, text) },
                 onAddAnnotation = { x, y -> onAddAnnotation(pageNumber, x, y) },
@@ -382,7 +387,8 @@ fun PdfViewer(
 fun PdfPage(
     pdfFile: File, pageNumber: Int, activeTool: Tool, strokeColor: Int,
     annotations: List<AnnotationEntity>, pageDrawingsJson: String?,
-    undoTrigger: Long, redoTrigger: Long, pdfRenderer: PdfRenderer?, renderMutex: Mutex,
+    undoTrigger: Long, redoTrigger: Long, strokeWidthMultiplier: Float,
+    pdfRenderer: PdfRenderer?, renderMutex: Mutex,
     onOcrSuccess: (String) -> Unit, onAddAnnotation: (Float, Float) -> Unit, onOpenAnnotation: (AnnotationEntity) -> Unit, onSaveDrawing: (String) -> Unit
 ) {
     var bitmap by remember { mutableStateOf<Bitmap?>(null) }
@@ -425,8 +431,11 @@ fun PdfPage(
                     Image(bitmap = bmp.asImageBitmap(), contentDescription = null, modifier = Modifier.fillMaxWidth(), contentScale = ContentScale.FillWidth)
                     
                     DrawingLayer(
-                        modifier = Modifier.matchParentSize(), activeTool = activeTool, strokeColor = Color(strokeColor),
-                        annotations = annotations, pageDrawingsJson = pageDrawingsJson, undoTrigger = undoTrigger, redoTrigger = redoTrigger,
+                        modifier = Modifier.matchParentSize(),
+                        activeTool = activeTool, strokeColor = Color(strokeColor),
+                        strokeWidthMultiplier = strokeWidthMultiplier,
+                        annotations = annotations,
+                        pageDrawingsJson = pageDrawingsJson, undoTrigger = undoTrigger, redoTrigger = redoTrigger,
                         onAddAnnotation = onAddAnnotation, onOpenAnnotation = onOpenAnnotation, onSaveDrawing = onSaveDrawing
                     )
 
@@ -530,7 +539,8 @@ fun PdfPage(
 
 @Composable
 fun DrawingLayer(
-    modifier: Modifier, activeTool: Tool, strokeColor: Color, annotations: List<AnnotationEntity>,
+    modifier: Modifier, activeTool: Tool, strokeColor: Color, strokeWidthMultiplier: Float,
+    annotations: List<AnnotationEntity>,
     pageDrawingsJson: String?, undoTrigger: Long, redoTrigger: Long,
     onAddAnnotation: (Float, Float) -> Unit, onOpenAnnotation: (AnnotationEntity) -> Unit, onSaveDrawing: (String) -> Unit
 ) {
@@ -571,7 +581,7 @@ fun DrawingLayer(
                     val down = awaitFirstDown()
                     down.consume()
                     redoStack.clear()
-                    var pathInProgress = DrawnPath(activeTool, strokeColor, mutableListOf(PathPoint(down.position.x, down.position.y, down.pressure)))
+                    var pathInProgress = DrawnPath(activeTool, strokeColor, strokeWidthMultiplier, mutableListOf(PathPoint(down.position.x, down.position.y, down.pressure)))
                     currentPath = pathInProgress
                     do {
                         val event = awaitPointerEvent()
@@ -606,12 +616,11 @@ fun DrawingLayer(
         // Sempre visíveis e sempre clicáveis, independente da ferramenta ativa.
         val density = LocalDensity.current
         annotations.forEach { annot ->
-            val iconSize = 40.dp
+            val iconSize = 27.dp  // 40dp * 2/3
             val iconSizePx = with(density) { iconSize.toPx() }
             Box(
                 modifier = Modifier
                     .offset {
-                        // Centraliza o ícone horizontalmente e posiciona acima do ponto tocado
                         IntOffset(
                             x = (annot.x - iconSizePx / 2f).toInt(),
                             y = (annot.y - iconSizePx).toInt()
@@ -621,7 +630,7 @@ fun DrawingLayer(
                     .clickable { onOpenAnnotation(annot) },
                 contentAlignment = Alignment.Center
             ) {
-                // Sombra (ícone levemente maior e escuro atrás)
+                // Sombra
                 Icon(
                     imageVector = Icons.Default.ChatBubble,
                     contentDescription = null,
@@ -635,17 +644,35 @@ fun DrawingLayer(
                     tint = Color(0xFFF59E0B),
                     modifier = Modifier.fillMaxSize()
                 )
+                // Linhas internas simulando texto da anotação
+                androidx.compose.foundation.Canvas(
+                    modifier = Modifier.fillMaxSize()
+                ) {
+                    val w = size.width; val h = size.height
+                    val lineColor = Color.White.copy(alpha = 0.88f)
+                    val sw = 1.1.dp.toPx()
+                    val x0 = w * 0.22f
+                    drawLine(lineColor, Offset(x0, h * 0.28f), Offset(w * 0.76f, h * 0.28f), sw)
+                    drawLine(lineColor, Offset(x0, h * 0.43f), Offset(w * 0.70f, h * 0.43f), sw)
+                    drawLine(lineColor, Offset(x0, h * 0.58f), Offset(w * 0.55f, h * 0.58f), sw)
+                }
             }
         }
     }
 }
 
 data class PathPoint(val x: Float, val y: Float, val pressure: Float = 1f)
-data class DrawnPath(val tool: Tool, val color: Color, val points: MutableList<PathPoint> = mutableListOf())
+data class DrawnPath(
+    val tool: Tool,
+    val color: Color,
+    val widthMultiplier: Float = 1f,  // 0.5 = fino, 1.0 = médio, 2.0 = grosso
+    val points: MutableList<PathPoint> = mutableListOf()
+)
 
 fun DrawScope.drawDrawnPath(path: DrawnPath) {
     if (path.points.size < 2) return
-    val baseWidth = when(path.tool) { Tool.PEN -> 3f; Tool.PENCIL -> 4f; Tool.HIGHLIGHTER -> 25f; Tool.ERASER -> 30f; else -> 2f }
+    // widthMultiplier ajusta a espessura base; pressão da caneta continua afetando individualmente cada segmento
+    val baseWidth = when(path.tool) { Tool.PEN -> 3f; Tool.PENCIL -> 4f; Tool.HIGHLIGHTER -> 25f; Tool.ERASER -> 30f; else -> 2f } * path.widthMultiplier
     // A borracha usa BlendMode.Clear para apagar os pixels do próprio layer de anotações,
     // sem afetar a imagem do PDF que está numa camada inferior.
     val alpha = when (path.tool) { Tool.HIGHLIGHTER -> 0.35f; Tool.ERASER -> 1f; else -> 0.9f }
@@ -681,7 +708,10 @@ fun DrawScope.drawDrawnPath(path: DrawnPath) {
     }
 }
 
-fun List<DrawnPath>.toJson() = JSONArray(map { p -> mapOf("tool" to p.tool.name, "color" to p.color.value.toString(), "points" to p.points.map { mapOf("x" to it.x, "y" to it.y, "p" to it.pressure) }) }).toString()
+fun List<DrawnPath>.toJson() = JSONArray(map { p ->
+    mapOf("tool" to p.tool.name, "color" to p.color.value.toString(), "wm" to p.widthMultiplier,
+          "points" to p.points.map { mapOf("x" to it.x, "y" to it.y, "p" to it.pressure) })
+}).toString()
 
 fun parseDrawingsJson(json: String): List<DrawnPath> {
     val res = mutableListOf<DrawnPath>()
@@ -691,13 +721,14 @@ fun parseDrawingsJson(json: String): List<DrawnPath> {
             val obj = arr.getJSONObject(i)
             val tool = Tool.valueOf(obj.getString("tool"))
             val color = Color(obj.getString("color").toULong())
+            val wm = if (obj.has("wm")) obj.getDouble("wm").toFloat() else 1f  // retro-compat
             val ptsArr = obj.getJSONArray("points"); val pts = mutableListOf<PathPoint>()
-            for (j in 0 until ptsArr.length()) { 
+            for (j in 0 until ptsArr.length()) {
                 val p = ptsArr.getJSONObject(j)
                 val pressure = if (p.has("p")) p.getDouble("p").toFloat() else 1f
-                pts.add(PathPoint(p.getDouble("x").toFloat(), p.getDouble("y").toFloat(), pressure)) 
+                pts.add(PathPoint(p.getDouble("x").toFloat(), p.getDouble("y").toFloat(), pressure))
             }
-            res.add(DrawnPath(tool, color, pts))
+            res.add(DrawnPath(tool, color, wm, pts))
         }
     } catch(e: Exception) {}
     return res
