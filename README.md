@@ -97,4 +97,4 @@ br.com.jotdown/
 
 ## Licença
 
-[MIT](LICENSE) © Walter França
+[MIT](LICENSE) © Walter Rebouças
