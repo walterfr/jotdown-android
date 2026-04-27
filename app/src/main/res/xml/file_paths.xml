@@ -1,4 +1,7 @@
-﻿<?xml version="1.0" encoding="utf-8"?>
+<?xml version="1.0" encoding="utf-8"?>
 <paths>
-    <cache-path name="shared_backups" path="." />
+    <files-path name="pdfs" path="pdfs/" />
+    <files-path name="covers" path="covers/" />
+    <cache-path name="exports" path="." />
+    <external-cache-path name="external_exports" path="." />
 </paths>
