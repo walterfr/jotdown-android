@@ -13,3 +13,11 @@
 # Compose — evita problemas com reflexão
 -keep class androidx.compose.** { *; }
 -dontwarn androidx.compose.**
+
+# PDFBox-Android (Evitar erros com JP2Decoder e outras libs opcionais)
+-keep class com.tom_roush.pdfbox.** { *; }
+-dontwarn com.tom_roush.pdfbox.**
+-dontwarn com.gemalto.jp2.**
+-dontwarn org.bouncycastle.**
+-dontwarn org.apache.fontbox.**
+-dontwarn org.apache.pdfbox.**
