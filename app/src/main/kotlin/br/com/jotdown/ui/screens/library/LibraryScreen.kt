@@ -2,8 +2,8 @@ package br.com.jotdown.ui.screens.library
 
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.animation.core.animateDpAsState
-import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.*
+import androidx.compose.animation.core.*
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -27,6 +27,7 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.*
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
@@ -136,27 +137,52 @@ fun LibraryScreen(viewModel: LibraryViewModel, onOpenDocument: (String) -> Unit)
             },
             floatingActionButton = {
                 Column(horizontalAlignment = Alignment.End) {
-                    if (showFabMenu) {
-                        ExtendedFloatingActionButton(
-                            onClick = { showFabMenu = false; pdfPicker.launch("application/pdf") },
-                            icon = { Icon(Icons.Default.PictureAsPdf, contentDescription = null) },
-                            text = { Text("Importar PDF", fontWeight = FontWeight.Bold) },
-                            containerColor = MaterialTheme.colorScheme.surfaceVariant, contentColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                            modifier = Modifier.padding(bottom = 12.dp)
+                    AnimatedVisibility(
+                        visible = showFabMenu,
+                        enter = fadeIn(tween(200)) + slideInVertically(
+                            initialOffsetY = { it / 2 }, animationSpec = tween(220)
+                        ),
+                        exit = fadeOut(tween(150)) + slideOutVertically(
+                            targetOffsetY = { it / 2 }, animationSpec = tween(150)
                         )
-                        ExtendedFloatingActionButton(
-                            onClick = { showFabMenu = false; showCreateNoteDialog = true; noteTitle = "Caderno Sem Título" },
-                            icon = { Icon(Icons.Default.EditNote, contentDescription = null) },
-                            text = { Text("Novo Caderno", fontWeight = FontWeight.Bold) },
-                            containerColor = MaterialTheme.colorScheme.surfaceVariant, contentColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                            modifier = Modifier.padding(bottom = 16.dp)
-                        )
+                    ) {
+                        Column(horizontalAlignment = Alignment.End) {
+                            ExtendedFloatingActionButton(
+                                onClick = { showFabMenu = false; pdfPicker.launch("application/pdf") },
+                                icon = { Icon(Icons.Default.PictureAsPdf, contentDescription = null) },
+                                text = { Text("Importar PDF", fontWeight = FontWeight.Bold) },
+                                containerColor = MaterialTheme.colorScheme.surfaceVariant,
+                                contentColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                                modifier = Modifier.padding(bottom = 12.dp)
+                            )
+                            ExtendedFloatingActionButton(
+                                onClick = { showFabMenu = false; showCreateNoteDialog = true; noteTitle = "Caderno Sem Título" },
+                                icon = { Icon(Icons.Default.EditNote, contentDescription = null) },
+                                text = { Text("Novo Caderno", fontWeight = FontWeight.Bold) },
+                                containerColor = MaterialTheme.colorScheme.surfaceVariant,
+                                contentColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                                modifier = Modifier.padding(bottom = 16.dp)
+                            )
+                        }
                     }
                     FloatingActionButton(
                         onClick = { showFabMenu = !showFabMenu },
                         containerColor = Indigo600, contentColor = Color.White
                     ) {
-                        Icon(if (showFabMenu) Icons.Default.Close else Icons.Default.Add, contentDescription = "Novo")
+                        // Ícone cross-fades entre Add e Close
+                        AnimatedContent(
+                            targetState = showFabMenu,
+                            transitionSpec = {
+                                fadeIn(tween(180)) + scaleIn(tween(180)) togetherWith
+                                fadeOut(tween(120)) + scaleOut(tween(120))
+                            },
+                            label = "fabIcon"
+                        ) { isOpen ->
+                            Icon(
+                                if (isOpen) Icons.Default.Close else Icons.Default.Add,
+                                contentDescription = "Novo"
+                            )
+                        }
                     }
                 }
             },
@@ -293,7 +319,7 @@ private fun DocumentCoverCard(
             ) {
                 Box(modifier = Modifier.fillMaxSize()) {
                     if (coverBitmap != null) { Image(bitmap = coverBitmap!!, contentDescription = "Capa do PDF", modifier = Modifier.fillMaxSize(), contentScale = ContentScale.Crop) } 
-                    else { Box(modifier = Modifier.fillMaxSize().background(Color(0xFFE5E7EB)), contentAlignment = Alignment.Center) { Icon(if (doc.docType == "nota") Icons.Default.EditNote else Icons.Default.PictureAsPdf, contentDescription = null, tint = Color.Gray, modifier = Modifier.size(48.dp)) } }
+                    else { AutoGeneratedCover(title = doc.title.ifBlank { doc.fileName }, docType = doc.docType) }
                     
                     // 🛡️ Lombada do Livro (Book Spine)
                     Box(modifier = Modifier.fillMaxHeight().width(14.dp).align(Alignment.CenterStart).background(Brush.horizontalGradient(colors = listOf(Color.Black.copy(alpha = 0.45f), Color.Black.copy(alpha = 0.1f), Color.Transparent))))
@@ -338,13 +364,105 @@ private fun EmptyLibrary(filter: String, tab: String) {
         tab == "Nota" -> "Nenhum caderno ou PDF fichado."
         else -> "A sua estante está vazia."
     }
+    val subtitle = when {
+        filter == "Lixo" || filter.startsWith("Tag:") -> ""
+        else -> "Toque em + para adicionar"
+    }
+
+    // Animação flutuante infinita no ícone
+    val pulse = rememberInfiniteTransition(label = "emptyFloat")
+    val floatY by pulse.animateFloat(
+        initialValue = 0f, targetValue = -12f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(1400, easing = FastOutSlowInEasing),
+            repeatMode = RepeatMode.Reverse
+        ),
+        label = "float"
+    )
+
     Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            Box(modifier = Modifier.size(80.dp).clip(RoundedCornerShape(24.dp)).background(MaterialTheme.colorScheme.surfaceVariant), contentAlignment = Alignment.Center) {
-                Icon(if (filter == "Lixo") Icons.Default.DeleteOutline else if (filter.startsWith("Tag:")) Icons.Default.Label else if (tab == "Nota") Icons.Default.EditNote else Icons.AutoMirrored.Filled.MenuBook, contentDescription = null, tint = MaterialTheme.colorScheme.outline, modifier = Modifier.size(44.dp))
+            Box(
+                modifier = Modifier
+                    .size(80.dp)
+                    .offset { IntOffset(0, floatY.roundToInt()) }
+                    .clip(RoundedCornerShape(24.dp))
+                    .background(MaterialTheme.colorScheme.surfaceVariant),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    if (filter == "Lixo") Icons.Default.DeleteOutline
+                    else if (filter.startsWith("Tag:")) Icons.Default.Label
+                    else if (tab == "Nota") Icons.Default.EditNote
+                    else Icons.AutoMirrored.Filled.MenuBook,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.outline,
+                    modifier = Modifier.size(44.dp)
+                )
             }
-            Spacer(Modifier.height(16.dp))
+            Spacer(Modifier.height(20.dp))
             Text(message, fontWeight = FontWeight.Bold, fontSize = 17.sp, color = MaterialTheme.colorScheme.onBackground)
+            if (subtitle.isNotBlank()) {
+                Spacer(Modifier.height(6.dp))
+                Text(subtitle, fontSize = 13.sp, color = MaterialTheme.colorScheme.outline)
+            }
+        }
+    }
+}
+
+/**
+ * Capa gerada automaticamente quando o documento não possui thumbnail.
+ * O gradiente é determinístico: deriva do hash do título, garantindo
+ * que o mesmo documento sempre exiba as mesmas cores.
+ */
+@Composable
+private fun AutoGeneratedCover(title: String, docType: String) {
+    val gradients = remember {
+        listOf(
+            listOf(Color(0xFF4F46E5), Color(0xFF7C3AED)), // índigo → violeta
+            listOf(Color(0xFF0EA5E9), Color(0xFF6366F1)), // céu → índigo
+            listOf(Color(0xFF059669), Color(0xFF0EA5E9)), // esmeralda → céu
+            listOf(Color(0xFFF59E0B), Color(0xFFEF4444)), // âmbar → vermelho
+            listOf(Color(0xFF8B5CF6), Color(0xFFEC4899)), // violeta → rosa
+            listOf(Color(0xFF0891B2), Color(0xFF6366F1)), // ciano → índigo
+        )
+    }
+    val palette = gradients[kotlin.math.abs(title.hashCode()) % gradients.size]
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(
+                Brush.linearGradient(
+                    colors = palette,
+                    start = androidx.compose.ui.geometry.Offset(0f, 0f),
+                    end = androidx.compose.ui.geometry.Offset(
+                        Float.POSITIVE_INFINITY, Float.POSITIVE_INFINITY
+                    )
+                )
+            ),
+        contentAlignment = Alignment.Center
+    ) {
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            modifier = Modifier.padding(horizontal = 12.dp, vertical = 16.dp)
+        ) {
+            Icon(
+                imageVector = if (docType == "nota") Icons.Default.EditNote else Icons.Default.PictureAsPdf,
+                contentDescription = null,
+                tint = Color.White.copy(alpha = 0.4f),
+                modifier = Modifier.size(28.dp)
+            )
+            Spacer(Modifier.height(10.dp))
+            Text(
+                text = title,
+                color = Color.White,
+                fontSize = 11.sp,
+                fontWeight = FontWeight.Bold,
+                textAlign = TextAlign.Center,
+                maxLines = 4,
+                overflow = TextOverflow.Ellipsis,
+                lineHeight = 15.sp,
+            )
         }
     }
 }
