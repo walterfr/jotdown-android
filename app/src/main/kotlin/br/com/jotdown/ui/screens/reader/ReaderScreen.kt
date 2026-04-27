@@ -191,25 +191,30 @@ fun ReaderScreen(
             }
 
             if (numPages > 0) {
-                Row(
-                    modifier = Modifier.align(Alignment.BottomCenter).padding(bottom = 24.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.Center
+                Box(
+                    modifier = Modifier
+                        .align(Alignment.BottomCenter)
+                        .fillMaxWidth()
+                        .padding(bottom = 24.dp, start = 16.dp, end = 16.dp)
                 ) {
+                    // Pílula centralizada
                     Surface(
                         onClick = { showOffsetDialog = true },
                         shape = RoundedCornerShape(16.dp),
-                        color = Color.Black.copy(alpha = 0.85f)
+                        color = Color.Black.copy(alpha = 0.85f),
+                        modifier = Modifier.align(Alignment.Center)
                     ) {
                         Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.padding(horizontal = 16.dp, vertical = 6.dp)) {
                             Text("PDF $currentPage de $numPages", color = Color.Gray, fontSize = 10.sp)
                             Text("Doc ${currentPage + pageOffset} de $numPages", color = Color.White, fontSize = 13.sp, fontWeight = FontWeight.Bold)
                         }
                     }
-                    Spacer(modifier = Modifier.width(12.dp))
+
+                    // Slider ancorado à direita
                     Surface(
                         shape = RoundedCornerShape(16.dp),
-                        color = Color.Black.copy(alpha = 0.5f)
+                        color = Color.Black.copy(alpha = 0.5f),
+                        modifier = Modifier.align(Alignment.CenterEnd)
                     ) {
                         Slider(
                             value = currentPage.toFloat(),
@@ -533,7 +538,11 @@ fun DrawingLayer(
     LaunchedEffect(redoTrigger) { if (redoTrigger > 0 && redoStack.isNotEmpty()) { paths.add(redoStack.removeAt(redoStack.size - 1)); onSaveDrawing(paths.toJson()) } }
 
     Canvas(
-        modifier = modifier.pointerInput(activeTool, strokeColor) {
+        // O graphicsLayer cria um layer de composição dedicado, necessário para que
+        // BlendMode.Clear funcione corretamente (apaga apenas os pixels deste layer).
+        modifier = modifier
+            .graphicsLayer(compositingStrategy = CompositingStrategy.Offscreen)
+            .pointerInput(activeTool, strokeColor) {
             if (activeTool == Tool.NONE || activeTool == Tool.SELECT) return@pointerInput
 
             if (activeTool == Tool.ANNOTATION) {
@@ -589,17 +598,38 @@ data class DrawnPath(val tool: Tool, val color: Color, val points: MutableList<P
 fun DrawScope.drawDrawnPath(path: DrawnPath) {
     if (path.points.size < 2) return
     val baseWidth = when(path.tool) { Tool.PEN -> 3f; Tool.PENCIL -> 4f; Tool.HIGHLIGHTER -> 25f; Tool.ERASER -> 30f; else -> 2f }
-    val alpha = if (path.tool == Tool.HIGHLIGHTER) 0.35f else 0.9f
-    val blend = if (path.tool == Tool.HIGHLIGHTER) BlendMode.Multiply else BlendMode.SrcOver
+    // A borracha usa BlendMode.Clear para apagar os pixels do próprio layer de anotações,
+    // sem afetar a imagem do PDF que está numa camada inferior.
+    val alpha = when (path.tool) { Tool.HIGHLIGHTER -> 0.35f; Tool.ERASER -> 1f; else -> 0.9f }
+    val blend = when (path.tool) { Tool.HIGHLIGHTER -> BlendMode.Multiply; Tool.ERASER -> BlendMode.Clear; else -> BlendMode.SrcOver }
 
-    for (i in 1 until path.points.size) {
-        val p1 = path.points[i-1]; val p2 = path.points[i]
-        val pFact = if (path.tool == Tool.PEN) (0.5f + 1.5f * p2.pressure).coerceIn(0.5f, 2.5f) else 1f
-        drawLine(
-            color = if (path.tool == Tool.ERASER) Color.White else path.color,
-            start = Offset(p1.x, p1.y), end = Offset(p2.x, p2.y),
-            strokeWidth = baseWidth * pFact, cap = StrokeCap.Round, alpha = alpha, blendMode = blend
+    if (path.tool == Tool.HIGHLIGHTER || path.tool == Tool.ERASER) {
+        // Marca-texto e borracha: um único drawPath para que alpha/blendMode sejam aplicados
+        // UMA SÓ VEZ em todo o traço — evita o artefato de "bolinhas" nas sobreposições de segmentos.
+        val shapePath = androidx.compose.ui.graphics.Path().apply {
+            moveTo(path.points[0].x, path.points[0].y)
+            for (i in 1 until path.points.size) {
+                lineTo(path.points[i].x, path.points[i].y)
+            }
+        }
+        drawPath(
+            path = shapePath,
+            color = if (path.tool == Tool.ERASER) Color.Transparent else path.color,
+            alpha = alpha,
+            style = Stroke(width = baseWidth, cap = StrokeCap.Round, join = StrokeJoin.Round),
+            blendMode = blend
         )
+    } else {
+        // Caneta e lápis: segmentos individuais para suportar variação de pressão por ponto.
+        for (i in 1 until path.points.size) {
+            val p1 = path.points[i-1]; val p2 = path.points[i]
+            val pFact = if (path.tool == Tool.PEN) (0.5f + 1.5f * p2.pressure).coerceIn(0.5f, 2.5f) else 1f
+            drawLine(
+                color = path.color,
+                start = Offset(p1.x, p1.y), end = Offset(p2.x, p2.y),
+                strokeWidth = baseWidth * pFact, cap = StrokeCap.Round, alpha = alpha, blendMode = blend
+            )
+        }
     }
 }
 
