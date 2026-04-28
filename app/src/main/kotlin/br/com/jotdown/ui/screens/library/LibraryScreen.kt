@@ -12,6 +12,8 @@ import androidx.compose.foundation.gestures.*
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.grid.*
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.*
@@ -79,6 +81,7 @@ fun LibraryScreen(viewModel: LibraryViewModel, onOpenDocument: (String) -> Unit)
     val backupPicker = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri -> uri ?: return@rememberLauncherForActivityResult; viewModel.importBackup(context, uri) }
     var showMenu by remember { mutableStateOf(false) }
     var showImportWarning by remember { mutableStateOf(false) }
+    var showAboutDialog by remember { mutableStateOf(false) }
 
     var globalDragPos by remember { mutableStateOf(Offset.Zero) }
     var draggingDocId by remember { mutableStateOf<String?>(null) }
@@ -163,7 +166,14 @@ fun LibraryScreen(viewModel: LibraryViewModel, onOpenDocument: (String) -> Unit)
 
                 // ── Rodapé com versão ────────────────────────────────────
                 Spacer(Modifier.weight(1f))
-                HorizontalDivider()
+                NavigationDrawerItem(
+                    icon = { Icon(Icons.Default.Info, contentDescription = null) },
+                    label = { Text("Sobre") },
+                    selected = false,
+                    onClick = { showAboutDialog = true; scope.launch { drawerState.close() } },
+                    modifier = Modifier.padding(horizontal = 12.dp)
+                )
+                HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
                 Text(
                     "v2.2.0",
                     modifier = Modifier.padding(horizontal = 20.dp, vertical = 14.dp),
@@ -393,6 +403,29 @@ fun LibraryScreen(viewModel: LibraryViewModel, onOpenDocument: (String) -> Unit)
     docToTag?.let { doc -> AlertDialog(onDismissRequest = { docToTag = null }, title = { Text("Editar Rótulos") }, text = { Column { Text("Separe os rótulos por vírgula.", fontSize = 12.sp, color = MaterialTheme.colorScheme.outline); Spacer(Modifier.height(8.dp)); OutlinedTextField(value = tagText, onValueChange = { tagText = it }, label = { Text("Rótulos") }, modifier = Modifier.fillMaxWidth()) } }, confirmButton = { TextButton(onClick = { viewModel.updateLabels(doc.id, tagText); docToTag = null }) { Text("Salvar", color = Indigo600, fontWeight = FontWeight.Bold) } }, dismissButton = { TextButton(onClick = { docToTag = null }) { Text("Cancelar") } }) }
     if (showImportWarning) { AlertDialog(onDismissRequest = { showImportWarning = false }, title = { Text("Importar Backup") }, text = { Text("ATENÇÃO: A sua biblioteca atual será substituída.") }, confirmButton = { TextButton(onClick = { showImportWarning = false; backupPicker.launch("application/zip") }) { Text("Sim, Importar", color = MaterialTheme.colorScheme.error, fontWeight = FontWeight.Bold) } }, dismissButton = { TextButton(onClick = { showImportWarning = false }) { Text("Cancelar") } }) }
     if (showDeleteFolder) { AlertDialog(onDismissRequest = { showDeleteFolder = false }, title = { Text("Apagar Pasta?") }, text = { Text("Os PDFs voltarão para a biblioteca principal.") }, confirmButton = { TextButton(onClick = { viewModel.deleteCurrentFolder(); showDeleteFolder = false }) { Text("Apagar", color = MaterialTheme.colorScheme.error) } }, dismissButton = { TextButton(onClick = { showDeleteFolder = false }) { Text("Cancelar") } }) }
+
+    if (showAboutDialog) {
+        AlertDialog(
+            onDismissRequest = { showAboutDialog = false },
+            title = { Text("Sobre o Jotdown", fontWeight = FontWeight.Black) },
+            text = {
+                Column(modifier = Modifier.fillMaxWidth().verticalScroll(rememberScrollState())) {
+                    Text("O Jotdown é um fichador acadêmico e leitor de PDF para Android criado para dar total controle e privacidade ao usuário. Focado em produtividade, permite fazer anotações à mão, ancorar notas em páginas de PDF e gerenciar a biblioteca de documentos de forma 100% offline — sem internet, sem contas e sem telemetria.")
+                    Spacer(Modifier.height(16.dp))
+                    Text("Sobre o Autor", fontWeight = FontWeight.Bold)
+                    Spacer(Modifier.height(4.dp))
+                    Text("Sou Walter Rebouças, desenvolvedor open-source, professor de história da rede estadual do Ceará e mestrando PPGHCE-UECE. Acredito na tecnologia que respeita a privacidade e entrega valor real aos usuários.")
+                    Spacer(Modifier.height(16.dp))
+                    Text("Feito com ♥ em Fortaleza.", fontWeight = FontWeight.Bold, color = Indigo600)
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = { showAboutDialog = false }) {
+                    Text("Fechar", color = Indigo600, fontWeight = FontWeight.Bold)
+                }
+            }
+        )
+    }
 }
 
 @Composable
