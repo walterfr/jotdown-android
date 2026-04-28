@@ -33,19 +33,18 @@ jobs:
         run: ./gradlew assembleFullRelease
 
       - name: Sign APK
-        uses: r0adkll/sign-android-release@v1
+        uses: ilharp/sign-android-release@v1
         id: sign_app
         with:
-          releaseDirectory: app/build/outputs/apk/full/release
-          signingKeyBase64: ${{ secrets.KEYSTORE_BASE64 }}
-          alias: ${{ secrets.KEY_ALIAS }}
+          releaseDir: app/build/outputs/apk/full/release
+          signingKey: ${{ secrets.KEYSTORE_BASE64 }}
+          keyAlias: ${{ secrets.KEY_ALIAS }}
           keyStorePassword: ${{ secrets.KEYSTORE_PASSWORD }}
           keyPassword: ${{ secrets.KEY_PASSWORD }}
-          buildToolsVersion: 34.0.0
 
       - name: Create Release and Upload APK
         uses: softprops/action-gh-release@v1
         with:
           # Faz o upload do APK que foi assinado no passo anterior
-          files: ${{steps.sign_app.outputs.signedReleaseFile}}
+          files: ${{steps.sign_app.outputs.signedFile}}
           generate_release_notes: true
