@@ -1,0 +1,50 @@
+name: Android Release Build
+
+on:
+  push:
+    tags:
+      - 'v*' # Esse fluxo vai rodar sempre que você enviar uma tag começando com 'v', tipo v2.0.0
+
+jobs:
+  build-and-release:
+    name: Build & Release APK
+    runs-on: ubuntu-latest
+
+    # Permissão necessária para o GitHub Actions criar o Release
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'zulu'
+          java-version: '17'
+          cache: 'gradle'
+
+      - name: Grant execute permission for gradlew
+        run: chmod +x gradlew
+
+      - name: Build Full Release APK
+        # Vai compilar a versão "Full" (sem ser FOSS) em modo Release
+        run: ./gradlew assembleFullRelease
+
+      - name: Sign APK
+        uses: r0adkll/sign-android-release@v1
+        id: sign_app
+        with:
+          releaseDirectory: app/build/outputs/apk/full/release
+          signingKeyBase64: ${{ secrets.KEYSTORE_BASE64 }}
+          alias: ${{ secrets.KEY_ALIAS }}
+          keyStorePassword: ${{ secrets.KEYSTORE_PASSWORD }}
+          keyPassword: ${{ secrets.KEY_PASSWORD }}
+
+      - name: Create Release and Upload APK
+        uses: softprops/action-gh-release@v1
+        with:
+          # Faz o upload do APK que foi assinado no passo anterior
+          files: ${{steps.sign_app.outputs.signedReleaseFile}}
+          generate_release_notes: true
