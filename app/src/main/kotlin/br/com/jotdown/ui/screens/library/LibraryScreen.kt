@@ -532,7 +532,8 @@ private fun DocumentCoverCard(
         Spacer(Modifier.height(4.dp))
         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
              Text("${doc.highlightCount} Cit. \u2022 ${doc.annotationCount} Notas", fontSize = 11.sp, color = MaterialTheme.colorScheme.outline)
-             val dateToShow = if (doc.accessDate.isNotBlank()) "Lido: " + dateFormat.format(Date(doc.accessDate.toLongOrNull() ?: doc.dateAdded)) else dateFormat.format(Date(doc.dateAdded))
+             val accessTs = doc.accessDate.toLongOrNull()
+             val dateToShow = if (accessTs != null && accessTs > 0) "Lido: " + dateFormat.format(Date(accessTs)) else dateFormat.format(Date(doc.dateAdded))
              Text(dateToShow, fontSize = 11.sp, color = MaterialTheme.colorScheme.outline)
         }
     }
