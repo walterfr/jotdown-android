@@ -1,4 +1,4 @@
-﻿package br.com.jotdown.data.entity
+package br.com.jotdown.data.entity
 
 import androidx.room.Entity
 import androidx.room.PrimaryKey
@@ -16,7 +16,7 @@ import androidx.room.Index
     indices = [Index("documentId")]
 )
 data class HighlightEntity(
-    @PrimaryKey val id: Long,
+    @PrimaryKey(autoGenerate = true) val id: Long = 0,
     val documentId: String,
     val page: Int,
     val text: String

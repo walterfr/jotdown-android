@@ -1,4 +1,4 @@
-﻿package br.com.jotdown.data.db
+package br.com.jotdown.data.db
 
 import android.content.Context
 import androidx.room.Database
@@ -15,7 +15,7 @@ import br.com.jotdown.data.entity.*
         DrawingEntity::class,
         FolderEntity::class
     ],
-    version = 2,
+    version = 10,
     exportSchema = false
 )
 abstract class JotdownDatabase : RoomDatabase() {
@@ -35,7 +35,7 @@ abstract class JotdownDatabase : RoomDatabase() {
                 Room.databaseBuilder(
                     context.applicationContext,
                     JotdownDatabase::class.java,
-                    "jotdown.db"
+                    "jotdown_stable.db"
                 )
                 .fallbackToDestructiveMigration()
                 .build()
