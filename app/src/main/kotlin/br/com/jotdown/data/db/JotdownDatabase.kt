@@ -13,7 +13,8 @@ import br.com.jotdown.data.entity.*
         AnnotationEntity::class,
         HighlightEntity::class,
         DrawingEntity::class,
-        FolderEntity::class
+        FolderEntity::class,
+        DictionaryCache::class
     ],
     version = 10,
     exportSchema = false
@@ -25,6 +26,7 @@ abstract class JotdownDatabase : RoomDatabase() {
     abstract fun highlightDao(): HighlightDao
     abstract fun drawingDao(): DrawingDao
     abstract fun folderDao(): FolderDao
+    abstract fun dictionaryCacheDao(): DictionaryCacheDao
 
     companion object {
         @Volatile

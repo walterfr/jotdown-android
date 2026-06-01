@@ -5,6 +5,7 @@ import android.net.Uri
 import android.provider.OpenableColumns
 import android.util.Log
 import androidx.lifecycle.*
+import br.com.jotdown.JotdownApplication
 import br.com.jotdown.data.dao.DocumentSummary
 import br.com.jotdown.data.entity.DocumentEntity
 import br.com.jotdown.data.repository.DocumentRepository
@@ -18,7 +19,9 @@ import kotlinx.coroutines.withContext
 import java.io.File
 import java.util.UUID
 
-class LibraryViewModel(private val repository: DocumentRepository) : ViewModel() {
+class LibraryViewModel(private val repository: DocumentRepository, private val application: JotdownApplication) : ViewModel() {
+    val syncWorkInfo = application.syncManager.getSyncWorkInfo()
+
     private val _currentFolder = MutableStateFlow<FolderEntity?>(null)
     val currentFolder: StateFlow<FolderEntity?> = _currentFolder.asStateFlow()
 
@@ -257,8 +260,22 @@ class LibraryViewModel(private val repository: DocumentRepository) : ViewModel()
 
     fun exportBackup(context: Context) = viewModelScope.launch { br.com.jotdown.util.BackupUtil.exportBackup(context) }
     fun importBackup(context: Context, uri: Uri) = viewModelScope.launch { br.com.jotdown.util.BackupUtil.importBackup(context, uri) }
+    
+    suspend fun getBackupFile(context: Context): File? = br.com.jotdown.util.BackupUtil.getBackupFileForSaving(context)
+    fun saveBackupToUri(context: Context, sourceFile: File, uri: Uri) = viewModelScope.launch { 
+        br.com.jotdown.util.BackupUtil.saveBackupToUri(context, sourceFile, uri) 
+    }
 }
 
-class LibraryViewModelFactory(private val repository: DocumentRepository) : ViewModelProvider.Factory {
-    override fun <T : ViewModel> create(modelClass: Class<T>): T { @Suppress("UNCHECKED_CAST") return LibraryViewModel(repository) as T }
+class LibraryViewModelFactory(
+    private val repository: DocumentRepository,
+    private val application: br.com.jotdown.JotdownApplication
+) : ViewModelProvider.Factory {
+    override fun <T : ViewModel> create(modelClass: Class<T>): T {
+        if (modelClass.isAssignableFrom(LibraryViewModel::class.java)) {
+            @Suppress("UNCHECKED_CAST")
+            return LibraryViewModel(repository, application) as T
+        }
+        throw IllegalArgumentException("Unknown ViewModel class")
+    }
 }

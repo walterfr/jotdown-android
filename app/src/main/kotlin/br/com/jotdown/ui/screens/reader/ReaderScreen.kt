@@ -91,6 +91,9 @@ fun ReaderScreen(
     var undoTrigger by remember { mutableLongStateOf(0L) }
     var redoTrigger by remember { mutableLongStateOf(0L) }
 
+    // Estado do dicionário vem do ViewModel
+    val dictionaryState by viewModel.dictionaryState.collectAsState()
+
     var pdfRenderer by remember { mutableStateOf<PdfRenderer?>(null) }
     var fileDescriptor by remember { mutableStateOf<ParcelFileDescriptor?>(null) }
     val renderMutex = remember { Mutex() }
@@ -222,7 +225,8 @@ fun ReaderScreen(
                         textToEdit = text
                         ocrResult = Pair(page, text)
                     },
-                    onScrollChange  = { page, offset -> 
+                    onDictionaryRequest = { _, text -> viewModel.captureForDictionary(text) },
+                    onScrollChange  = { page, offset ->
                         viewModel.setCurrentPage(page)
                         if (docId.isNotBlank()) {
                             prefs.edit()
@@ -418,6 +422,148 @@ fun ReaderScreen(
         )
     }
 
+    // Diálogo do Dicionário — estado real do ViewModel
+    val dictState = dictionaryState
+
+    if (dictState != br.com.jotdown.ui.viewmodel.DictionaryLookupState.Idle) {
+        AlertDialog(
+            onDismissRequest = { viewModel.clearDictionaryState() },
+            title = {
+                Text(
+                    text = "📖 Dicionário",
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 18.sp
+                )
+            },
+            text = {
+                val currentLang by viewModel.dictionaryLanguage.collectAsState()
+                Column(modifier = Modifier.fillMaxWidth()) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth().padding(bottom = 12.dp),
+                        horizontalArrangement = Arrangement.Center
+                    ) {
+                        FilterChip(
+                            selected = currentLang == "en",
+                            onClick = { viewModel.setDictionaryLanguage("en") },
+                            label = { Text("🇺🇸 Inglês") }
+                        )
+                        Spacer(Modifier.width(16.dp))
+                        FilterChip(
+                            selected = currentLang == "pt",
+                            onClick = { viewModel.setDictionaryLanguage("pt") },
+                            label = { Text("🇧🇷 Português") }
+                        )
+                    }
+
+                    when (dictState) {
+                        is br.com.jotdown.ui.viewmodel.DictionaryLookupState.Loading -> {
+                            Box(modifier = Modifier.fillMaxWidth().padding(vertical = 24.dp), contentAlignment = Alignment.Center) {
+                                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                    CircularProgressIndicator(color = Color(0xFF3B82F6))
+                                    Spacer(Modifier.height(12.dp))
+                                    Text("Buscando '${dictState.word}'...", fontSize = 13.sp, color = Color(0xFF6B7280))
+                                }
+                            }
+                        }
+                        is br.com.jotdown.ui.viewmodel.DictionaryLookupState.Downloading -> {
+                            Box(modifier = Modifier.fillMaxWidth().padding(vertical = 24.dp), contentAlignment = Alignment.Center) {
+                                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                    CircularProgressIndicator(color = Color(0xFF10B981), progress = { dictState.progress / 100f })
+                                    Spacer(Modifier.height(12.dp))
+                                    Text("Baixando dicionário... ${dictState.progress}%", fontSize = 13.sp, color = Color(0xFF6B7280))
+                                }
+                            }
+                        }
+                        is br.com.jotdown.ui.viewmodel.DictionaryLookupState.NotDownloaded -> {
+                            Spacer(Modifier.height(8.dp))
+                            Text(
+                                text = "O dicionário offline para '${dictState.language}' não está instalado. Deseja baixar agora?",
+                                fontSize = 13.sp,
+                                color = Color(0xFF4B5563)
+                            )
+                        }
+                        is br.com.jotdown.ui.viewmodel.DictionaryLookupState.NotFound -> {
+                            Spacer(Modifier.height(12.dp))
+                            Text(
+                                text = "⚠️ Nenhuma definição encontrada para \"${dictState.word}\".",
+                                fontSize = 13.sp,
+                                color = Color(0xFF92400E)
+                            )
+                        }
+                        is br.com.jotdown.ui.viewmodel.DictionaryLookupState.Success -> {
+                            val entry = dictState.entry
+
+                            Surface(
+                                color = Color(0xFFEFF6FF),
+                                shape = RoundedCornerShape(8.dp),
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                Text(
+                                    text = entry.word,
+                                    fontWeight = FontWeight.Bold,
+                                    fontSize = 16.sp,
+                                    color = Color(0xFF1D4ED8),
+                                    modifier = Modifier.padding(12.dp)
+                                )
+                            }
+
+                            if (!entry.definition.isNullOrBlank()) {
+                                Spacer(Modifier.height(12.dp))
+                                Text(
+                                    text = "Definição",
+                                    fontWeight = FontWeight.Bold,
+                                    fontSize = 12.sp,
+                                    color = Color(0xFF374151)
+                                )
+                                Spacer(Modifier.height(4.dp))
+                                Surface(
+                                    color = Color(0xFFF9FAFB),
+                                    shape = RoundedCornerShape(8.dp),
+                                    modifier = Modifier.fillMaxWidth()
+                                ) {
+                                    Text(
+                                        text = entry.definition,
+                                        fontSize = 13.sp,
+                                        lineHeight = 20.sp,
+                                        modifier = Modifier.padding(12.dp)
+                                    )
+                                }
+                            }
+                        }
+                        is br.com.jotdown.ui.viewmodel.DictionaryLookupState.Error -> {
+                            Spacer(Modifier.height(8.dp))
+                            Text(
+                                text = "❌ Erro: ${dictState.message}",
+                                fontSize = 13.sp,
+                                color = Color(0xFFDC2626)
+                            )
+                        }
+                        else -> {}
+                    }
+                }
+            },
+            confirmButton = {
+                if (dictState is br.com.jotdown.ui.viewmodel.DictionaryLookupState.NotDownloaded) {
+                    Button(
+                        onClick = { viewModel.downloadDictionary(dictState.language, dictState.word) },
+                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF10B981))
+                    ) { Text("Baixar Dicionário") }
+                } else if (dictState !is br.com.jotdown.ui.viewmodel.DictionaryLookupState.Downloading) {
+                    Button(
+                        onClick = { viewModel.clearDictionaryState() },
+                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF3B82F6))
+                    ) { Text("Fechar") }
+                }
+            },
+            dismissButton = {
+                if (dictState is br.com.jotdown.ui.viewmodel.DictionaryLookupState.NotDownloaded ||
+                    dictState is br.com.jotdown.ui.viewmodel.DictionaryLookupState.Error) {
+                    TextButton(onClick = { viewModel.clearDictionaryState() }) { Text("Cancelar") }
+                }
+            }
+        )
+    }
+
     if (pendingAnnotation != null || editingAnnotation != null) {
         AlertDialog(
             onDismissRequest = { pendingAnnotation = null; editingAnnotation = null },
@@ -557,7 +703,8 @@ fun PdfViewer(
     annotations: List<AnnotationEntity>, drawings: List<DrawingEntity>,
     scrollToPage: Int, undoTrigger: Long, redoTrigger: Long, strokeWidthMultiplier: Float,
     pdfRenderer: PdfRenderer?, renderMutex: Mutex, isDarkMode: Boolean, initialScrollOffset: Int,
-    onScrollDone: () -> Unit, onOcrSuccess: (Int, String) -> Unit, onScrollChange: (Int, Int) -> Unit,
+    onScrollDone: () -> Unit, onOcrSuccess: (Int, String) -> Unit, onDictionaryRequest: (Int, String) -> Unit,
+    onScrollChange: (Int, Int) -> Unit,
     onAddAnnotation: (Int, Float, Float) -> Unit, onOpenAnnotation: (AnnotationEntity) -> Unit, onSaveDrawing: (Int, String) -> Unit
 ) {
     var scale by remember { mutableFloatStateOf(1f) }
@@ -624,8 +771,10 @@ fun PdfViewer(
                     annotations = annotations.filter { it.page == pageNumber },
                     pageDrawingsJson = drawings.find { it.page == pageNumber }?.pathsJson,
                     undoTrigger = undoTrigger, redoTrigger = redoTrigger, strokeWidthMultiplier = strokeWidthMultiplier,
-                    pdfRenderer = pdfRenderer, renderMutex = renderMutex, isDarkMode = isDarkMode,
+                    pdfRenderer = pdfRenderer, renderMutex = renderMutex, isDarkMode = isDarkMode, initialScrollOffset = 0,
+                    onWordSelected = {},
                     onOcrSuccess = { text -> onOcrSuccess(pageNumber, text) },
+                    onDictionaryRequest = { text -> onDictionaryRequest(pageNumber, text) },
                     onAddAnnotation = { x, y -> onAddAnnotation(pageNumber, x, y) },
                     onOpenAnnotation = onOpenAnnotation,
                     onSaveDrawing = { json -> onSaveDrawing(pageNumber, json) }
@@ -640,8 +789,10 @@ fun PdfPage(
     pdfFile: File, pageNumber: Int, activeTool: Tool, strokeColor: Int,
     annotations: List<AnnotationEntity>, pageDrawingsJson: String?,
     undoTrigger: Long, redoTrigger: Long, strokeWidthMultiplier: Float,
-    pdfRenderer: PdfRenderer?, renderMutex: Mutex, isDarkMode: Boolean,
-    onOcrSuccess: (String) -> Unit, onAddAnnotation: (Float, Float) -> Unit, onOpenAnnotation: (AnnotationEntity) -> Unit, onSaveDrawing: (String) -> Unit
+    pdfRenderer: PdfRenderer?, renderMutex: Mutex, isDarkMode: Boolean, initialScrollOffset: Int,
+    onWordSelected: (String) -> Unit,
+    onOcrSuccess: (String) -> Unit, onDictionaryRequest: (String) -> Unit,
+    onAddAnnotation: (Float, Float) -> Unit, onOpenAnnotation: (AnnotationEntity) -> Unit, onSaveDrawing: (String) -> Unit
 ) {
     var bitmap by remember { mutableStateOf<Bitmap?>(null) }
     
@@ -686,7 +837,13 @@ fun PdfPage(
                         0f, 0f, -1f, 0f, 255f,
                         0f, 0f, 0f, 1f, 0f
                     ))) else null
-                    Image(bitmap = bmp.asImageBitmap(), contentDescription = null, modifier = Modifier.fillMaxWidth(), contentScale = ContentScale.FillWidth, colorFilter = filter)
+                    Image(bitmap = bmp.asImageBitmap(), contentDescription = null, modifier = Modifier
+                        .fillMaxWidth()
+                        .pointerInput(Unit) {
+                            detectTapGestures(onDoubleTap = {
+                                onWordSelected("example")
+                            })
+                        }, contentScale = ContentScale.FillWidth, colorFilter = filter)
                     
                     DrawingLayer(
                         modifier = Modifier.matchParentSize(),
@@ -714,17 +871,31 @@ fun PdfPage(
                                         }
                                     } else dragAction = "NEW"
                                     initialRect = rect
-                                    if (dragAction == "NEW") { startOffset = offset; selectionRect = Rect(offset, offset) }
-                                    else if (dragAction == "MOVE") { startOffset = offset }
+                                    if (dragAction == "NEW") {
+                                        startOffset = offset
+                                        selectionRect = Rect(offset, offset)
+                                    } else if (dragAction == "MOVE") {
+                                        startOffset = offset
+                                    }
                                 },
                                 onDrag = { change, _ ->
                                     val pos = change.position
                                     if (dragAction == "NEW") {
-                                        startOffset?.let { start -> selectionRect = Rect(minOf(start.x, pos.x), minOf(start.y, pos.y), maxOf(start.x, pos.x), maxOf(start.y, pos.y)) }
+                                        startOffset?.let { start ->
+                                            selectionRect = Rect(
+                                                minOf(start.x, pos.x),
+                                                minOf(start.y, pos.y),
+                                                maxOf(start.x, pos.x),
+                                                maxOf(start.y, pos.y)
+                                            )
+                                        }
                                     } else if (dragAction == "MOVE") {
                                         startOffset?.let { start ->
-                                            val dx = pos.x - start.x; val dy = pos.y - start.y
-                                            initialRect?.let { init -> selectionRect = init.translate(dx, dy) }
+                                            val dx = pos.x - start.x
+                                            val dy = pos.y - start.y
+                                            initialRect?.let { init ->
+                                                selectionRect = init.translate(dx, dy)
+                                            }
                                         }
                                     } else {
                                         initialRect?.let { init ->
@@ -753,32 +924,80 @@ fun PdfPage(
                         
                         selectionRect?.let { rect ->
                             if (rect.width > 40f && rect.height > 40f) {
-                                Box(modifier = Modifier.offset { IntOffset(rect.right.toInt() - 130, rect.bottom.toInt() + 16) }) {
-                                    Button(
-                                        onClick = {
-                                            try {
-                                                val safeLeft = maxOf(0, rect.left.toInt())
-                                                val safeTop = maxOf(0, rect.top.toInt())
-                                                val safeWidth = minOf(bmp.width - safeLeft, rect.width.toInt())
-                                                val safeHeight = minOf(bmp.height - safeTop, rect.height.toInt())
-                                                
-                                                if (safeWidth > 0 && safeHeight > 0) {
-                                                    val crop = Bitmap.createBitmap(bmp, safeLeft, safeTop, safeWidth, safeHeight)
-                                                    OcrUtil.extractTextFromBitmap(
-                                                        bitmap = crop,
-                                                        onSuccess = { text -> if (text.isNotBlank()) onOcrSuccess(text) },
-                                                        onError = { e -> e.printStackTrace() }
-                                                    )
-                                                    selectionRect = null
-                                                }
-                                            } catch (e: Exception) { e.printStackTrace() }
-                                        },
-                                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF10B981)),
-                                        contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp), modifier = Modifier.height(36.dp), shape = RoundedCornerShape(8.dp)
+                                val isNearBottom = rect.bottom + 150 > bmp.height
+                                val yOffset = if (isNearBottom) {
+                                    maxOf(0, rect.top.toInt() - 120)
+                                } else {
+                                    rect.bottom.toInt() + 16
+                                }
+                                Box(
+                                    modifier = Modifier
+                                        .offset { IntOffset(0, yOffset) }
+                                        .fillMaxWidth()
+                                ) {
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        horizontalArrangement = Arrangement.Center,
+                                        verticalAlignment = Alignment.CenterVertically
                                     ) {
-                                        Icon(Icons.Default.CropFree, contentDescription = null, modifier = Modifier.size(16.dp), tint = Color.White)
-                                        Spacer(Modifier.width(6.dp))
-                                        Text("Capturar", color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                                        // Botão azul: Dicionário
+                                        Button(
+                                            onClick = {
+                                                try {
+                                                    val safeLeft = maxOf(0, rect.left.toInt())
+                                                    val safeTop = maxOf(0, rect.top.toInt())
+                                                    val safeWidth = minOf(bmp.width - safeLeft, rect.width.toInt())
+                                                    val safeHeight = minOf(bmp.height - safeTop, rect.height.toInt())
+                                                    if (safeWidth > 0 && safeHeight > 0) {
+                                                        val crop = Bitmap.createBitmap(bmp, safeLeft, safeTop, safeWidth, safeHeight)
+                                                        OcrUtil.extractTextFromBitmap(
+                                                            bitmap = crop,
+                                                            onSuccess = { text -> if (text.isNotBlank()) { onDictionaryRequest(text); selectionRect = null } },
+                                                            onError = { e -> e.printStackTrace() }
+                                                        )
+                                                    }
+                                                } catch (e: Exception) { e.printStackTrace() }
+                                            },
+                                            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF3B82F6)),
+                                            contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp),
+                                            modifier = Modifier.height(36.dp),
+                                            shape = RoundedCornerShape(8.dp)
+                                        ) {
+                                            Icon(Icons.Default.MenuBook, contentDescription = null, modifier = Modifier.size(16.dp), tint = Color.White)
+                                            Spacer(Modifier.width(6.dp))
+                                            Text("Dicionário", color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                                        }
+
+                                        Spacer(Modifier.width(16.dp))
+
+                                        // Botão verde: Capturar
+                                        Button(
+                                            onClick = {
+                                                try {
+                                                    val safeLeft = maxOf(0, rect.left.toInt())
+                                                    val safeTop = maxOf(0, rect.top.toInt())
+                                                    val safeWidth = minOf(bmp.width - safeLeft, rect.width.toInt())
+                                                    val safeHeight = minOf(bmp.height - safeTop, rect.height.toInt())
+                                                    if (safeWidth > 0 && safeHeight > 0) {
+                                                        val crop = Bitmap.createBitmap(bmp, safeLeft, safeTop, safeWidth, safeHeight)
+                                                        OcrUtil.extractTextFromBitmap(
+                                                            bitmap = crop,
+                                                            onSuccess = { text -> if (text.isNotBlank()) onOcrSuccess(text) },
+                                                            onError = { e -> e.printStackTrace() }
+                                                        )
+                                                        selectionRect = null
+                                                    }
+                                                } catch (e: Exception) { e.printStackTrace() }
+                                            },
+                                            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF10B981)),
+                                            contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp),
+                                            modifier = Modifier.height(36.dp),
+                                            shape = RoundedCornerShape(8.dp)
+                                        ) {
+                                            Icon(Icons.Default.CropFree, contentDescription = null, modifier = Modifier.size(16.dp), tint = Color.White)
+                                            Spacer(Modifier.width(6.dp))
+                                            Text("Capturar", color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                                        }
                                     }
                                 }
                             }

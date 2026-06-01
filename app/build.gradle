@@ -2,7 +2,7 @@ plugins {
     id 'com.android.application'
     id 'org.jetbrains.kotlin.android'
     id 'com.google.devtools.ksp'
-    id 'org.jetbrains.kotlin.plugin.compose'
+    // id 'org.jetbrains.kotlin.plugin.compose'
 }
 
 android {
@@ -41,7 +41,6 @@ android {
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
         }
         debug {
-            applicationIdSuffix '.debug'
             versionNameSuffix '-debug'
         }
     }
@@ -77,6 +76,9 @@ android {
         buildConfig false   // NÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â£o usamos BuildConfig no cÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â³digo
     }
 
+    composeOptions {
+        kotlinCompilerExtensionVersion "1.5.10"
+    }
 }
 
 dependencies {
@@ -90,6 +92,9 @@ dependencies {
 
     // Navigation
     implementation 'androidx.navigation:navigation-compose:2.7.7'
+
+    // Livedata
+    implementation 'androidx.compose.runtime:runtime-livedata:1.6.0'
 
     // ViewModel
     implementation 'androidx.lifecycle:lifecycle-viewmodel-compose:2.7.0'
@@ -107,7 +112,23 @@ dependencies {
     implementation 'androidx.core:core-ktx:1.13.1'
     implementation 'androidx.appcompat:appcompat:1.7.0'
 
-    // OCR ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â Google ML Kit
+    // Retrofit
+    implementation 'com.squareup.retrofit2:retrofit:2.11.0'
+    implementation 'com.squareup.retrofit2:converter-gson:2.11.0'
+
+    // Google Sign-In & Drive
+    fullImplementation 'com.google.android.gms:play-services-auth:21.1.1'
+    fullImplementation('com.google.api-client:google-api-client-android:1.33.0') {
+        exclude group: 'org.apache.httpcomponents'
+    }
+    fullImplementation('com.google.apis:google-api-services-drive:v3-rev20220815-2.0.0') {
+        exclude group: 'org.apache.httpcomponents'
+    }
+
+    // WorkManager
+    implementation 'androidx.work:work-runtime-ktx:2.9.0'
+
+    // OCR ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â  Google ML Kit
     fullImplementation 'com.google.mlkit:text-recognition:16.0.1'
 
     // Debug

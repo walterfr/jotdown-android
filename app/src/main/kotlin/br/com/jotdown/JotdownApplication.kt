@@ -1,7 +1,10 @@
 package br.com.jotdown
 
 import android.app.Application
+import br.com.jotdown.data.dao.OfflineDictionaryDao
 import br.com.jotdown.data.db.JotdownDatabase
+import br.com.jotdown.data.manager.OfflineDictionaryManager
+import br.com.jotdown.data.repository.DictionaryRepository
 import br.com.jotdown.data.repository.DocumentRepository
 
 class JotdownApplication : Application() {
@@ -22,5 +25,18 @@ class JotdownApplication : Application() {
             folderDao     = database.folderDao()
         )
     }
-}
 
+    private val offlineDictionaryDao by lazy { OfflineDictionaryDao(this) }
+    private val offlineDictionaryManager by lazy { OfflineDictionaryManager(this) }
+
+    val dictionaryRepository by lazy {
+        DictionaryRepository(
+            cacheDao = database.dictionaryCacheDao(),
+            offlineDao = offlineDictionaryDao,
+            offlineManager = offlineDictionaryManager
+        )
+    }
+
+    val syncProvider by lazy { br.com.jotdown.data.sync.SyncProviderImpl() }
+    val syncManager by lazy { br.com.jotdown.data.sync.SyncManager(this) }
+}

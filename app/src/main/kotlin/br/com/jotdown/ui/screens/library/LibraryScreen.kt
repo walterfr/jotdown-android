@@ -20,6 +20,7 @@ import androidx.compose.material.icons.automirrored.filled.*
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -50,7 +51,7 @@ import kotlin.math.roundToInt
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun LibraryScreen(viewModel: LibraryViewModel, onOpenDocument: (String) -> Unit) {
+fun LibraryScreen(viewModel: LibraryViewModel, onOpenDocument: (String) -> Unit, onOpenSettings: () -> Unit = {}) {
     val context = LocalContext.current
     val displayDocuments by viewModel.displayDocuments.collectAsState()
     val folders by viewModel.folders.collectAsState()
@@ -81,6 +82,18 @@ fun LibraryScreen(viewModel: LibraryViewModel, onOpenDocument: (String) -> Unit)
     val backupPicker = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri -> uri ?: return@rememberLauncherForActivityResult; viewModel.importBackup(context, uri) }
     var showMenu by remember { mutableStateOf(false) }
     var showImportWarning by remember { mutableStateOf(false) }
+    var tempBackupFile by remember { mutableStateOf<File?>(null) }
+
+    val saveBackupLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.CreateDocument("application/zip"),
+        onResult = { uri ->
+            uri?.let {
+                tempBackupFile?.let { file ->
+                    viewModel.saveBackupToUri(context, file, it)
+                }
+            }
+        }
+    )
     var showAboutDialog by remember { mutableStateOf(false) }
 
     var globalDragPos by remember { mutableStateOf(Offset.Zero) }
@@ -167,6 +180,13 @@ fun LibraryScreen(viewModel: LibraryViewModel, onOpenDocument: (String) -> Unit)
                 // ── Rodapé com versão ────────────────────────────────────
                 Spacer(Modifier.weight(1f))
                 NavigationDrawerItem(
+                    icon = { Icon(Icons.Default.Settings, contentDescription = null) },
+                    label = { Text("Configurações e Nuvem") },
+                    selected = false,
+                    onClick = { scope.launch { drawerState.close() }; onOpenSettings() },
+                    modifier = Modifier.padding(horizontal = 12.dp)
+                )
+                NavigationDrawerItem(
                     icon = { Icon(Icons.Default.Info, contentDescription = null) },
                     label = { Text("Sobre") },
                     selected = false,
@@ -211,6 +231,15 @@ fun LibraryScreen(viewModel: LibraryViewModel, onOpenDocument: (String) -> Unit)
                         }
                     },
                     actions = {
+                        val syncWorkInfos by viewModel.syncWorkInfo.observeAsState(emptyList<androidx.work.WorkInfo>())
+                        val isSyncing = syncWorkInfos.any { it.state == androidx.work.WorkInfo.State.RUNNING }
+                        
+                        if (isSyncing) {
+                            Icon(Icons.Default.CloudSync, contentDescription = "Sincronizando...", tint = Indigo600, modifier = Modifier.padding(end = 8.dp))
+                        } else {
+                            Icon(Icons.Default.CloudDone, contentDescription = "Sincronizado", tint = Color.Gray, modifier = Modifier.padding(end = 8.dp))
+                        }
+
                         if (!isSearchActive) {
                             IconButton(onClick = { isSearchActive = true }) { Icon(Icons.Default.Search, contentDescription = "Buscar") }
                             Box {
@@ -229,7 +258,18 @@ fun LibraryScreen(viewModel: LibraryViewModel, onOpenDocument: (String) -> Unit)
                         Box {
                             IconButton(onClick = { showMenu = true }) { Icon(Icons.Default.MoreVert, contentDescription = "Menu") }
                             DropdownMenu(expanded = showMenu, onDismissRequest = { showMenu = false }) {
-                                DropdownMenuItem(text = { Text("Exportar Backup", fontWeight = FontWeight.Bold) }, onClick = { showMenu = false; viewModel.exportBackup(context) })
+                                DropdownMenuItem(text = { Text("Exportar Backup (Nuvem/Apps)", fontWeight = FontWeight.Bold) }, onClick = { showMenu = false; viewModel.exportBackup(context) })
+                                DropdownMenuItem(text = { Text("Exportar Backup (Offline/Memória)") }, onClick = { 
+                                    showMenu = false
+                                    scope.launch {
+                                        val file = viewModel.getBackupFile(context)
+                                        tempBackupFile = file
+                                        if (file != null) {
+                                            val dateFormat = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(Date())
+                                            saveBackupLauncher.launch("Jotdown_Backup_$dateFormat.zip")
+                                        }
+                                    }
+                                })
                                 DropdownMenuItem(text = { Text("Importar Backup") }, onClick = { showMenu = false; showImportWarning = true })
                             }
                         }

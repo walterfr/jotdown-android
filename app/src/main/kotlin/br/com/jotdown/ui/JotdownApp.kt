@@ -42,14 +42,26 @@ fun JotdownApp() {
         }
 
         composable(Screen.Library.route) {
-            val vm: LibraryViewModel = viewModel(factory = LibraryViewModelFactory(repository))
-            LibraryScreen(viewModel = vm, onOpenDocument = { docId -> navController.navigate(Screen.Reader.createRoute(docId)) })
+            val app = context.applicationContext as JotdownApplication
+            val vm: LibraryViewModel = viewModel(factory = LibraryViewModelFactory(repository, app))
+            LibraryScreen(
+                viewModel = vm,
+                onOpenDocument = { docId -> navController.navigate(Screen.Reader.createRoute(docId)) },
+                onOpenSettings = { navController.navigate(Screen.Settings.route) }
+            )
         }
 
         composable(Screen.Reader.route) { backStack ->
             val documentId = backStack.arguments?.getString("documentId") ?: return@composable
-            val vm: ReaderViewModel = viewModel(factory = ReaderViewModelFactory(repository, documentId))
+            val app = context.applicationContext as JotdownApplication
+            val vm: ReaderViewModel = viewModel(factory = ReaderViewModelFactory(repository, documentId, app.dictionaryRepository))
             ReaderScreen(viewModel = vm, onBack = { navController.popBackStack() })
+        }
+
+        composable(Screen.Settings.route) {
+            val app = context.applicationContext as JotdownApplication
+            val vm: br.com.jotdown.ui.viewmodel.SettingsViewModel = viewModel(factory = br.com.jotdown.ui.viewmodel.SettingsViewModelFactory(app))
+            br.com.jotdown.ui.screens.settings.SettingsScreen(viewModel = vm, onNavigateBack = { navController.popBackStack() })
         }
     }
 }

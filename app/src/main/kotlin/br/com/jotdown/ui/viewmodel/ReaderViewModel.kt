@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import br.com.jotdown.data.entity.*
+import br.com.jotdown.data.repository.DictionaryRepository
 import br.com.jotdown.data.repository.DocumentRepository
 import br.com.jotdown.ui.screens.reader.Tool
 import kotlinx.coroutines.Dispatchers
@@ -11,7 +12,22 @@ import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import java.io.File
 
-class ReaderViewModel(private val repository: DocumentRepository, private val documentId: String) : ViewModel() {
+sealed class DictionaryLookupState {
+    object Idle : DictionaryLookupState()
+    data class Loading(val word: String) : DictionaryLookupState()
+    data class Success(val entry: DictionaryCache) : DictionaryLookupState()
+    data class NotFound(val word: String) : DictionaryLookupState()
+    data class NotDownloaded(val language: String, val word: String) : DictionaryLookupState()
+    data class Downloading(val progress: Int) : DictionaryLookupState()
+    data class Error(val message: String) : DictionaryLookupState()
+}
+
+class ReaderViewModel(
+    private val repository: DocumentRepository,
+    private val documentId: String,
+    private val dictionaryRepository: DictionaryRepository
+) : ViewModel() {
+
     private val _pdfFile = MutableStateFlow<File?>(null)
     val pdfFile: StateFlow<File?> = _pdfFile
 
@@ -31,6 +47,26 @@ class ReaderViewModel(private val repository: DocumentRepository, private val do
     val highlights = repository.getHighlightsForDocument(documentId).stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
     val drawings = repository.getDrawingsForDocument(documentId).stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
+    private val _dictionaryState = MutableStateFlow<DictionaryLookupState>(DictionaryLookupState.Idle)
+    val dictionaryState: StateFlow<DictionaryLookupState> = _dictionaryState
+
+    private val _dictionaryLanguage = MutableStateFlow("pt")
+    val dictionaryLanguage: StateFlow<String> = _dictionaryLanguage
+
+    fun setDictionaryLanguage(lang: String) {
+        _dictionaryLanguage.value = lang
+        val currentWord = when (val s = _dictionaryState.value) {
+            is DictionaryLookupState.Success -> s.entry.word
+            is DictionaryLookupState.NotFound -> s.word
+            is DictionaryLookupState.NotDownloaded -> s.word
+            is DictionaryLookupState.Loading -> s.word
+            else -> null
+        }
+        if (currentWord != null) {
+            lookupDictionary(currentWord, lang)
+        }
+    }
+
     init {
         viewModelScope.launch(Dispatchers.IO) {
             val doc = repository.getDocumentById(documentId)
@@ -48,14 +84,66 @@ class ReaderViewModel(private val repository: DocumentRepository, private val do
     val strokeWidthMultiplier: StateFlow<Float> = _strokeWidthMultiplier
     fun setStrokeWidthMultiplier(v: Float) { _strokeWidthMultiplier.value = v }
 
-    // ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â°ÃƒÆ’Ã¢â‚¬Â¦Ãƒâ€šÃ‚Â¸ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚ÂºÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¡ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¯ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¸ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â A CORREÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â¡ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢O MESTRA: Atualiza o registo existente em vez de duplicar
+    /** Fluxo Kindle: captura e já busca a primeira palavra */
+    fun captureForDictionary(text: String) {
+        if (text.isBlank()) return
+        
+        // Pega a primeira palavra, removendo pontuações extras
+        val firstWord = text.trim().split(Regex("\\s+")).firstOrNull()?.replace(Regex("[^\\p{L}]"), "") ?: return
+        if (firstWord.isBlank()) return
+        
+        lookupDictionary(firstWord, _dictionaryLanguage.value)
+    }
+
+    fun lookupDictionary(word: String, language: String = "en") {
+        if (word.isBlank()) return
+        
+        _dictionaryState.value = DictionaryLookupState.Loading(word)
+        
+        viewModelScope.launch(Dispatchers.IO) {
+            if (!dictionaryRepository.isDownloaded(language)) {
+                _dictionaryState.value = DictionaryLookupState.NotDownloaded(language, word)
+                return@launch
+            }
+
+            try {
+                val entry = dictionaryRepository.getEntry(word, language)
+                if (entry != null) {
+                    _dictionaryState.value = DictionaryLookupState.Success(entry)
+                } else {
+                    _dictionaryState.value = DictionaryLookupState.NotFound(word)
+                }
+            } catch (e: Exception) {
+                _dictionaryState.value = DictionaryLookupState.Error(e.message ?: "Erro desconhecido")
+            }
+        }
+    }
+
+    fun downloadDictionary(language: String, wordToLookup: String? = null) {
+        _dictionaryState.value = DictionaryLookupState.Downloading(0)
+        viewModelScope.launch(Dispatchers.IO) {
+            val success = dictionaryRepository.downloadDictionary(language) { progress ->
+                _dictionaryState.value = DictionaryLookupState.Downloading(progress)
+            }
+            if (success) {
+                if (wordToLookup != null) {
+                    lookupDictionary(wordToLookup, language)
+                } else {
+                    _dictionaryState.value = DictionaryLookupState.Idle
+                }
+            } else {
+                _dictionaryState.value = DictionaryLookupState.Error("Falha ao baixar o dicionário ($language)")
+            }
+        }
+    }
+
+    fun clearDictionaryState() { _dictionaryState.value = DictionaryLookupState.Idle }
+
     fun saveDrawing(page: Int, json: String) = viewModelScope.launch(Dispatchers.IO) {
         val existing = drawings.value.find { it.page == page }
         if (existing != null) {
-            // Se jÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¡ desenhou nesta pÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¡gina antes, atualiza a mesma folha!
             repository.upsertDrawing(existing.copy(pathsJson = json))
         } else {
-            // Primeira vez a desenhar nesta folha
             repository.upsertDrawing(DrawingEntity(documentId = documentId, page = page, pathsJson = json))
         }
     }
@@ -71,8 +159,8 @@ class ReaderViewModel(private val repository: DocumentRepository, private val do
 
     fun deleteAnnotation(id: Long) = viewModelScope.launch(Dispatchers.IO) { repository.deleteAnnotation(id) }
 
-    fun updateHighlight(id: Long, text: String) = viewModelScope.launch(kotlinx.coroutines.Dispatchers.IO) { highlights.value.find { it.id == id }?.let { repository.insertHighlight(it.copy(text = text)) } }
-    fun deleteHighlight(id: Long) = viewModelScope.launch(kotlinx.coroutines.Dispatchers.IO) { repository.deleteHighlight(id) }
+    fun updateHighlight(id: Long, text: String) = viewModelScope.launch(Dispatchers.IO) { highlights.value.find { it.id == id }?.let { repository.insertHighlight(it.copy(text = text)) } }
+    fun deleteHighlight(id: Long) = viewModelScope.launch(Dispatchers.IO) { repository.deleteHighlight(id) }
     fun addHighlight(page: Int, text: String) = viewModelScope.launch(Dispatchers.IO) {
         repository.insertHighlight(HighlightEntity(id = 0L, documentId = documentId, page = page, text = text))
     }
@@ -83,11 +171,15 @@ class ReaderViewModel(private val repository: DocumentRepository, private val do
     }
 }
 
-class ReaderViewModelFactory(private val repository: DocumentRepository, private val documentId: String) : ViewModelProvider.Factory {
+class ReaderViewModelFactory(
+    private val repository: DocumentRepository,
+    private val documentId: String,
+    private val dictionaryRepository: DictionaryRepository
+) : ViewModelProvider.Factory {
     override fun <T : ViewModel> create(modelClass: Class<T>): T {
         if (modelClass.isAssignableFrom(ReaderViewModel::class.java)) {
             @Suppress("UNCHECKED_CAST")
-            return ReaderViewModel(repository, documentId) as T
+            return ReaderViewModel(repository, documentId, dictionaryRepository) as T
         }
         throw IllegalArgumentException("Unknown ViewModel class")
     }
