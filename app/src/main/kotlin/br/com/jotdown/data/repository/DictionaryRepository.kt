@@ -35,4 +35,13 @@ class DictionaryRepository(
     fun deleteDictionary(lang: String): Boolean {
         return offlineManager.deleteDictionary(lang)
     }
+    suspend fun translatePhrase(phrase: String, lang: String): List<DictionaryCache> {
+        val words = phrase.trim().split(Regex("\\s+"))
+        val results = mutableListOf<DictionaryCache>()
+        for (w in words) {
+            val entry = getEntry(w, lang)
+            if (entry != null) results.add(entry)
+        }
+        return results
+    }
 }

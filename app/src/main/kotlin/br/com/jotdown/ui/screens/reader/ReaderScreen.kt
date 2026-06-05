@@ -46,7 +46,7 @@ import kotlinx.coroutines.sync.withLock
 import org.json.JSONArray
 import java.io.File
 
-enum class Tool { NONE, SELECT, PEN, PENCIL, HIGHLIGHTER, ERASER, ANNOTATION }
+enum class Tool { NONE, SELECT, PEN, PENCIL, HIGHLIGHTER, ERASER, ANNOTATION, DICTIONARY }
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -507,6 +507,31 @@ fun ReaderScreen(
                                 )
                             }
 
+                            if (!entry.translation.isNullOrBlank()) {
+                                Spacer(Modifier.height(12.dp))
+                                Text(
+                                    text = "Tradução",
+                                    fontWeight = FontWeight.Bold,
+                                    fontSize = 12.sp,
+                                    color = Color(0xFF374151)
+                                )
+                                Spacer(Modifier.height(4.dp))
+                                Surface(
+                                    color = Color(0xFFECFDF5),
+                                    shape = RoundedCornerShape(8.dp),
+                                    modifier = Modifier.fillMaxWidth()
+                                ) {
+                                    Text(
+                                        text = entry.translation,
+                                        fontSize = 15.sp,
+                                        lineHeight = 21.sp,
+                                        fontWeight = FontWeight.SemiBold,
+                                        color = Color(0xFF065F46),
+                                        modifier = Modifier.padding(12.dp)
+                                    )
+                                }
+                            }
+
                             if (!entry.definition.isNullOrBlank()) {
                                 Spacer(Modifier.height(12.dp))
                                 Text(
@@ -537,6 +562,68 @@ fun ReaderScreen(
                                 fontSize = 13.sp,
                                 color = Color(0xFFDC2626)
                             )
+                        }
+                        is br.com.jotdown.ui.viewmodel.DictionaryLookupState.PhraseLoading -> {
+                            Box(modifier = Modifier.fillMaxWidth().padding(vertical = 24.dp), contentAlignment = Alignment.Center) {
+                                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                    CircularProgressIndicator(color = Color(0xFF8B5CF6))
+                                    Spacer(Modifier.height(12.dp))
+                                    Text("Traduzindo frase...", fontSize = 13.sp, color = Color(0xFF6B7280))
+                                }
+                            }
+                        }
+                        is br.com.jotdown.ui.viewmodel.DictionaryLookupState.PhraseNotFound -> {
+                            Spacer(Modifier.height(12.dp))
+                            Text(
+                                text = "⚠️ Nenhuma tradução encontrada para a frase selecionada.",
+                                fontSize = 13.sp,
+                                color = Color(0xFF92400E)
+                            )
+                        }
+                        is br.com.jotdown.ui.viewmodel.DictionaryLookupState.PhraseSuccess -> {
+                            val entries = dictState.entries
+                            Spacer(Modifier.height(8.dp))
+                            Text(
+                                text = "📝 Tradução da frase (${entries.size} palavra${if (entries.size != 1) "s" else ""})",
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 13.sp,
+                                color = Color(0xFF374151)
+                            )
+                            Spacer(Modifier.height(8.dp))
+                            entries.forEach { entry ->
+                                Surface(
+                                    color = Color(0xFFEFF6FF),
+                                    shape = RoundedCornerShape(8.dp),
+                                    modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp)
+                                ) {
+                                    Column(modifier = Modifier.padding(10.dp)) {
+                                        Text(
+                                            text = entry.word,
+                                            fontWeight = FontWeight.Bold,
+                                            fontSize = 14.sp,
+                                            color = Color(0xFF1D4ED8)
+                                        )
+                                        if (!entry.translation.isNullOrBlank()) {
+                                            Text(
+                                                text = entry.translation,
+                                                fontSize = 13.sp,
+                                                color = Color(0xFF065F46),
+                                                fontWeight = FontWeight.SemiBold,
+                                                modifier = Modifier.padding(top = 2.dp)
+                                            )
+                                        }
+                                        if (!entry.definition.isNullOrBlank()) {
+                                            Text(
+                                                text = entry.definition,
+                                                fontSize = 11.sp,
+                                                color = Color(0xFF6B7280),
+                                                lineHeight = 16.sp,
+                                                modifier = Modifier.padding(top = 2.dp)
+                                            )
+                                        }
+                                    }
+                                }
+                            }
                         }
                         else -> {}
                     }

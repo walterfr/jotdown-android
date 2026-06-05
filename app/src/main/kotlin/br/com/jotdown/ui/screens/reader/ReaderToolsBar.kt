@@ -52,6 +52,7 @@ private val toolButtons = listOf(
     Triple(Tool.ERASER,      Icons.Default.AutoFixHigh,                   "Borracha"),
     Triple(Tool.ANNOTATION,  Icons.AutoMirrored.Filled.StickyNote2,       "Post-it"),
     Triple(Tool.SELECT,      Icons.Default.Crop,                          "Selecionar"),
+    Triple(Tool.DICTIONARY,  Icons.Default.Translate,                     "Dicionário"),
 )
 
 /**

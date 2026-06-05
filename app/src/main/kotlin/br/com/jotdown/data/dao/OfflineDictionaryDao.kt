@@ -32,23 +32,34 @@ class OfflineDictionaryDao(private val context: Context) {
             ).mapNotNull { it }.distinct()
 
             for (fw in fallbacks) {
-                val cursor = db.rawQuery("SELECT word, wordtype, definition FROM entries WHERE word = ? COLLATE NOCASE", arrayOf(fw))
+                val cursor = db.rawQuery("SELECT * FROM entries WHERE word = ? COLLATE NOCASE", arrayOf(fw))
                 if (cursor.moveToFirst()) {
-                    val dbWord = cursor.getString(0)
-                    val pos = cursor.getString(1) ?: ""
-                    val def = cursor.getString(2) ?: ""
-                    
+                    val dbWord = cursor.getFirstText("word", "term", "headword") ?: fw
+                    val pos = cursor.getFirstText("wordtype", "type", "pos", "part_of_speech") ?: ""
+                    val def = cursor.getFirstText("definition", "definitions", "meaning", "gloss", "description")
+                    val translation = cursor.getFirstText(
+                        "translation",
+                        "translations",
+                        "translated",
+                        "translated_word",
+                        "target",
+                        "target_word",
+                        "pt",
+                        "en"
+                    )
+
                     val fullDef = buildString {
                         if (pos.isNotBlank()) append("[$pos] ")
-                        append(def)
-                    }
+                        if (!def.isNullOrBlank()) append(def)
+                    }.takeIf { it.isNotBlank() }
+
                     cursor.close()
                     return DictionaryCache(
                         word = dbWord,
                         sourceLang = lang,
-                        targetLang = null,
+                        targetLang = if (!translation.isNullOrBlank()) oppositeLanguage(lang) else null,
                         definition = fullDef,
-                        translation = null,
+                        translation = translation,
                         fetchedAt = System.currentTimeMillis()
                     )
                 }
@@ -65,5 +76,24 @@ class OfflineDictionaryDao(private val context: Context) {
 
     fun isDownloaded(lang: String = "en"): Boolean {
         return context.getDatabasePath("dict_$lang.db").exists()
+    }
+
+    private fun android.database.Cursor.getFirstText(vararg columns: String): String? {
+        for (column in columns) {
+            val index = getColumnIndex(column)
+            if (index >= 0 && !isNull(index)) {
+                val value = getString(index)?.trim()
+                if (!value.isNullOrBlank()) return value
+            }
+        }
+        return null
+    }
+
+    private fun oppositeLanguage(lang: String): String? {
+        return when (lang) {
+            "en" -> "pt"
+            "pt" -> "en"
+            else -> null
+        }
     }
 }

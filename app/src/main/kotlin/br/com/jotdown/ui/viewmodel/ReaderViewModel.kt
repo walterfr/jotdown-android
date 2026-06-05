@@ -20,6 +20,9 @@ sealed class DictionaryLookupState {
     data class NotDownloaded(val language: String, val word: String) : DictionaryLookupState()
     data class Downloading(val progress: Int) : DictionaryLookupState()
     data class Error(val message: String) : DictionaryLookupState()
+    object PhraseLoading : DictionaryLookupState()
+    data class PhraseSuccess(val entries: List<DictionaryCache>) : DictionaryLookupState()
+    data class PhraseNotFound(val phrase: String) : DictionaryLookupState()
 }
 
 class ReaderViewModel(
@@ -84,15 +87,39 @@ class ReaderViewModel(
     val strokeWidthMultiplier: StateFlow<Float> = _strokeWidthMultiplier
     fun setStrokeWidthMultiplier(v: Float) { _strokeWidthMultiplier.value = v }
 
-    /** Fluxo Kindle: captura e já busca a primeira palavra */
+    /** Dispara busca inteligente: 1 palavra → definição, 2+ palavras → tradução de frase */
     fun captureForDictionary(text: String) {
-        if (text.isBlank()) return
-        
-        // Pega a primeira palavra, removendo pontuações extras
-        val firstWord = text.trim().split(Regex("\\s+")).firstOrNull()?.replace(Regex("[^\\p{L}]"), "") ?: return
-        if (firstWord.isBlank()) return
-        
-        lookupDictionary(firstWord, _dictionaryLanguage.value)
+        val trimmed = text.trim()
+        if (trimmed.isBlank()) return
+        val words = trimmed.split(Regex("\\s+")).filter { it.isNotBlank() }
+        if (words.size > 1) {
+            translatePhrase(trimmed, _dictionaryLanguage.value)
+        } else {
+            val word = words.firstOrNull()?.replace(Regex("[^\\p{L}]"), "") ?: return
+            if (word.isBlank()) return
+            lookupDictionary(word, _dictionaryLanguage.value)
+        }
+    }
+
+    fun translatePhrase(phrase: String, language: String = "en") {
+        if (phrase.isBlank()) return
+        _dictionaryState.value = DictionaryLookupState.PhraseLoading
+        viewModelScope.launch(Dispatchers.IO) {
+            if (!dictionaryRepository.isDownloaded(language)) {
+                _dictionaryState.value = DictionaryLookupState.NotDownloaded(language, phrase)
+                return@launch
+            }
+            try {
+                val entries = dictionaryRepository.translatePhrase(phrase, language)
+                if (entries.isNotEmpty()) {
+                    _dictionaryState.value = DictionaryLookupState.PhraseSuccess(entries)
+                } else {
+                    _dictionaryState.value = DictionaryLookupState.PhraseNotFound(phrase)
+                }
+            } catch (e: Exception) {
+                _dictionaryState.value = DictionaryLookupState.Error(e.message ?: "Erro desconhecido")
+            }
+        }
     }
 
     fun lookupDictionary(word: String, language: String = "en") {
@@ -118,6 +145,7 @@ class ReaderViewModel(
             }
         }
     }
+
 
     fun downloadDictionary(language: String, wordToLookup: String? = null) {
         _dictionaryState.value = DictionaryLookupState.Downloading(0)
