@@ -445,13 +445,13 @@ fun ReaderScreen(
                         FilterChip(
                             selected = currentLang == "en",
                             onClick = { viewModel.setDictionaryLanguage("en") },
-                            label = { Text("🇺🇸 Inglês") }
+                            label = { Text("🇺🇸 EN → PT (Tradução)") }
                         )
                         Spacer(Modifier.width(16.dp))
                         FilterChip(
                             selected = currentLang == "pt",
                             onClick = { viewModel.setDictionaryLanguage("pt") },
-                            label = { Text("🇧🇷 Português") }
+                            label = { Text("🇧🇷 PT → PT (Definição)") }
                         )
                     }
 
@@ -889,7 +889,7 @@ fun PdfPage(
     var initialRect by remember { mutableStateOf<Rect?>(null) }
     val selectionRectRef = rememberUpdatedState(selectionRect)
 
-    LaunchedEffect(activeTool) { if (activeTool != Tool.SELECT) selectionRect = null }
+    LaunchedEffect(activeTool) { if (activeTool != Tool.SELECT && activeTool != Tool.DICTIONARY) selectionRect = null }
 
     BoxWithConstraints(modifier = Modifier.fillMaxWidth()) {
         val density = LocalDensity.current
@@ -941,7 +941,7 @@ fun PdfPage(
                         onAddAnnotation = onAddAnnotation, onOpenAnnotation = onOpenAnnotation, onSaveDrawing = onSaveDrawing
                     )
 
-                    if (activeTool == Tool.SELECT) {
+                    if (activeTool == Tool.SELECT || activeTool == Tool.DICTIONARY) {
                         Canvas(modifier = Modifier.matchParentSize().pointerInput(Unit) {
                             detectDragGestures(
                                 onDragStart = { offset ->
@@ -1027,63 +1027,63 @@ fun PdfPage(
                                         horizontalArrangement = Arrangement.Center,
                                         verticalAlignment = Alignment.CenterVertically
                                     ) {
-                                        // Botão azul: Dicionário
-                                        Button(
-                                            onClick = {
-                                                try {
-                                                    val safeLeft = maxOf(0, rect.left.toInt())
-                                                    val safeTop = maxOf(0, rect.top.toInt())
-                                                    val safeWidth = minOf(bmp.width - safeLeft, rect.width.toInt())
-                                                    val safeHeight = minOf(bmp.height - safeTop, rect.height.toInt())
-                                                    if (safeWidth > 0 && safeHeight > 0) {
-                                                        val crop = Bitmap.createBitmap(bmp, safeLeft, safeTop, safeWidth, safeHeight)
-                                                        OcrUtil.extractTextFromBitmap(
-                                                            bitmap = crop,
-                                                            onSuccess = { text -> if (text.isNotBlank()) { onDictionaryRequest(text); selectionRect = null } },
-                                                            onError = { e -> e.printStackTrace() }
-                                                        )
-                                                    }
-                                                } catch (e: Exception) { e.printStackTrace() }
-                                            },
-                                            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF3B82F6)),
-                                            contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp),
-                                            modifier = Modifier.height(36.dp),
-                                            shape = RoundedCornerShape(8.dp)
-                                        ) {
-                                            Icon(Icons.Default.MenuBook, contentDescription = null, modifier = Modifier.size(16.dp), tint = Color.White)
-                                            Spacer(Modifier.width(6.dp))
-                                            Text("Dicionário", color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                                        if (activeTool == Tool.DICTIONARY) {
+                                            Button(
+                                                onClick = {
+                                                    try {
+                                                        val safeLeft = maxOf(0, rect.left.toInt())
+                                                        val safeTop = maxOf(0, rect.top.toInt())
+                                                        val safeWidth = minOf(bmp.width - safeLeft, rect.width.toInt())
+                                                        val safeHeight = minOf(bmp.height - safeTop, rect.height.toInt())
+                                                        if (safeWidth > 0 && safeHeight > 0) {
+                                                            val crop = Bitmap.createBitmap(bmp, safeLeft, safeTop, safeWidth, safeHeight)
+                                                            OcrUtil.extractTextFromBitmap(
+                                                                bitmap = crop,
+                                                                onSuccess = { text -> if (text.isNotBlank()) { onDictionaryRequest(text); selectionRect = null } },
+                                                                onError = { e -> e.printStackTrace() }
+                                                            )
+                                                        }
+                                                    } catch (e: Exception) { e.printStackTrace() }
+                                                },
+                                                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF3B82F6)),
+                                                contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp),
+                                                modifier = Modifier.height(36.dp),
+                                                shape = RoundedCornerShape(8.dp)
+                                            ) {
+                                                Icon(Icons.Default.MenuBook, contentDescription = null, modifier = Modifier.size(16.dp), tint = Color.White)
+                                                Spacer(Modifier.width(6.dp))
+                                                Text("Traduzir / Definir", color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                                            }
                                         }
 
-                                        Spacer(Modifier.width(16.dp))
-
-                                        // Botão verde: Capturar
-                                        Button(
-                                            onClick = {
-                                                try {
-                                                    val safeLeft = maxOf(0, rect.left.toInt())
-                                                    val safeTop = maxOf(0, rect.top.toInt())
-                                                    val safeWidth = minOf(bmp.width - safeLeft, rect.width.toInt())
-                                                    val safeHeight = minOf(bmp.height - safeTop, rect.height.toInt())
-                                                    if (safeWidth > 0 && safeHeight > 0) {
-                                                        val crop = Bitmap.createBitmap(bmp, safeLeft, safeTop, safeWidth, safeHeight)
-                                                        OcrUtil.extractTextFromBitmap(
-                                                            bitmap = crop,
-                                                            onSuccess = { text -> if (text.isNotBlank()) onOcrSuccess(text) },
-                                                            onError = { e -> e.printStackTrace() }
-                                                        )
-                                                        selectionRect = null
-                                                    }
-                                                } catch (e: Exception) { e.printStackTrace() }
-                                            },
-                                            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF10B981)),
-                                            contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp),
-                                            modifier = Modifier.height(36.dp),
-                                            shape = RoundedCornerShape(8.dp)
-                                        ) {
-                                            Icon(Icons.Default.CropFree, contentDescription = null, modifier = Modifier.size(16.dp), tint = Color.White)
-                                            Spacer(Modifier.width(6.dp))
-                                            Text("Capturar", color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                                        if (activeTool == Tool.SELECT) {
+                                            Button(
+                                                onClick = {
+                                                    try {
+                                                        val safeLeft = maxOf(0, rect.left.toInt())
+                                                        val safeTop = maxOf(0, rect.top.toInt())
+                                                        val safeWidth = minOf(bmp.width - safeLeft, rect.width.toInt())
+                                                        val safeHeight = minOf(bmp.height - safeTop, rect.height.toInt())
+                                                        if (safeWidth > 0 && safeHeight > 0) {
+                                                            val crop = Bitmap.createBitmap(bmp, safeLeft, safeTop, safeWidth, safeHeight)
+                                                            OcrUtil.extractTextFromBitmap(
+                                                                bitmap = crop,
+                                                                onSuccess = { text -> if (text.isNotBlank()) onOcrSuccess(text) },
+                                                                onError = { e -> e.printStackTrace() }
+                                                            )
+                                                            selectionRect = null
+                                                        }
+                                                    } catch (e: Exception) { e.printStackTrace() }
+                                                },
+                                                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF10B981)),
+                                                contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp),
+                                                modifier = Modifier.height(36.dp),
+                                                shape = RoundedCornerShape(8.dp)
+                                            ) {
+                                                Icon(Icons.Default.CropFree, contentDescription = null, modifier = Modifier.size(16.dp), tint = Color.White)
+                                                Spacer(Modifier.width(6.dp))
+                                                Text("Fichar Texto", color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                                            }
                                         }
                                     }
                                 }
@@ -1134,7 +1134,7 @@ fun DrawingLayer(
                 // Três chaves: o bloco relança quando qualquer uma delas muda,
                 // garantindo que strokeWidthMultiplier capturado nunca fique stale.
                 .pointerInput(activeTool, strokeColor, strokeWidthMultiplier) {
-                if (activeTool == Tool.NONE || activeTool == Tool.SELECT) return@pointerInput
+                if (activeTool == Tool.NONE || activeTool == Tool.SELECT || activeTool == Tool.DICTIONARY) return@pointerInput
 
                 if (activeTool == Tool.ANNOTATION) {
                     // Toque em espaço vazio → nova anotação.
