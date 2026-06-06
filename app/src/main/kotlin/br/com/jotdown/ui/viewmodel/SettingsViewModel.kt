@@ -117,7 +117,14 @@ class SettingsViewModel(private val application: JotdownApplication) : ViewModel
             val result = syncProvider.restoreNow(application)
             _isSyncing.value = false
             if (result.isSuccess) {
-                _syncMessage.value = "Restauração concluída com sucesso."
+                _syncMessage.value = "Restauração concluída. O aplicativo será reiniciado em instantes..."
+                kotlinx.coroutines.delay(2000)
+                val intent = application.packageManager.getLaunchIntentForPackage(application.packageName)
+                if (intent != null) {
+                    intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_CLEAR_TASK or Intent.FLAG_ACTIVITY_NEW_TASK)
+                    application.startActivity(intent)
+                }
+                Runtime.getRuntime().exit(0)
             } else {
                 _syncMessage.value = "Erro ao restaurar: ${result.exceptionOrNull()?.message}"
             }
