@@ -103,10 +103,15 @@ def convert_stardict(archive: Path, output: Path) -> int:
         temp = Path(temp_name)
         extract_archive(archive, temp)
 
-        idx_path = find_one(temp, (".idx",))
+        idx_path = find_one(temp, (".idx", ".idx.gz"))
         dict_path = find_one(temp, (".dict", ".dict.dz"))
         dict_data = read_stardict_dict(dict_path)
-        idx_data = idx_path.read_bytes()
+        
+        if idx_path.name.endswith(".gz"):
+            with gzip.open(idx_path, "rb") as handle:
+                idx_data = handle.read()
+        else:
+            idx_data = idx_path.read_bytes()
 
         rows: list[tuple[str, str | None, str | None, str | None]] = []
         pos = 0
