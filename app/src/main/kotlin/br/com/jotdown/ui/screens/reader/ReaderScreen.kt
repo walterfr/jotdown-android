@@ -71,7 +71,7 @@ fun ReaderScreen(
     val isDarkModePref = prefs.getBoolean("dark_mode_$docId", false)
     var isDarkMode by remember { mutableStateOf(isDarkModePref) }
 
-    val initialScrollOffset = prefs.getInt("offset_$docId", 0)
+    val initialScrollOffset = prefs.getInt("scroll_offset_$docId", 0)
 
     var numPages        by remember { mutableIntStateOf(0) }
     var showSidebar     by remember { mutableStateOf(false) }
@@ -86,7 +86,7 @@ fun ReaderScreen(
 
     var scrollToPage by remember { mutableIntStateOf(0) }
     
-    var pageOffset by remember(docId) { mutableIntStateOf(if (docId.isNotBlank()) prefs.getInt("offset_$docId", 0) else 0) }
+    var pageOffset by remember(docId) { mutableIntStateOf(if (docId.isNotBlank()) prefs.getInt("page_offset_$docId", 0) else 0) }
     var showOffsetDialog by remember { mutableStateOf(false) }
     var undoTrigger by remember { mutableLongStateOf(0L) }
     var redoTrigger by remember { mutableLongStateOf(0L) }
@@ -231,7 +231,7 @@ fun ReaderScreen(
                         if (docId.isNotBlank()) {
                             prefs.edit()
                                 .putInt("last_$docId", page)
-                                .putInt("offset_$docId", offset)
+                                .putInt("scroll_offset_$docId", offset)
                                 .apply()
                         }
                     },
@@ -367,7 +367,7 @@ fun ReaderScreen(
             onDismissRequest = { showOffsetDialog = false },
             title = { Text("Sincronizar Página") },
             text = { OutlinedTextField(value = input, onValueChange = { input = it }, label = { Text("Número impresso na folha") }) },
-            confirmButton = { Button(onClick = { pageOffset = (input.toIntOrNull() ?: currentPage) - currentPage; prefs.edit().putInt("offset_$docId", pageOffset).apply(); showOffsetDialog = false }) { Text("Ok") } }
+            confirmButton = { Button(onClick = { pageOffset = (input.toIntOrNull() ?: currentPage) - currentPage; prefs.edit().putInt("page_offset_$docId", pageOffset).apply(); showOffsetDialog = false }) { Text("Ok") } }
         )
     }
 

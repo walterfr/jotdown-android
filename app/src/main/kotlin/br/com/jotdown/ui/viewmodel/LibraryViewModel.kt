@@ -120,10 +120,18 @@ class LibraryViewModel(private val repository: DocumentRepository, private val a
         }
     }
 
+    private var isMerging = false
+
     fun mergeIntoFolder(doc1Id: String, doc2Id: String) = viewModelScope.launch {
-        val folderId = repository.insertFolder(FolderEntity(name = "Nova Pasta"))
-        repository.setDocumentFolder(doc1Id, folderId)
-        repository.setDocumentFolder(doc2Id, folderId)
+        if (isMerging) return@launch
+        isMerging = true
+        try {
+            val folderId = repository.insertFolder(FolderEntity(name = "Nova Pasta"))
+            repository.setDocumentFolder(doc1Id, folderId)
+            repository.setDocumentFolder(doc2Id, folderId)
+        } finally {
+            isMerging = false
+        }
     }
 
     fun moveToFolder(docId: String, folderId: Long) = viewModelScope.launch { repository.setDocumentFolder(docId, folderId) }
