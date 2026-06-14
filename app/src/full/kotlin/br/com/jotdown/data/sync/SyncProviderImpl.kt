@@ -146,6 +146,25 @@ class SyncProviderImpl : SyncProvider {
             }
         }
 
+    override suspend fun listDriveFolders(context: Context, parentId: String): Result<List<DriveFileInfo>> =
+        withContext(Dispatchers.IO) {
+            try {
+                val drive = getDriveReadonlyService(context)
+                    ?: throw Exception("Sem autenticação. Conecte-se ao Google.")
+                val safeId = parentId.ifBlank { "root" }
+                val result = drive.files().list()
+                    .setQ("'$safeId' in parents and mimeType='application/vnd.google-apps.folder' and trashed=false")
+                    .setFields("files(id, name)")
+                    .setOrderBy("name")
+                    .setSpaces("drive")
+                    .execute()
+                val folders = result.files.map { DriveFileInfo(it.id, it.name, 0L) }
+                Result.success(folders)
+            } catch (e: Exception) {
+                Result.failure(e)
+            }
+        }
+
     override suspend fun downloadDriveFile(
         context: Context,
         fileId: String,
@@ -251,6 +270,9 @@ class SyncProviderImpl : SyncProvider {
 
             val fileId = fileList.files[0].id
             val zipFile = java.io.File(context.cacheDir, "jotdown_backup_downloaded.zip")
+
+            val application = context.applicationContext as br.com.jotdown.JotdownApplication
+            application.database.close()
 
             java.io.FileOutputStream(zipFile).use { fos ->
                 drive.files().get(fileId).executeMediaAndDownloadTo(fos)

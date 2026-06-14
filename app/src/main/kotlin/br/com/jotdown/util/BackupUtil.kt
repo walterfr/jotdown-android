@@ -114,6 +114,9 @@ object BackupUtil {
     suspend fun importBackup(context: Context, uri: Uri) {
         withContext(Dispatchers.IO) {
             try {
+                val application = context.applicationContext as br.com.jotdown.JotdownApplication
+                application.database.close()
+
                 val dbDir = context.getDatabasePath(DB_NAME).parentFile
                 val pdfDir = File(context.filesDir, "pdfs").also { if (!it.exists()) it.mkdirs() }
                 val coverDir = File(context.filesDir, "covers").also { if (!it.exists()) it.mkdirs() }

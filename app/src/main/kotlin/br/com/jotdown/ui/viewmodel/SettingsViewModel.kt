@@ -6,6 +6,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import br.com.jotdown.JotdownApplication
+import br.com.jotdown.data.sync.DriveFileInfo
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -154,7 +155,7 @@ class SettingsViewModel(private val application: JotdownApplication) : ViewModel
             val result = syncProvider.handleSignInResult(application, intent)
             if (result.isSuccess) {
                 checkSignInStatus()
-                if (pendingFolderName.isNotBlank()) connectDriveFolder(pendingFolderName)
+                // Picker will be opened by the launcher callback in SettingsScreen
             } else {
                 _syncMessage.value = "Erro ao autorizar acesso ao Drive: ${result.exceptionOrNull()?.message}"
             }
@@ -189,6 +190,69 @@ class SettingsViewModel(private val application: JotdownApplication) : ViewModel
         drivePrefs.edit().remove("folder_id").remove("folder_name").apply()
         _driveFolderName.value = null
         _syncMessage.value = null
+    }
+
+    // ── Drive Folder Picker ─────────────────────────────────────────────────
+
+    /** Breadcrumb entry: folder id + display name. Root uses id="root". */
+    data class BreadcrumbEntry(val id: String, val name: String)
+
+    data class DriveFolderPickerState(
+        val isOpen: Boolean = false,
+        val breadcrumb: List<BreadcrumbEntry> = listOf(BreadcrumbEntry("root", "Meu Drive")),
+        val folders: List<DriveFileInfo> = emptyList(),
+        val loading: Boolean = false,
+        val error: String? = null
+    )
+
+    private val _pickerState = MutableStateFlow(DriveFolderPickerState())
+    val pickerState: StateFlow<DriveFolderPickerState> = _pickerState.asStateFlow()
+
+    fun openFolderPicker() {
+        _pickerState.value = DriveFolderPickerState(isOpen = true)
+        loadPickerFolder("root", "Meu Drive")
+    }
+
+    fun closeFolderPicker() {
+        _pickerState.value = _pickerState.value.copy(isOpen = false)
+    }
+
+    fun navigateIntoFolder(folder: DriveFileInfo) {
+        val newCrumb = _pickerState.value.breadcrumb + BreadcrumbEntry(folder.id, folder.name)
+        _pickerState.value = _pickerState.value.copy(breadcrumb = newCrumb)
+        loadPickerFolder(folder.id, folder.name)
+    }
+
+    fun navigateToBreadcrumb(index: Int) {
+        val entry = _pickerState.value.breadcrumb.getOrNull(index) ?: return
+        val newCrumb = _pickerState.value.breadcrumb.take(index + 1)
+        _pickerState.value = _pickerState.value.copy(breadcrumb = newCrumb)
+        loadPickerFolder(entry.id, entry.name)
+    }
+
+    private fun loadPickerFolder(folderId: String, folderName: String) = viewModelScope.launch {
+        _pickerState.value = _pickerState.value.copy(loading = true, error = null, folders = emptyList())
+        val result = syncProvider.listDriveFolders(application, folderId)
+        result.fold(
+            onSuccess = { folders ->
+                _pickerState.value = _pickerState.value.copy(loading = false, folders = folders)
+            },
+            onFailure = { e ->
+                _pickerState.value = _pickerState.value.copy(loading = false, error = e.message)
+            }
+        )
+    }
+
+    /** Called when the user presses "Selecionar esta pasta". Saves the current folder. */
+    fun selectCurrentPickerFolder() {
+        val current = _pickerState.value.breadcrumb.last()
+        drivePrefs.edit()
+            .putString("folder_id", current.id)
+            .putString("folder_name", current.name)
+            .apply()
+        _driveFolderName.value = current.name
+        _syncMessage.value = "✓ Pasta \"${current.name}\" conectada com sucesso!"
+        closeFolderPicker()
     }
 }
 

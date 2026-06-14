@@ -30,8 +30,7 @@ fun SettingsScreen(
 
     val driveFolderName by viewModel.driveFolderName.collectAsState()
     val driveFolderConnecting by viewModel.driveFolderConnecting.collectAsState()
-    // Input for the Drive folder name — kept at top level so the launcher closure can read it
-    var driveFolderInput by remember { mutableStateOf("") }
+    val pickerState by viewModel.pickerState.collectAsState()
 
     val signInLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.StartActivityForResult()
@@ -39,11 +38,12 @@ fun SettingsScreen(
         viewModel.handleSignInResult(result.data)
     }
 
-    // Launcher specifically for Drive Library additional permission
+    // Launcher for Drive Library additional permission — opens picker automatically after grant
     val driveLibraryLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.StartActivityForResult()
     ) { result ->
-        viewModel.handleDriveLibrarySignIn(result.data, driveFolderInput)
+        viewModel.handleDriveLibrarySignIn(result.data, "")
+        viewModel.openFolderPicker()
     }
 
     LaunchedEffect(Unit) {
@@ -172,80 +172,55 @@ fun SettingsScreen(
                 )
             } else if (driveFolderName != null) {
                 // Connected state
-                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
                     Icon(Icons.Default.Folder, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
-                    Text("Conectado a: ", style = MaterialTheme.typography.bodyMedium)
-                    Text(driveFolderName ?: "", fontWeight = FontWeight.Bold, style = MaterialTheme.typography.bodyMedium)
+                    Text("Conectado a:", style = MaterialTheme.typography.bodyMedium)
+                    Text(
+                        driveFolderName ?: "",
+                        fontWeight = FontWeight.Bold,
+                        style = MaterialTheme.typography.bodyMedium,
+                        modifier = Modifier.weight(1f)
+                    )
                 }
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    var showChangePicker by remember { mutableStateOf(false) }
-                    if (showChangePicker) {
-                        OutlinedTextField(
-                            value = driveFolderInput,
-                            onValueChange = { driveFolderInput = it },
-                            label = { Text("Nome da nova pasta") },
-                            modifier = Modifier.weight(1f),
-                            singleLine = true
-                        )
-                        Button(
-                            onClick = {
-                                if (driveFolderInput.isNotBlank()) {
-                                    if (!viewModel.hasDriveReadAccess()) {
-                                        viewModel.getDriveLibraryIntent()?.let { intent ->
-                                            driveLibraryLauncher.launch(intent)
-                                        } ?: viewModel.setSyncMessage("Erro ao iniciar login do Google")
-                                    } else {
-                                        viewModel.connectDriveFolder(driveFolderInput)
-                                        showChangePicker = false
-                                    }
-                                }
-                            },
-                            enabled = driveFolderInput.isNotBlank() && !driveFolderConnecting
-                        ) { Text("Buscar") }
-                    } else {
-                        OutlinedButton(onClick = { showChangePicker = true; driveFolderInput = "" }) {
-                            Text("Mudar Pasta")
-                        }
-                        OutlinedButton(onClick = { viewModel.disconnectDriveFolder() }) {
-                            Text("Desconectar", color = MaterialTheme.colorScheme.error)
-                        }
-                    }
-                }
-                if (driveFolderConnecting) { CircularProgressIndicator(modifier = Modifier.size(24.dp)) }
-            } else {
-                // Not connected — show input to connect
-                OutlinedTextField(
-                    value = driveFolderInput,
-                    onValueChange = { driveFolderInput = it },
-                    label = { Text("Nome exato da pasta no Drive") },
-                    placeholder = { Text("ex: Minha Biblioteca Acadêmica") },
-                    modifier = Modifier.fillMaxWidth(),
-                    singleLine = true,
-                    leadingIcon = { Icon(Icons.Default.FolderOpen, contentDescription = null) }
-                )
-                Button(
-                    onClick = {
-                        if (driveFolderInput.isNotBlank()) {
-                            if (!viewModel.hasDriveReadAccess()) {
-                                // Request additional scope — after grant, handleDriveLibrarySignIn will call connectDriveFolder
-                                viewModel.getDriveLibraryIntent()?.let { intent ->
-                                    driveLibraryLauncher.launch(intent)
-                                } ?: viewModel.setSyncMessage("Erro ao iniciar login do Google")
+                    OutlinedButton(
+                        onClick = {
+                            if (viewModel.hasDriveReadAccess()) {
+                                viewModel.openFolderPicker()
                             } else {
-                                viewModel.connectDriveFolder(driveFolderInput)
+                                viewModel.getDriveLibraryIntent()?.let { driveLibraryLauncher.launch(it) }
+                                    ?: viewModel.setSyncMessage("Erro ao iniciar login do Google")
                             }
                         }
+                    ) {
+                        Icon(Icons.Default.FolderOpen, contentDescription = null, modifier = Modifier.size(16.dp))
+                        Spacer(Modifier.width(6.dp))
+                        Text("Mudar Pasta")
+                    }
+                    OutlinedButton(onClick = { viewModel.disconnectDriveFolder() }) {
+                        Text("Desconectar", color = MaterialTheme.colorScheme.error)
+                    }
+                }
+            } else {
+                // Not connected — show Browse button
+                Button(
+                    onClick = {
+                        if (viewModel.hasDriveReadAccess()) {
+                            viewModel.openFolderPicker()
+                        } else {
+                            // Request DRIVE_READONLY, then open picker after grant
+                            viewModel.getDriveLibraryIntent()?.let { driveLibraryLauncher.launch(it) }
+                                ?: viewModel.setSyncMessage("Erro ao iniciar login do Google")
+                        }
                     },
-                    enabled = driveFolderInput.isNotBlank() && !driveFolderConnecting,
                     modifier = Modifier.fillMaxWidth()
                 ) {
-                    if (driveFolderConnecting) {
-                        CircularProgressIndicator(modifier = Modifier.size(18.dp), strokeWidth = 2.dp)
-                        Spacer(Modifier.width(8.dp))
-                    }
-                    Icon(Icons.Default.CloudDownload, contentDescription = null)
+                    Icon(Icons.Default.FolderOpen, contentDescription = null)
                     Spacer(Modifier.width(8.dp))
-                    Text("Conectar Pasta")
+                    Text("Navegar e escolher pasta")
                 }
             }
 
@@ -277,6 +252,17 @@ fun SettingsScreen(
                 onDelete = { viewModel.deleteDictionary("en") }
             )
         }
+    }
+
+    // ── Drive folder picker bottom sheet ──────────────────────────────────────
+    if (pickerState.isOpen) {
+        DriveFolderPickerBottomSheet(
+            state = pickerState,
+            onDismiss = { viewModel.closeFolderPicker() },
+            onNavigateInto = { folder -> viewModel.navigateIntoFolder(folder) },
+            onBreadcrumbTap = { index -> viewModel.navigateToBreadcrumb(index) },
+            onSelectCurrent = { viewModel.selectCurrentPickerFolder() }
+        )
     }
 }
 

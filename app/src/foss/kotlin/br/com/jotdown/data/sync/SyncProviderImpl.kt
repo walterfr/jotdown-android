@@ -20,4 +20,5 @@ class SyncProviderImpl : SyncProvider {
     override suspend fun findDriveFolderByName(context: Context, name: String): Result<DriveFileInfo?> = Result.failure(notSupported)
     override suspend fun listDrivePdfs(context: Context, folderId: String): Result<List<DriveFileInfo>> = Result.failure(notSupported)
     override suspend fun downloadDriveFile(context: Context, fileId: String, destFile: File, onProgress: (Int) -> Unit): Result<Unit> = Result.failure(notSupported)
+    override suspend fun listDriveFolders(context: Context, parentId: String): Result<List<DriveFileInfo>> = Result.failure(notSupported)
 }

@@ -382,6 +382,11 @@ class LibraryViewModel(private val repository: DocumentRepository, private val a
     fun deleteDocument(context: Context, id: String) = viewModelScope.launch {
         val doc = repository.getDocumentById(id)
         doc?.pdfFilePath?.let { File(it).delete() }
+        
+        // Fallback for backups restored from different devices/ROMs where the absolute path might have changed
+        val fallbackPdfFile = File(context.filesDir, "pdfs/$id.pdf")
+        if (fallbackPdfFile.exists()) fallbackPdfFile.delete()
+
         val coverFile = File(context.filesDir, "covers/$id.jpg")
         if (coverFile.exists()) coverFile.delete()
         repository.deleteDocument(id)

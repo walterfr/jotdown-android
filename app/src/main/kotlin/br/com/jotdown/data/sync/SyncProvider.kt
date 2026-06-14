@@ -29,4 +29,6 @@ interface SyncProvider {
         destFile: File,
         onProgress: (Int) -> Unit
     ): Result<Unit>
+    /** Lists subfolders of [parentId] (defaults to root). */
+    suspend fun listDriveFolders(context: Context, parentId: String = "root"): Result<List<DriveFileInfo>>
 }

@@ -124,19 +124,6 @@
           <option name="screenY" value="2160" />
         </PersistentDeviceSelectionData>
         <PersistentDeviceSelectionData>
-          <option name="api" value="35" />
-          <option name="brand" value="Lenovo" />
-          <option name="codename" value="TB330FU" />
-          <option name="formFactor" value="Tablet" />
-          <option name="id" value="TB330FU" />
-          <option name="labId" value="google" />
-          <option name="manufacturer" value="Lenovo" />
-          <option name="name" value="Tab M11" />
-          <option name="screenDensity" value="240" />
-          <option name="screenX" value="1200" />
-          <option name="screenY" value="1920" />
-        </PersistentDeviceSelectionData>
-        <PersistentDeviceSelectionData>
           <option name="api" value="33" />
           <option name="brand" value="samsung" />
           <option name="codename" value="a03su" />
@@ -1035,6 +1022,19 @@
           <option name="screenDensity" value="240" />
           <option name="screenX" value="1200" />
           <option name="screenY" value="1920" />
+        </PersistentDeviceSelectionData>
+        <PersistentDeviceSelectionData>
+          <option name="api" value="36" />
+          <option name="brand" value="samsung" />
+          <option name="codename" value="gts10pwifi" />
+          <option name="formFactor" value="Tablet" />
+          <option name="id" value="gts10pwifi" />
+          <option name="labId" value="google" />
+          <option name="manufacturer" value="Samsung" />
+          <option name="name" value="Galaxy Tab S10+" />
+          <option name="screenDensity" value="320" />
+          <option name="screenX" value="1752" />
+          <option name="screenY" value="2800" />
         </PersistentDeviceSelectionData>
         <PersistentDeviceSelectionData>
           <option name="api" value="33" />
