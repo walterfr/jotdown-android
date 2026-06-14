@@ -52,6 +52,9 @@ abstract class DocumentDao {
     @Query("UPDATE documents SET labels = :labels WHERE id = :id")
     abstract suspend fun updateDocumentLabels(id: String, labels: String): Int
 
+    @Query("SELECT * FROM documents WHERE driveFileId = :driveFileId LIMIT 1")
+    abstract suspend fun getDocumentByDriveFileId(driveFileId: String): DocumentEntity?
+
 }
 
 data class DocumentSummary(

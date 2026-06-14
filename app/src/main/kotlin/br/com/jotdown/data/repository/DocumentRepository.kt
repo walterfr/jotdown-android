@@ -65,4 +65,5 @@ class DocumentRepository(
     suspend fun updateTrashStatus(id: String, isTrashed: Boolean) { documentDao.updateTrashStatus(id, isTrashed); triggerSync() }
     suspend fun updateAccessDate(id: String, accessDate: String) { documentDao.updateAccessDate(id, accessDate); triggerSync() }
     suspend fun saveDocument(doc: DocumentEntity) = upsertDocument(doc)
+    suspend fun getDocumentByDriveFileId(driveFileId: String) = documentDao.getDocumentByDriveFileId(driveFileId)
 }

@@ -2,29 +2,22 @@ package br.com.jotdown.data.sync
 
 import android.content.Context
 import android.content.Intent
+import java.io.File
 
 class SyncProviderImpl : SyncProvider {
-    override suspend fun backupNow(context: Context): Result<Unit> {
-        return Result.failure(UnsupportedOperationException("Cloud Sync is not supported in FOSS version."))
-    }
+    private val notSupported = UnsupportedOperationException("Cloud Sync is not supported in FOSS version.")
 
-    override suspend fun restoreNow(context: Context): Result<Unit> {
-        return Result.failure(UnsupportedOperationException("Cloud Sync is not supported in FOSS version."))
-    }
+    override suspend fun backupNow(context: Context): Result<Unit> = Result.failure(notSupported)
+    override suspend fun restoreNow(context: Context): Result<Unit> = Result.failure(notSupported)
+    override fun getSignInIntent(context: Context): Intent? = null
+    override suspend fun handleSignInResult(context: Context, intent: Intent?): Result<Unit> = Result.failure(notSupported)
+    override fun getSignedInAccountEmail(context: Context): String? = null
+    override fun signOut(context: Context) { /* no-op */ }
 
-    override fun getSignInIntent(context: Context): Intent? {
-        return null
-    }
-
-    override suspend fun handleSignInResult(context: Context, intent: Intent?): Result<Unit> {
-        return Result.failure(UnsupportedOperationException("Cloud Sync is not supported in FOSS version."))
-    }
-
-    override fun getSignedInAccountEmail(context: Context): String? {
-        return null
-    }
-
-    override fun signOut(context: Context) {
-        // No-op
-    }
+    // Drive Library — not available in FOSS
+    override fun hasDriveReadAccess(context: Context): Boolean = false
+    override fun getDriveLibraryIntent(context: Context): Intent? = null
+    override suspend fun findDriveFolderByName(context: Context, name: String): Result<DriveFileInfo?> = Result.failure(notSupported)
+    override suspend fun listDrivePdfs(context: Context, folderId: String): Result<List<DriveFileInfo>> = Result.failure(notSupported)
+    override suspend fun downloadDriveFile(context: Context, fileId: String, destFile: File, onProgress: (Int) -> Unit): Result<Unit> = Result.failure(notSupported)
 }

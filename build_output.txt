@@ -1,0 +1,97 @@
+﻿Starting a Gradle Daemon, 1 incompatible and 5 stopped Daemons could not be reused, use --status for details
+.\gradlew : Warning: SDK processing. This version only understands SDK XML versions up to 3 but an SDK XML file of 
+version 4 was encountered. This can happen if you use versions of Android Studio and the command-line tools that were 
+released at different times.
+No linha:1 caractere:1
++ .\gradlew assembleFullDebug 2>&1 | Out-File -FilePath "build_output.t ...
++ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (Warning: SDK pr...ifferent times.:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+> Task :app:preBuild UP-TO-DATE
+> Task :app:preFullDebugBuild UP-TO-DATE
+> Task :app:mergeFullDebugNativeDebugMetadata NO-SOURCE
+> Task :app:checkKotlinGradlePluginConfigurationErrors
+> Task :app:checkFullDebugAarMetadata UP-TO-DATE
+> Task :app:generateFullDebugResValues UP-TO-DATE
+> Task :app:mapFullDebugSourceSetPaths UP-TO-DATE
+> Task :app:generateFullDebugResources UP-TO-DATE
+> Task :app:mergeFullDebugResources UP-TO-DATE
+> Task :app:packageFullDebugResources UP-TO-DATE
+> Task :app:parseFullDebugLocalResources UP-TO-DATE
+> Task :app:createFullDebugCompatibleScreenManifests UP-TO-DATE
+> Task :app:extractDeepLinksFullDebug UP-TO-DATE
+> Task :app:processFullDebugMainManifest UP-TO-DATE
+> Task :app:processFullDebugManifest UP-TO-DATE
+> Task :app:processFullDebugManifestForPackage UP-TO-DATE
+> Task :app:processFullDebugResources UP-TO-DATE
+> Task :app:javaPreCompileFullDebug UP-TO-DATE
+> Task :app:mergeFullDebugShaders UP-TO-DATE
+> Task :app:compileFullDebugShaders NO-SOURCE
+> Task :app:generateFullDebugAssets UP-TO-DATE
+> Task :app:mergeFullDebugAssets UP-TO-DATE
+> Task :app:compressFullDebugAssets UP-TO-DATE
+> Task :app:checkFullDebugDuplicateClasses UP-TO-DATE
+> Task :app:desugarFullDebugFileDependencies UP-TO-DATE
+> Task :app:mergeExtDexFullDebug UP-TO-DATE
+> Task :app:mergeLibDexFullDebug UP-TO-DATE
+> Task :app:mergeFullDebugJniLibFolders UP-TO-DATE
+> Task :app:mergeFullDebugNativeLibs UP-TO-DATE
+> Task :app:stripFullDebugDebugSymbols UP-TO-DATE
+> Task :app:validateSigningFullDebug UP-TO-DATE
+> Task :app:writeFullDebugAppMetadata UP-TO-DATE
+> Task :app:writeFullDebugSigningConfigVersions UP-TO-DATE
+> Task :app:kspFullDebugKotlin
+
+> Task :app:compileFullDebugKotlin
+w: file:///X:/Android%20Projetos/Jotdown-Android/app/src/full/kotlin/br/com/jotdown/data/sync/SyncProviderImpl.kt:5:47 'GoogleSignIn' is deprecated. Deprecated in Java
+w: file:///X:/Android%20Projetos/Jotdown-Android/app/src/full/kotlin/br/com/jotdown/data/sync/SyncProviderImpl.kt:6:47 'GoogleSignInOptions' is deprecated. Deprecated in Java
+w: file:///X:/Android%20Projetos/Jotdown-Android/app/src/full/kotlin/br/com/jotdown/data/sync/SyncProviderImpl.kt:22:37 'GoogleSignInOptions' is deprecated. Deprecated in Java
+w: file:///X:/Android%20Projetos/Jotdown-Android/app/src/full/kotlin/br/com/jotdown/data/sync/SyncProviderImpl.kt:23:16 'GoogleSignInOptions' is deprecated. Deprecated in Java
+w: file:///X:/Android%20Projetos/Jotdown-Android/app/src/full/kotlin/br/com/jotdown/data/sync/SyncProviderImpl.kt:23:44 'GoogleSignInOptions' is deprecated. Deprecated in Java
+w: file:///X:/Android%20Projetos/Jotdown-Android/app/src/full/kotlin/br/com/jotdown/data/sync/SyncProviderImpl.kt:30:49 'GoogleSignInOptions' is deprecated. Deprecated in Java
+w: file:///X:/Android%20Projetos/Jotdown-Android/app/src/full/kotlin/br/com/jotdown/data/sync/SyncProviderImpl.kt:31:16 'GoogleSignInOptions' is deprecated. Deprecated in Java
+w: file:///X:/Android%20Projetos/Jotdown-Android/app/src/full/kotlin/br/com/jotdown/data/sync/SyncProviderImpl.kt:31:44 'GoogleSignInOptions' is deprecated. Deprecated in Java
+w: file:///X:/Android%20Projetos/Jotdown-Android/app/src/full/kotlin/br/com/jotdown/data/sync/SyncProviderImpl.kt:40:22 'GoogleSignIn' is deprecated. Deprecated in Java
+w: file:///X:/Android%20Projetos/Jotdown-Android/app/src/full/kotlin/br/com/jotdown/data/sync/SyncProviderImpl.kt:45:22 'GoogleSignIn' is deprecated. Deprecated in Java
+w: file:///X:/Android%20Projetos/Jotdown-Android/app/src/full/kotlin/br/com/jotdown/data/sync/SyncProviderImpl.kt:50:23 'GoogleSignIn' is deprecated. Deprecated in Java
+w: file:///X:/Android%20Projetos/Jotdown-Android/app/src/full/kotlin/br/com/jotdown/data/sync/SyncProviderImpl.kt:51:16 'GoogleSignIn' is deprecated. Deprecated in Java
+w: file:///X:/Android%20Projetos/Jotdown-Android/app/src/full/kotlin/br/com/jotdown/data/sync/SyncProviderImpl.kt:56:24 'GoogleSignIn' is deprecated. Deprecated in Java
+w: file:///X:/Android%20Projetos/Jotdown-Android/app/src/full/kotlin/br/com/jotdown/data/sync/SyncProviderImpl.kt:66:23 'GoogleSignIn' is deprecated. Deprecated in Java
+w: file:///X:/Android%20Projetos/Jotdown-Android/app/src/full/kotlin/br/com/jotdown/data/sync/SyncProviderImpl.kt:71:9 'GoogleSignIn' is deprecated. Deprecated in Java
+w: file:///X:/Android%20Projetos/Jotdown-Android/app/src/full/kotlin/br/com/jotdown/data/sync/SyncProviderImpl.kt:78:23 'GoogleSignIn' is deprecated. Deprecated in Java
+w: file:///X:/Android%20Projetos/Jotdown-Android/app/src/full/kotlin/br/com/jotdown/data/sync/SyncProviderImpl.kt:92:23 'GoogleSignIn' is deprecated. Deprecated in Java
+w: file:///X:/Android%20Projetos/Jotdown-Android/app/src/full/kotlin/br/com/jotdown/data/sync/SyncProviderImpl.kt:198:38 Type mismatch: inferred type is String? but String was expected
+w: file:///X:/Android%20Projetos/Jotdown-Android/app/src/full/kotlin/br/com/jotdown/data/sync/SyncProviderImpl.kt:269:42 Type mismatch: inferred type is String? but String was expected
+w: file:///X:/Android%20Projetos/Jotdown-Android/app/src/main/kotlin/br/com/jotdown/data/db/JotdownDatabase.kt:39:34 The corresponding parameter in the supertype 'Migration' is named 'db'. This may cause problems when calling this function with named arguments.
+w: file:///X:/Android%20Projetos/Jotdown-Android/app/src/main/kotlin/br/com/jotdown/ui/screens/library/LibraryScreen.kt:170:57 'Label: ImageVector' is deprecated. Use the AutoMirrored version at Icons.AutoMirrored.Filled.Label
+w: file:///X:/Android%20Projetos/Jotdown-Android/app/src/main/kotlin/br/com/jotdown/ui/screens/library/LibraryScreen.kt:249:100 'Sort: ImageVector' is deprecated. Use the AutoMirrored version at Icons.AutoMirrored.Filled.Sort
+w: file:///X:/Android%20Projetos/Jotdown-Android/app/src/main/kotlin/br/com/jotdown/ui/screens/library/LibraryScreen.kt:629:71 'Label: ImageVector' is deprecated. Use the AutoMirrored version at Icons.AutoMirrored.Filled.Label
+w: file:///X:/Android%20Projetos/Jotdown-Android/app/src/main/kotlin/br/com/jotdown/ui/screens/settings/SettingsScreen.kt:29:9 Variable 'context' is never used
+w: file:///X:/Android%20Projetos/Jotdown-Android/app/src/main/kotlin/br/com/jotdown/ui/screens/settings/SettingsScreen.kt:286:5 Parameter 'langCode' is never used
+w: file:///X:/Android%20Projetos/Jotdown-Android/app/src/main/kotlin/br/com/jotdown/ui/screens/settings/SettingsScreen.kt:299:17 'LinearProgressIndicator(Float, Modifier = ..., Color = ..., Color = ..., StrokeCap = ...): Unit' is deprecated. Use the overload that takes `progress` as a lambda
+w: file:///X:/Android%20Projetos/Jotdown-Android/app/src/main/kotlin/br/com/jotdown/ui/screens/reader/ReaderScreen.kt:876:5 Parameter 'pdfFile' is never used
+w: file:///X:/Android%20Projetos/Jotdown-Android/app/src/main/kotlin/br/com/jotdown/ui/screens/reader/ReaderScreen.kt:879:73 Parameter 'initialScrollOffset' is never used
+w: file:///X:/Android%20Projetos/Jotdown-Android/app/src/main/kotlin/br/com/jotdown/ui/screens/reader/ReaderScreen.kt:1053:68 'MenuBook: ImageVector' is deprecated. Use the AutoMirrored version at Icons.AutoMirrored.Filled.MenuBook
+w: file:///X:/Android%20Projetos/Jotdown-Android/app/src/main/kotlin/br/com/jotdown/ui/screens/reader/ReaderScreen.kt:1116:9 Variable 'annotationsRef' is never used
+
+> Task :app:compileFullDebugJavaWithJavac
+> Task :app:dexBuilderFullDebug
+> Task :app:mergeFullDebugGlobalSynthetics UP-TO-DATE
+> Task :app:processFullDebugJavaRes UP-TO-DATE
+> Task :app:mergeFullDebugJavaResource UP-TO-DATE
+> Task :app:mergeProjectDexFullDebug
+> Task :app:packageFullDebug
+> Task :app:createFullDebugApkListingFileRedirect UP-TO-DATE
+> Task :app:assembleFullDebug
+
+[Incubating] Problems report is available at: file:///X:/Android%20Projetos/Jotdown-Android/build/reports/problems/problems-report.html
+
+Deprecated Gradle features were used in this build, making it incompatible with Gradle 10.
+
+You can use '--warning-mode all' to show the individual deprecation warnings and determine if they come from your own scripts or plugins.
+
+For more on this, please refer to https://docs.gradle.org/9.4.1/userguide/command_line_interface.html#sec:command_line_warnings in the Gradle documentation.
+
+BUILD SUCCESSFUL in 54s
+38 actionable tasks: 7 executed, 31 up-to-date

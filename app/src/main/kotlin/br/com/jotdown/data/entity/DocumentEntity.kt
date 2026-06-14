@@ -1,4 +1,4 @@
-﻿package br.com.jotdown.data.entity
+package br.com.jotdown.data.entity
 
 import androidx.room.Entity
 import androidx.room.PrimaryKey
@@ -25,6 +25,8 @@ data class DocumentEntity(
     val url: String = "",
     val accessDate: String = "",
     val isFavorite: Boolean = false,
-    val isTrashed: Boolean = false, // <- O Segredo da Lixeira!
-    val labels: String = ""
+    val isTrashed: Boolean = false,
+    val labels: String = "",
+    /** Google Drive file ID — null for locally-imported documents. */
+    val driveFileId: String? = null
 )

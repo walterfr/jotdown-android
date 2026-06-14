@@ -134,6 +134,62 @@ class SettingsViewModel(private val application: JotdownApplication) : ViewModel
     fun schedulePeriodicBackup(hours: Long) {
         application.syncManager.schedulePeriodicBackup(hours)
     }
+
+    // ── Drive Library ─────────────────────────────────────────────────────────
+
+    private val drivePrefs = application.getSharedPreferences("jotdown_drive", Context.MODE_PRIVATE)
+
+    private val _driveFolderName = MutableStateFlow<String?>(drivePrefs.getString("folder_name", null))
+    val driveFolderName: StateFlow<String?> = _driveFolderName.asStateFlow()
+
+    private val _driveFolderConnecting = MutableStateFlow(false)
+    val driveFolderConnecting: StateFlow<Boolean> = _driveFolderConnecting.asStateFlow()
+
+    fun hasDriveReadAccess(): Boolean = syncProvider.hasDriveReadAccess(application)
+
+    fun getDriveLibraryIntent(): Intent? = syncProvider.getDriveLibraryIntent(application)
+
+    fun handleDriveLibrarySignIn(intent: Intent?, pendingFolderName: String) {
+        viewModelScope.launch {
+            val result = syncProvider.handleSignInResult(application, intent)
+            if (result.isSuccess) {
+                checkSignInStatus()
+                if (pendingFolderName.isNotBlank()) connectDriveFolder(pendingFolderName)
+            } else {
+                _syncMessage.value = "Erro ao autorizar acesso ao Drive: ${result.exceptionOrNull()?.message}"
+            }
+        }
+    }
+
+    fun connectDriveFolder(folderName: String) = viewModelScope.launch {
+        _driveFolderConnecting.value = true
+        _syncMessage.value = "Buscando pasta \"$folderName\" no Drive..."
+        val result = syncProvider.findDriveFolderByName(application, folderName)
+        result.fold(
+            onSuccess = { folder ->
+                if (folder != null) {
+                    drivePrefs.edit()
+                        .putString("folder_id", folder.id)
+                        .putString("folder_name", folderName)
+                        .apply()
+                    _driveFolderName.value = folderName
+                    _syncMessage.value = "✓ Pasta \"$folderName\" conectada com sucesso!"
+                } else {
+                    _syncMessage.value = "Pasta \"$folderName\" não encontrada no seu Drive."
+                }
+            },
+            onFailure = { e ->
+                _syncMessage.value = "Erro ao buscar pasta: ${e.message}"
+            }
+        )
+        _driveFolderConnecting.value = false
+    }
+
+    fun disconnectDriveFolder() {
+        drivePrefs.edit().remove("folder_id").remove("folder_name").apply()
+        _driveFolderName.value = null
+        _syncMessage.value = null
+    }
 }
 
 class SettingsViewModelFactory(private val application: JotdownApplication) : ViewModelProvider.Factory {

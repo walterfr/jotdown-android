@@ -5,16 +5,13 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.CloudDone
-import androidx.compose.material.icons.filled.CloudDownload
-import androidx.compose.material.icons.filled.CloudUpload
-import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material.icons.filled.Download
+import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.rememberScrollState
@@ -31,10 +28,22 @@ fun SettingsScreen(
     val syncMessage by viewModel.syncMessage.collectAsState()
     val context = LocalContext.current
 
+    val driveFolderName by viewModel.driveFolderName.collectAsState()
+    val driveFolderConnecting by viewModel.driveFolderConnecting.collectAsState()
+    // Input for the Drive folder name — kept at top level so the launcher closure can read it
+    var driveFolderInput by remember { mutableStateOf("") }
+
     val signInLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.StartActivityForResult()
     ) { result ->
         viewModel.handleSignInResult(result.data)
+    }
+
+    // Launcher specifically for Drive Library additional permission
+    val driveLibraryLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.StartActivityForResult()
+    ) { result ->
+        viewModel.handleDriveLibrarySignIn(result.data, driveFolderInput)
     }
 
     LaunchedEffect(Unit) {
@@ -145,6 +154,101 @@ fun SettingsScreen(
             if (syncMessage != null) {
                 Text(syncMessage ?: "", color = MaterialTheme.colorScheme.primary)
             }
+            HorizontalDivider()
+
+            // ── Drive Library ────────────────────────────────────────────────
+            Text("Biblioteca do Drive", style = MaterialTheme.typography.titleMedium)
+            Text(
+                "Conecte uma pasta do seu Google Drive para acessar e baixar PDFs diretamente no app.",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.outline
+            )
+
+            if (signedInEmail == null) {
+                Text(
+                    "Faça login no Google (seção acima) para usar a Biblioteca do Drive.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.outline
+                )
+            } else if (driveFolderName != null) {
+                // Connected state
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Icon(Icons.Default.Folder, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
+                    Text("Conectado a: ", style = MaterialTheme.typography.bodyMedium)
+                    Text(driveFolderName ?: "", fontWeight = FontWeight.Bold, style = MaterialTheme.typography.bodyMedium)
+                }
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    var showChangePicker by remember { mutableStateOf(false) }
+                    if (showChangePicker) {
+                        OutlinedTextField(
+                            value = driveFolderInput,
+                            onValueChange = { driveFolderInput = it },
+                            label = { Text("Nome da nova pasta") },
+                            modifier = Modifier.weight(1f),
+                            singleLine = true
+                        )
+                        Button(
+                            onClick = {
+                                if (driveFolderInput.isNotBlank()) {
+                                    if (!viewModel.hasDriveReadAccess()) {
+                                        viewModel.getDriveLibraryIntent()?.let { intent ->
+                                            driveLibraryLauncher.launch(intent)
+                                        } ?: viewModel.setSyncMessage("Erro ao iniciar login do Google")
+                                    } else {
+                                        viewModel.connectDriveFolder(driveFolderInput)
+                                        showChangePicker = false
+                                    }
+                                }
+                            },
+                            enabled = driveFolderInput.isNotBlank() && !driveFolderConnecting
+                        ) { Text("Buscar") }
+                    } else {
+                        OutlinedButton(onClick = { showChangePicker = true; driveFolderInput = "" }) {
+                            Text("Mudar Pasta")
+                        }
+                        OutlinedButton(onClick = { viewModel.disconnectDriveFolder() }) {
+                            Text("Desconectar", color = MaterialTheme.colorScheme.error)
+                        }
+                    }
+                }
+                if (driveFolderConnecting) { CircularProgressIndicator(modifier = Modifier.size(24.dp)) }
+            } else {
+                // Not connected — show input to connect
+                OutlinedTextField(
+                    value = driveFolderInput,
+                    onValueChange = { driveFolderInput = it },
+                    label = { Text("Nome exato da pasta no Drive") },
+                    placeholder = { Text("ex: Minha Biblioteca Acadêmica") },
+                    modifier = Modifier.fillMaxWidth(),
+                    singleLine = true,
+                    leadingIcon = { Icon(Icons.Default.FolderOpen, contentDescription = null) }
+                )
+                Button(
+                    onClick = {
+                        if (driveFolderInput.isNotBlank()) {
+                            if (!viewModel.hasDriveReadAccess()) {
+                                // Request additional scope — after grant, handleDriveLibrarySignIn will call connectDriveFolder
+                                viewModel.getDriveLibraryIntent()?.let { intent ->
+                                    driveLibraryLauncher.launch(intent)
+                                } ?: viewModel.setSyncMessage("Erro ao iniciar login do Google")
+                            } else {
+                                viewModel.connectDriveFolder(driveFolderInput)
+                            }
+                        }
+                    },
+                    enabled = driveFolderInput.isNotBlank() && !driveFolderConnecting,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    if (driveFolderConnecting) {
+                        CircularProgressIndicator(modifier = Modifier.size(18.dp), strokeWidth = 2.dp)
+                        Spacer(Modifier.width(8.dp))
+                    }
+                    Icon(Icons.Default.CloudDownload, contentDescription = null)
+                    Spacer(Modifier.width(8.dp))
+                    Text("Conectar Pasta")
+                }
+            }
+
             HorizontalDivider()
 
             Text("Gerenciar Dicionários Offline", style = MaterialTheme.typography.titleMedium)

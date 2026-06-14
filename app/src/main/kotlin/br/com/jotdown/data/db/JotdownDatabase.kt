@@ -4,6 +4,8 @@ import android.content.Context
 import androidx.room.Database
 import androidx.room.Room
 import androidx.room.RoomDatabase
+import androidx.room.migration.Migration
+import androidx.sqlite.db.SupportSQLiteDatabase
 import br.com.jotdown.data.dao.*
 import br.com.jotdown.data.entity.*
 
@@ -16,7 +18,7 @@ import br.com.jotdown.data.entity.*
         FolderEntity::class,
         DictionaryCache::class
     ],
-    version = 10,
+    version = 11,
     exportSchema = false
 )
 abstract class JotdownDatabase : RoomDatabase() {
@@ -32,6 +34,13 @@ abstract class JotdownDatabase : RoomDatabase() {
         @Volatile
         private var INSTANCE: JotdownDatabase? = null
 
+        /** Adds the driveFileId column — no data loss. */
+        private val MIGRATION_10_11 = object : Migration(10, 11) {
+            override fun migrate(database: SupportSQLiteDatabase) {
+                database.execSQL("ALTER TABLE documents ADD COLUMN driveFileId TEXT DEFAULT NULL")
+            }
+        }
+
         fun getInstance(context: Context): JotdownDatabase {
             return INSTANCE ?: synchronized(this) {
                 Room.databaseBuilder(
@@ -39,6 +48,7 @@ abstract class JotdownDatabase : RoomDatabase() {
                     JotdownDatabase::class.java,
                     "jotdown_stable.db"
                 )
+                .addMigrations(MIGRATION_10_11)
                 .fallbackToDestructiveMigration()
                 .build()
                 .also { INSTANCE = it }
@@ -46,4 +56,3 @@ abstract class JotdownDatabase : RoomDatabase() {
         }
     }
 }
-

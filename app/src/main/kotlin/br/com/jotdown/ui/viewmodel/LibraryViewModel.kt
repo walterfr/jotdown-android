@@ -10,6 +10,7 @@ import br.com.jotdown.data.dao.DocumentSummary
 import br.com.jotdown.data.entity.DocumentEntity
 import br.com.jotdown.data.repository.DocumentRepository
 import br.com.jotdown.data.entity.FolderEntity
+import br.com.jotdown.data.sync.DriveFileInfo
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.*
@@ -18,6 +19,17 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.io.File
 import java.util.UUID
+
+/** UI model for a PDF that lives in the user's configured Drive folder. */
+data class DriveDocumentUiItem(
+    val driveFileId: String,
+    val name: String,
+    val sizeBytes: Long,
+    /** Non-null when this file has already been downloaded and imported locally. */
+    val localDocId: String? = null,
+    /** 0-100 while downloading, null when idle. */
+    val downloadProgress: Int? = null
+)
 
 class LibraryViewModel(private val repository: DocumentRepository, private val application: JotdownApplication) : ViewModel() {
     val syncWorkInfo = application.syncManager.getSyncWorkInfo()
@@ -70,6 +82,7 @@ class LibraryViewModel(private val repository: DocumentRepository, private val a
                 "PDF" -> list.filter { it.docType != "nota" } 
                 "Nota" -> list.filter { it.docType == "nota" || it.annotationCount > 0 || it.highlightCount > 0 }
                 "Pasta" -> emptyList()
+                "Drive"  -> emptyList() // Drive tab uses its own driveDocuments flow
                 else -> list
             }
             
@@ -147,6 +160,114 @@ class LibraryViewModel(private val repository: DocumentRepository, private val a
     fun toggleFavorite(id: String, isFavorite: Boolean) = viewModelScope.launch { repository.updateFavoriteStatus(id, isFavorite) }
     fun moveToTrash(id: String) = viewModelScope.launch { repository.updateTrashStatus(id, true); repository.setDocumentFolder(id, null) }
     fun restoreFromTrash(id: String) = viewModelScope.launch { repository.updateTrashStatus(id, false) }
+
+    // ── Drive Library ────────────────────────────────────────────────────────
+
+    private val _driveDocuments = MutableStateFlow<List<DriveDocumentUiItem>>(emptyList())
+    val driveDocuments: StateFlow<List<DriveDocumentUiItem>> = _driveDocuments.asStateFlow()
+
+    private val _driveLoading = MutableStateFlow(false)
+    val driveLoading: StateFlow<Boolean> = _driveLoading.asStateFlow()
+
+    private val _driveError = MutableStateFlow<String?>(null)
+    val driveError: StateFlow<String?> = _driveError.asStateFlow()
+
+    fun loadDriveDocuments(context: Context) = viewModelScope.launch {
+        val prefs = context.getSharedPreferences("jotdown_drive", Context.MODE_PRIVATE)
+        val folderId = prefs.getString("folder_id", null)
+        if (folderId == null) {
+            _driveError.value = "Nenhuma pasta configurada. Vá em Configurações > Biblioteca do Drive."
+            return@launch
+        }
+        _driveLoading.value = true
+        _driveError.value = null
+        val result = withContext(Dispatchers.IO) {
+            application.syncProvider.listDrivePdfs(context, folderId)
+        }
+        result.fold(
+            onSuccess = { files ->
+                val items = withContext(Dispatchers.IO) {
+                    files.map { file ->
+                        val local = repository.getDocumentByDriveFileId(file.id)
+                        DriveDocumentUiItem(
+                            driveFileId = file.id,
+                            name = file.name,
+                            sizeBytes = file.sizeBytes,
+                            localDocId = local?.id
+                        )
+                    }
+                }
+                _driveDocuments.value = items
+            },
+            onFailure = { e ->
+                _driveError.value = "Erro ao listar arquivos: ${e.message}"
+            }
+        )
+        _driveLoading.value = false
+    }
+
+    /**
+     * Downloads a Drive PDF to local storage, generates a cover thumbnail, saves it in Room,
+     * and calls [onComplete] with the new local document ID upon success.
+     */
+    fun importFromDrive(
+        context: Context,
+        item: DriveDocumentUiItem,
+        onComplete: (docId: String) -> Unit
+    ) = viewModelScope.launch {
+        updateDriveProgress(item.driveFileId, 0)
+        val result = withContext(Dispatchers.IO) {
+            try {
+                val docId = UUID.randomUUID().toString()
+                val pdfDir = File(context.filesDir, "pdfs").also { it.mkdirs() }
+                val pdfFile = File(pdfDir, "$docId.pdf")
+                application.syncProvider.downloadDriveFile(
+                    context = context,
+                    fileId = item.driveFileId,
+                    destFile = pdfFile,
+                    onProgress = { progress -> updateDriveProgress(item.driveFileId, progress) }
+                ).getOrThrow()
+
+                val coverDir = File(context.filesDir, "covers").also { it.mkdirs() }
+                br.com.jotdown.util.PdfCoverUtil.generateCover(pdfFile, File(coverDir, "$docId.jpg"))
+
+                val cleanTitle = item.name.removeSuffix(".pdf").removeSuffix(".PDF")
+                repository.saveDocument(
+                    DocumentEntity(
+                        id = docId,
+                        fileName = item.name,
+                        title = cleanTitle,
+                        dateAdded = System.currentTimeMillis(),
+                        pdfFilePath = pdfFile.absolutePath,
+                        driveFileId = item.driveFileId
+                    )
+                )
+                Result.success(docId)
+            } catch (e: Exception) {
+                Result.failure(e)
+            }
+        }
+        result.fold(
+            onSuccess = { docId ->
+                _driveDocuments.value = _driveDocuments.value.map {
+                    if (it.driveFileId == item.driveFileId) it.copy(localDocId = docId, downloadProgress = null) else it
+                }
+                onComplete(docId)
+            },
+            onFailure = { e ->
+                _driveError.value = "Erro ao baixar: ${e.message}"
+                updateDriveProgress(item.driveFileId, null)
+            }
+        )
+    }
+
+    private fun updateDriveProgress(driveFileId: String, progress: Int?) {
+        _driveDocuments.value = _driveDocuments.value.map {
+            if (it.driveFileId == driveFileId) it.copy(downloadProgress = progress) else it
+        }
+    }
+
+    // ── Local Import ─────────────────────────────────────────────────────────
 
     fun importPdf(context: Context, uri: Uri) = viewModelScope.launch {
         withContext(Dispatchers.IO) {

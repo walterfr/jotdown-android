@@ -10,8 +10,10 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.*
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.grid.*
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -40,6 +42,7 @@ import androidx.compose.ui.unit.sp
 import br.com.jotdown.data.dao.DocumentSummary
 import br.com.jotdown.data.entity.FolderEntity
 import br.com.jotdown.ui.theme.*
+import br.com.jotdown.ui.viewmodel.DriveDocumentUiItem
 import br.com.jotdown.ui.viewmodel.LibraryViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -337,7 +340,7 @@ fun LibraryScreen(viewModel: LibraryViewModel, onOpenDocument: (String) -> Unit,
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
                     contentPadding = PaddingValues(horizontal = 2.dp)
                 ) {
-                    val chipTabs = listOf("Tudo", "PDF", "Nota", "Pasta")
+                    val chipTabs = listOf("Tudo", "PDF", "Nota", "Pasta", "Drive")
                     items(chipTabs.size) { index ->
                         val title = chipTabs[index]
                         FilterChip(
@@ -363,42 +366,48 @@ fun LibraryScreen(viewModel: LibraryViewModel, onOpenDocument: (String) -> Unit,
                 Spacer(Modifier.height(16.dp))
                 val showFolders = currentFolder == null && currentFilter == "Tudo" && (currentTab == "Tudo" || currentTab == "Pasta")
 
-                if (displayDocuments.isEmpty() && (!showFolders || folders.isEmpty())) {
-                    EmptyLibrary(currentFilter, currentTab)
-                } else {
-                    LazyVerticalGrid(
-                        columns = GridCells.Adaptive(minSize = 140.dp), 
-                        horizontalArrangement = Arrangement.spacedBy(20.dp), 
-                        verticalArrangement = Arrangement.spacedBy(32.dp), 
-                        contentPadding = PaddingValues(bottom = 120.dp, top = 8.dp),
-                        modifier = Modifier.fillMaxSize()
-                    ) {
-                        if (showFolders) {
-                            items(folders, key = { "folder_${it.id}" }) { folder ->
-                                FolderCard(folder = folder, isTarget = targetFolderId == folder.id, onClick = { viewModel.enterFolder(folder) }, onRename = { folderToRename = folder; renameText = folder.name }, onGloballyPositioned = { coordinates -> folderBoundsMap[folder.id] = coordinates })
+                if (currentTab == "Drive") {
+                        DriveLibraryContent(
+                            viewModel = viewModel,
+                            context = context,
+                            onOpenDocument = onOpenDocument
+                        )
+                    } else if (displayDocuments.isEmpty() && (!showFolders || folders.isEmpty())) {
+                        EmptyLibrary(currentFilter, currentTab)
+                    } else {
+                        LazyVerticalGrid(
+                            columns = GridCells.Adaptive(minSize = 140.dp), 
+                            horizontalArrangement = Arrangement.spacedBy(20.dp), 
+                            verticalArrangement = Arrangement.spacedBy(32.dp), 
+                            contentPadding = PaddingValues(bottom = 120.dp, top = 8.dp),
+                            modifier = Modifier.fillMaxSize()
+                        ) {
+                            if (showFolders) {
+                                items(folders, key = { "folder_${it.id}" }) { folder ->
+                                    FolderCard(folder = folder, isTarget = targetFolderId == folder.id, onClick = { viewModel.enterFolder(folder) }, onRename = { folderToRename = folder; renameText = folder.name }, onGloballyPositioned = { coordinates -> folderBoundsMap[folder.id] = coordinates })
+                                }
                             }
-                        }
-                        if (currentTab != "Pasta") {
-                            items(displayDocuments, key = { it.id }) { doc ->
-                                DocumentCoverCard(
-                                    doc = doc, isDragging = draggingDocId == doc.id, isTarget = targetDocId == doc.id, inFolder = currentFolder != null, currentFilter = currentFilter, context = context,
-                                    onCardClick = { if (currentFilter != "Lixo") onOpenDocument(doc.id) },
-                                    onRename = { docToRename = doc; renameText = doc.title.ifBlank { doc.fileName } },
-                                    onEditTags = { docToTag = doc; tagText = doc.labels },
-                                    onDelete = { docToDelete = doc },
-                                    onRemoveFromFolder = { viewModel.removeFromFolder(doc.id) },
-                                    onMoveToTrash = { viewModel.moveToTrash(doc.id) },
-                                    onRestore = { viewModel.restoreFromTrash(doc.id) },
-                                    onToggleFavorite = { viewModel.toggleFavorite(doc.id, !doc.isFavorite) },
-                                    onGloballyPositioned = { coordinates -> boundsMap[doc.id] = coordinates },
-                                    onDragStart = { offset -> globalDragPos = boundsMap[doc.id]!!.topLeft + offset; draggingDocId = doc.id; showFabMenu = false },
-                                    onDrag = { dragAmount -> globalDragPos += dragAmount; targetDocId = boundsMap.entries.find { it.key != doc.id && it.value.contains(globalDragPos) }?.key; targetFolderId = folderBoundsMap.entries.find { it.value.contains(globalDragPos) }?.key },
-                                    onDragEnd = { if (targetDocId != null) viewModel.mergeIntoFolder(doc.id, targetDocId!!) else if (targetFolderId != null) viewModel.moveToFolder(doc.id, targetFolderId!!); draggingDocId = null; targetDocId = null; targetFolderId = null }
-                                )
+                            if (currentTab != "Pasta") {
+                                items(displayDocuments, key = { it.id }) { doc ->
+                                    DocumentCoverCard(
+                                        doc = doc, isDragging = draggingDocId == doc.id, isTarget = targetDocId == doc.id, inFolder = currentFolder != null, currentFilter = currentFilter, context = context,
+                                        onCardClick = { if (currentFilter != "Lixo") onOpenDocument(doc.id) },
+                                        onRename = { docToRename = doc; renameText = doc.title.ifBlank { doc.fileName } },
+                                        onEditTags = { docToTag = doc; tagText = doc.labels },
+                                        onDelete = { docToDelete = doc },
+                                        onRemoveFromFolder = { viewModel.removeFromFolder(doc.id) },
+                                        onMoveToTrash = { viewModel.moveToTrash(doc.id) },
+                                        onRestore = { viewModel.restoreFromTrash(doc.id) },
+                                        onToggleFavorite = { viewModel.toggleFavorite(doc.id, !doc.isFavorite) },
+                                        onGloballyPositioned = { coordinates -> boundsMap[doc.id] = coordinates },
+                                        onDragStart = { offset -> globalDragPos = boundsMap[doc.id]!!.topLeft + offset; draggingDocId = doc.id; showFabMenu = false },
+                                        onDrag = { dragAmount -> globalDragPos += dragAmount; targetDocId = boundsMap.entries.find { it.key != doc.id && it.value.contains(globalDragPos) }?.key; targetFolderId = folderBoundsMap.entries.find { it.value.contains(globalDragPos) }?.key },
+                                        onDragEnd = { if (targetDocId != null) viewModel.mergeIntoFolder(doc.id, targetDocId!!) else if (targetFolderId != null) viewModel.moveToFolder(doc.id, targetFolderId!!); draggingDocId = null; targetDocId = null; targetFolderId = null }
+                                    )
+                                }
                             }
                         }
                     }
-                }
             }
         }
     }
@@ -691,3 +700,152 @@ private fun AutoGeneratedCover(title: String, docType: String) {
         }
     }
 }
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Drive Library UI
+// ─────────────────────────────────────────────────────────────────────────────
+
+@Composable
+fun DriveLibraryContent(
+    viewModel: LibraryViewModel,
+    context: android.content.Context,
+    onOpenDocument: (String) -> Unit
+) {
+    val driveDocuments by viewModel.driveDocuments.collectAsState()
+    val driveLoading by viewModel.driveLoading.collectAsState()
+    val driveError by viewModel.driveError.collectAsState()
+
+    LaunchedEffect(Unit) {
+        viewModel.loadDriveDocuments(context)
+    }
+
+    Box(modifier = Modifier.fillMaxSize()) {
+        when {
+            driveLoading -> CircularProgressIndicator(modifier = Modifier.align(Alignment.Center))
+            driveError != null -> Column(
+                modifier = Modifier.align(Alignment.Center).padding(32.dp),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                Icon(
+                    imageVector = Icons.Default.CloudOff,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.outline,
+                    modifier = Modifier.size(56.dp)
+                )
+                Spacer(Modifier.height(16.dp))
+                Text(
+                    text = driveError ?: "",
+                    textAlign = TextAlign.Center,
+                    color = MaterialTheme.colorScheme.outline,
+                    style = MaterialTheme.typography.bodyMedium
+                )
+            }
+            driveDocuments.isEmpty() -> Text(
+                text = "Nenhum PDF encontrado na pasta conectada.",
+                modifier = Modifier.align(Alignment.Center).padding(32.dp),
+                textAlign = TextAlign.Center,
+                color = MaterialTheme.colorScheme.outline
+            )
+            else -> LazyColumn(
+                modifier = Modifier.fillMaxSize(),
+                contentPadding = PaddingValues(top = 4.dp, bottom = 120.dp)
+            ) {
+                items(driveDocuments, key = { it.driveFileId }) { item ->
+                    DriveDocumentRow(
+                        item = item,
+                        onTap = { if (item.localDocId != null) onOpenDocument(item.localDocId) },
+                        onDownload = { viewModel.importFromDrive(context, item) { docId -> onOpenDocument(docId) } }
+                    )
+                    HorizontalDivider(modifier = Modifier.padding(start = 64.dp, end = 16.dp))
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun DriveDocumentRow(
+    item: DriveDocumentUiItem,
+    onTap: () -> Unit,
+    onDownload: () -> Unit
+) {
+    val isLocal = item.localDocId != null
+    val isDownloading = item.downloadProgress != null
+
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(enabled = isLocal && !isDownloading, onClick = onTap)
+            .padding(horizontal = 16.dp, vertical = 12.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        // Status icon
+        Box(
+            modifier = Modifier.size(40.dp),
+            contentAlignment = Alignment.Center
+        ) {
+            Icon(
+                imageVector = Icons.Default.PictureAsPdf,
+                contentDescription = null,
+                tint = if (isLocal) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline,
+                modifier = Modifier.size(32.dp)
+            )
+        }
+        Spacer(Modifier.width(12.dp))
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = item.name.removeSuffix(".pdf").removeSuffix(".PDF"),
+                fontWeight = FontWeight.Medium,
+                style = MaterialTheme.typography.bodyMedium,
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis
+            )
+            Text(
+                text = formatDriveFileSize(item.sizeBytes),
+                fontSize = 11.sp,
+                color = MaterialTheme.colorScheme.outline
+            )
+            if (isDownloading) {
+                Spacer(Modifier.height(4.dp))
+                LinearProgressIndicator(
+                    progress = { (item.downloadProgress ?: 0) / 100f },
+                    modifier = Modifier.fillMaxWidth()
+                )
+                Text(
+                    text = "${item.downloadProgress ?: 0}%",
+                    fontSize = 10.sp,
+                    color = MaterialTheme.colorScheme.outline
+                )
+            }
+        }
+        Spacer(Modifier.width(8.dp))
+        when {
+            isDownloading -> CircularProgressIndicator(
+                modifier = Modifier.size(28.dp),
+                strokeWidth = 2.5.dp
+            )
+            isLocal -> Icon(
+                imageVector = Icons.Default.CheckCircle,
+                contentDescription = "Baixado",
+                tint = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.size(28.dp)
+            )
+            else -> IconButton(onClick = onDownload) {
+                Icon(
+                    imageVector = Icons.Default.CloudDownload,
+                    contentDescription = "Baixar do Drive",
+                    tint = MaterialTheme.colorScheme.primary
+                )
+            }
+        }
+    }
+}
+
+private fun formatDriveFileSize(bytes: Long): String {
+    if (bytes <= 0L) return ""
+    return when {
+        bytes >= 1_048_576L -> "${"%.1f".format(bytes / 1_048_576.0)} MB"
+        bytes >= 1_024L -> "${bytes / 1_024} KB"
+        else -> "$bytes B"
+    }
+}
