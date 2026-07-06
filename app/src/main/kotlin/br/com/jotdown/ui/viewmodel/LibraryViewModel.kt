@@ -10,7 +10,7 @@ import br.com.jotdown.data.dao.DocumentSummary
 import br.com.jotdown.data.entity.DocumentEntity
 import br.com.jotdown.data.repository.DocumentRepository
 import br.com.jotdown.data.entity.FolderEntity
-import br.com.jotdown.data.sync.DriveFileInfo
+import br.com.jotdown.data.sync.CloudFileInfo
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.*
@@ -25,6 +25,8 @@ data class DriveDocumentUiItem(
     val driveFileId: String,
     val name: String,
     val sizeBytes: Long,
+    val isFolder: Boolean = false,
+    val mimeType: String = "",
     /** Non-null when this file has already been downloaded and imported locally. */
     val localDocId: String? = null,
     /** 0-100 while downloading, null when idle. */
@@ -172,17 +174,22 @@ class LibraryViewModel(private val repository: DocumentRepository, private val a
     private val _driveError = MutableStateFlow<String?>(null)
     val driveError: StateFlow<String?> = _driveError.asStateFlow()
 
+    private val _drivePath = MutableStateFlow<List<CloudFileInfo>>(emptyList())
+    val drivePath: StateFlow<List<CloudFileInfo>> = _drivePath.asStateFlow()
+
     fun loadDriveDocuments(context: Context) = viewModelScope.launch {
         val prefs = context.getSharedPreferences("jotdown_drive", Context.MODE_PRIVATE)
-        val folderId = prefs.getString("folder_id", null)
-        if (folderId == null) {
+        val rootFolderId = prefs.getString("folder_id", null)
+        if (rootFolderId == null) {
             _driveError.value = "Nenhuma pasta configurada. Vá em Configurações > Biblioteca do Drive."
             return@launch
         }
+        val currentFolderId = _drivePath.value.lastOrNull()?.id ?: rootFolderId
+
         _driveLoading.value = true
         _driveError.value = null
         val result = withContext(Dispatchers.IO) {
-            application.syncProvider.listDrivePdfs(context, folderId)
+            application.syncProvider.listCloudDocuments(context, currentFolderId)
         }
         result.fold(
             onSuccess = { files ->
@@ -193,6 +200,8 @@ class LibraryViewModel(private val repository: DocumentRepository, private val a
                             driveFileId = file.id,
                             name = file.name,
                             sizeBytes = file.sizeBytes,
+                            isFolder = file.isFolder,
+                            mimeType = file.mimeType,
                             localDocId = local?.id
                         )
                     }
@@ -204,6 +213,22 @@ class LibraryViewModel(private val repository: DocumentRepository, private val a
             }
         )
         _driveLoading.value = false
+    }
+
+    fun navigateIntoDriveFolder(context: Context, folderId: String, folderName: String) {
+        val newPath = _drivePath.value.toMutableList()
+        newPath.add(CloudFileInfo(id = folderId, name = folderName, sizeBytes = 0L, isFolder = true))
+        _drivePath.value = newPath
+        loadDriveDocuments(context)
+    }
+
+    fun navigateDriveUp(context: Context) {
+        if (_drivePath.value.isNotEmpty()) {
+            val newPath = _drivePath.value.toMutableList()
+            newPath.removeLast()
+            _drivePath.value = newPath
+            loadDriveDocuments(context)
+        }
     }
 
     /**
@@ -219,26 +244,36 @@ class LibraryViewModel(private val repository: DocumentRepository, private val a
         val result = withContext(Dispatchers.IO) {
             try {
                 val docId = UUID.randomUUID().toString()
-                val pdfDir = File(context.filesDir, "pdfs").also { it.mkdirs() }
-                val pdfFile = File(pdfDir, "$docId.pdf")
+                
+                val ext = when {
+                    item.name.endsWith(".txt", ignoreCase = true) -> "txt"
+                    item.name.endsWith(".md", ignoreCase = true) -> "md"
+                    else -> "pdf"
+                }
+                
+                val destDir = File(context.filesDir, if (ext == "pdf") "pdfs" else "docs").also { it.mkdirs() }
+                val destFile = File(destDir, "$docId.$ext")
+                
                 application.syncProvider.downloadDriveFile(
                     context = context,
                     fileId = item.driveFileId,
-                    destFile = pdfFile,
+                    destFile = destFile,
                     onProgress = { progress -> updateDriveProgress(item.driveFileId, progress) }
                 ).getOrThrow()
 
-                val coverDir = File(context.filesDir, "covers").also { it.mkdirs() }
-                br.com.jotdown.util.PdfCoverUtil.generateCover(pdfFile, File(coverDir, "$docId.jpg"))
+                if (ext == "pdf") {
+                    val coverDir = File(context.filesDir, "covers").also { it.mkdirs() }
+                    br.com.jotdown.util.PdfCoverUtil.generateCover(destFile, File(coverDir, "$docId.jpg"))
+                }
 
-                val cleanTitle = item.name.removeSuffix(".pdf").removeSuffix(".PDF")
+                val cleanTitle = item.name.removeSuffix(".$ext").removeSuffix(".${ext.uppercase()}")
                 repository.saveDocument(
                     DocumentEntity(
                         id = docId,
                         fileName = item.name,
                         title = cleanTitle,
                         dateAdded = System.currentTimeMillis(),
-                        pdfFilePath = pdfFile.absolutePath,
+                        pdfFilePath = destFile.absolutePath,
                         driveFileId = item.driveFileId
                     )
                 )
@@ -386,6 +421,10 @@ class LibraryViewModel(private val repository: DocumentRepository, private val a
         // Fallback for backups restored from different devices/ROMs where the absolute path might have changed
         val fallbackPdfFile = File(context.filesDir, "pdfs/$id.pdf")
         if (fallbackPdfFile.exists()) fallbackPdfFile.delete()
+        val fallbackTxtFile = File(context.filesDir, "docs/$id.txt")
+        if (fallbackTxtFile.exists()) fallbackTxtFile.delete()
+        val fallbackMdFile = File(context.filesDir, "docs/$id.md")
+        if (fallbackMdFile.exists()) fallbackMdFile.delete()
 
         val coverFile = File(context.filesDir, "covers/$id.jpg")
         if (coverFile.exists()) coverFile.delete()

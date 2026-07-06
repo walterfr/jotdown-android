@@ -144,6 +144,17 @@ fun ReaderScreen(
         }
     }
 
+    val isTextFormat = pdfFile?.name?.endsWith(".txt", true) == true || pdfFile?.name?.endsWith(".md", true) == true
+
+    if (isTextFormat && pdfFile != null) {
+        TextReader(
+            filePath = pdfFile!!.absolutePath,
+            title = document?.title.takeIf { !it.isNullOrBlank() } ?: document?.fileName ?: "Documento",
+            onBack = onBack
+        )
+        return
+    }
+
     Scaffold(
         topBar = {
             AnimatedVisibility(

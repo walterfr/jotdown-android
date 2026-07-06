@@ -715,6 +715,8 @@ fun DriveLibraryContent(
     val driveLoading by viewModel.driveLoading.collectAsState()
     val driveError by viewModel.driveError.collectAsState()
 
+    val drivePath by viewModel.drivePath.collectAsState()
+
     LaunchedEffect(Unit) {
         viewModel.loadDriveDocuments(context)
     }
@@ -740,8 +742,8 @@ fun DriveLibraryContent(
                     style = MaterialTheme.typography.bodyMedium
                 )
             }
-            driveDocuments.isEmpty() -> Text(
-                text = "Nenhum PDF encontrado na pasta conectada.",
+            driveDocuments.isEmpty() && drivePath.isEmpty() -> Text(
+                text = "Nenhum arquivo encontrado na pasta conectada.",
                 modifier = Modifier.align(Alignment.Center).padding(32.dp),
                 textAlign = TextAlign.Center,
                 color = MaterialTheme.colorScheme.outline
@@ -750,10 +752,32 @@ fun DriveLibraryContent(
                 modifier = Modifier.fillMaxSize(),
                 contentPadding = PaddingValues(top = 4.dp, bottom = 120.dp)
             ) {
+                if (drivePath.isNotEmpty()) {
+                    item {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable { viewModel.navigateDriveUp(context) }
+                                .padding(horizontal = 16.dp, vertical = 12.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Voltar", tint = MaterialTheme.colorScheme.primary)
+                            Spacer(Modifier.width(16.dp))
+                            Text("Voltar", fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
+                        }
+                        HorizontalDivider(modifier = Modifier.padding(start = 56.dp, end = 16.dp))
+                    }
+                }
                 items(driveDocuments, key = { it.driveFileId }) { item ->
                     DriveDocumentRow(
                         item = item,
-                        onTap = { if (item.localDocId != null) onOpenDocument(item.localDocId) },
+                        onTap = {
+                            if (item.isFolder) {
+                                viewModel.navigateIntoDriveFolder(context, item.driveFileId, item.name)
+                            } else if (item.localDocId != null) {
+                                onOpenDocument(item.localDocId)
+                            }
+                        },
                         onDownload = { viewModel.importFromDrive(context, item) { docId -> onOpenDocument(docId) } }
                     )
                     HorizontalDivider(modifier = Modifier.padding(start = 64.dp, end = 16.dp))
@@ -771,11 +795,12 @@ fun DriveDocumentRow(
 ) {
     val isLocal = item.localDocId != null
     val isDownloading = item.downloadProgress != null
+    val isFolder = item.isFolder
 
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .clickable(enabled = isLocal && !isDownloading, onClick = onTap)
+            .clickable(enabled = isFolder || (isLocal && !isDownloading), onClick = onTap)
             .padding(horizontal = 16.dp, vertical = 12.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
@@ -784,27 +809,35 @@ fun DriveDocumentRow(
             modifier = Modifier.size(40.dp),
             contentAlignment = Alignment.Center
         ) {
+            val icon = when {
+                isFolder -> Icons.Default.Folder
+                item.name.endsWith(".txt", ignoreCase = true) || item.name.endsWith(".md", ignoreCase = true) -> Icons.Default.Article
+                else -> Icons.Default.PictureAsPdf
+            }
             Icon(
-                imageVector = Icons.Default.PictureAsPdf,
+                imageVector = icon,
                 contentDescription = null,
-                tint = if (isLocal) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline,
+                tint = if (isFolder || isLocal) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline,
                 modifier = Modifier.size(32.dp)
             )
         }
         Spacer(Modifier.width(12.dp))
         Column(modifier = Modifier.weight(1f)) {
+            val cleanName = if (isFolder) item.name else item.name.substringBeforeLast(".")
             Text(
-                text = item.name.removeSuffix(".pdf").removeSuffix(".PDF"),
+                text = cleanName,
                 fontWeight = FontWeight.Medium,
                 style = MaterialTheme.typography.bodyMedium,
                 maxLines = 2,
                 overflow = TextOverflow.Ellipsis
             )
-            Text(
-                text = formatDriveFileSize(item.sizeBytes),
-                fontSize = 11.sp,
-                color = MaterialTheme.colorScheme.outline
-            )
+            if (!isFolder) {
+                Text(
+                    text = formatDriveFileSize(item.sizeBytes),
+                    fontSize = 11.sp,
+                    color = MaterialTheme.colorScheme.outline
+                )
+            }
             if (isDownloading) {
                 Spacer(Modifier.height(4.dp))
                 LinearProgressIndicator(
@@ -819,23 +852,25 @@ fun DriveDocumentRow(
             }
         }
         Spacer(Modifier.width(8.dp))
-        when {
-            isDownloading -> CircularProgressIndicator(
-                modifier = Modifier.size(28.dp),
-                strokeWidth = 2.5.dp
-            )
-            isLocal -> Icon(
-                imageVector = Icons.Default.CheckCircle,
-                contentDescription = "Baixado",
-                tint = MaterialTheme.colorScheme.primary,
-                modifier = Modifier.size(28.dp)
-            )
-            else -> IconButton(onClick = onDownload) {
-                Icon(
-                    imageVector = Icons.Default.CloudDownload,
-                    contentDescription = "Baixar do Drive",
-                    tint = MaterialTheme.colorScheme.primary
+        if (!isFolder) {
+            when {
+                isDownloading -> CircularProgressIndicator(
+                    modifier = Modifier.size(28.dp),
+                    strokeWidth = 2.5.dp
                 )
+                isLocal -> Icon(
+                    imageVector = Icons.Default.CheckCircle,
+                    contentDescription = "Baixado",
+                    tint = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.size(28.dp)
+                )
+                else -> IconButton(onClick = onDownload) {
+                    Icon(
+                        imageVector = Icons.Default.CloudDownload,
+                        contentDescription = "Baixar do Drive",
+                        tint = MaterialTheme.colorScheme.primary
+                    )
+                }
             }
         }
     }
@@ -848,4 +883,4 @@ private fun formatDriveFileSize(bytes: Long): String {
         bytes >= 1_024L -> "${bytes / 1_024} KB"
         else -> "$bytes B"
     }
-}
+}
