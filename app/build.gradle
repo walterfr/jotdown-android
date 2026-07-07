@@ -23,8 +23,8 @@ android {
         applicationId 'br.com.jotdown'
         minSdk 26
         targetSdk 34
-        versionCode 19
-        versionName '3.0.2'
+        versionCode 20
+        versionName '3.1.0'
 
         testInstrumentationRunner 'androidx.test.runner.AndroidJUnitProcessor'
 
@@ -36,10 +36,9 @@ android {
 
     buildTypes {
         release {
-            minifyEnabled false
-            shrinkResources false
+            minifyEnabled true
+            shrinkResources true
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
-            signingConfig signingConfigs.debug
         }
         debug {
             versionNameSuffix '-debug'
