@@ -106,16 +106,25 @@ fun ReaderScreen(
     var showOutline by remember { mutableStateOf(false) }
     var pdfBookmarks by remember { mutableStateOf<List<br.com.jotdown.util.PdfBookmark>>(emptyList()) }
 
+    val isTextFormat = pdfFile?.name?.endsWith(".txt", true) == true || pdfFile?.name?.endsWith(".md", true) == true
+
     LaunchedEffect(pdfFile) {
         val file = pdfFile ?: return@LaunchedEffect
+        // Documentos txt/md são renderizados pelo TextReader; não abre PdfRenderer
+        if (isTextFormat) return@LaunchedEffect
         withContext(Dispatchers.IO) {
             try {
                 val fd = ParcelFileDescriptor.open(file, ParcelFileDescriptor.MODE_READ_ONLY)
-                val renderer = PdfRenderer(fd)
+                val renderer = try {
+                    PdfRenderer(fd)
+                } catch (e: Exception) {
+                    fd.close() // sem isso o descriptor vaza quando o arquivo não é um PDF válido
+                    throw e
+                }
                 fileDescriptor = fd
                 pdfRenderer = renderer
                 numPages = renderer.pageCount
-                
+
                 // I2 - Carrega sumário (Bookmarks) pelo PDFBox
                 pdfBookmarks = br.com.jotdown.util.PdfOutlineUtil.getBookmarks(file)
             } catch (e: Exception) { e.printStackTrace() }
@@ -143,8 +152,6 @@ fun ReaderScreen(
             )
         }
     }
-
-    val isTextFormat = pdfFile?.name?.endsWith(".txt", true) == true || pdfFile?.name?.endsWith(".md", true) == true
 
     if (isTextFormat && pdfFile != null) {
         TextReader(

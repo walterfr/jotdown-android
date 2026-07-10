@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Manifest exclusivo do sabor "full": entradas do ML Kit/Play Services não devem
+     vazar para o sabor FOSS (F-Droid), que não inclui essas bibliotecas. -->
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <application>
+        <!-- Faz o Play Services baixar o modelo de OCR na instalação,
+             em vez de no primeiro uso -->
+        <meta-data
+            android:name="com.google.mlkit.vision.DEPENDENCIES"
+            android:value="ocr" />
+    </application>
+
+</manifest>

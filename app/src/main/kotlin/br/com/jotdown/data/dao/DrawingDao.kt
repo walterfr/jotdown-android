@@ -1,4 +1,4 @@
-﻿package br.com.jotdown.data.dao
+package br.com.jotdown.data.dao
 import androidx.room.*
 import br.com.jotdown.data.entity.DrawingEntity
 import kotlinx.coroutines.flow.Flow

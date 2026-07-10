@@ -55,6 +55,9 @@ abstract class DocumentDao {
     @Query("SELECT * FROM documents WHERE driveFileId = :driveFileId LIMIT 1")
     abstract suspend fun getDocumentByDriveFileId(driveFileId: String): DocumentEntity?
 
+    @Query("SELECT * FROM documents WHERE driveFileId IN (:driveFileIds)")
+    abstract suspend fun getDocumentsByDriveFileIds(driveFileIds: List<String>): List<DocumentEntity>
+
 }
 
 data class DocumentSummary(

@@ -6,7 +6,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import br.com.jotdown.JotdownApplication
-import br.com.jotdown.data.sync.DriveFileInfo
+import br.com.jotdown.data.sync.CloudFileInfo
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -200,7 +200,7 @@ class SettingsViewModel(private val application: JotdownApplication) : ViewModel
     data class DriveFolderPickerState(
         val isOpen: Boolean = false,
         val breadcrumb: List<BreadcrumbEntry> = listOf(BreadcrumbEntry("root", "Meu Drive")),
-        val folders: List<DriveFileInfo> = emptyList(),
+        val folders: List<CloudFileInfo> = emptyList(),
         val loading: Boolean = false,
         val error: String? = null
     )
@@ -217,7 +217,7 @@ class SettingsViewModel(private val application: JotdownApplication) : ViewModel
         _pickerState.value = _pickerState.value.copy(isOpen = false)
     }
 
-    fun navigateIntoFolder(folder: DriveFileInfo) {
+    fun navigateIntoFolder(folder: CloudFileInfo) {
         val newCrumb = _pickerState.value.breadcrumb + BreadcrumbEntry(folder.id, folder.name)
         _pickerState.value = _pickerState.value.copy(breadcrumb = newCrumb)
         loadPickerFolder(folder.id, folder.name)

@@ -66,4 +66,5 @@ class DocumentRepository(
     suspend fun updateAccessDate(id: String, accessDate: String) { documentDao.updateAccessDate(id, accessDate); triggerSync() }
     suspend fun saveDocument(doc: DocumentEntity) = upsertDocument(doc)
     suspend fun getDocumentByDriveFileId(driveFileId: String) = documentDao.getDocumentByDriveFileId(driveFileId)
+    suspend fun getDocumentsByDriveFileIds(driveFileIds: List<String>) = documentDao.getDocumentsByDriveFileIds(driveFileIds)
 }

@@ -18,7 +18,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import br.com.jotdown.data.sync.DriveFileInfo
+import br.com.jotdown.data.sync.CloudFileInfo
 import br.com.jotdown.ui.viewmodel.SettingsViewModel
 
 /**
@@ -30,7 +30,7 @@ import br.com.jotdown.ui.viewmodel.SettingsViewModel
 fun DriveFolderPickerBottomSheet(
     state: SettingsViewModel.DriveFolderPickerState,
     onDismiss: () -> Unit,
-    onNavigateInto: (DriveFileInfo) -> Unit,
+    onNavigateInto: (CloudFileInfo) -> Unit,
     onBreadcrumbTap: (Int) -> Unit,
     onSelectCurrent: () -> Unit
 ) {
@@ -199,7 +199,7 @@ fun DriveFolderPickerBottomSheet(
 }
 
 @Composable
-private fun FolderPickerRow(folder: DriveFileInfo, onTap: () -> Unit) {
+private fun FolderPickerRow(folder: CloudFileInfo, onTap: () -> Unit) {
     Row(
         modifier = Modifier
             .fillMaxWidth()

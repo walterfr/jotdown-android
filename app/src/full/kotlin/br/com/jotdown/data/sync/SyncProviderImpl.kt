@@ -103,7 +103,7 @@ class SyncProviderImpl : SyncProvider {
 
     // ── Drive Library Methods ──────────────────────────────────────────────────
 
-    override suspend fun findDriveFolderByName(context: Context, name: String): Result<DriveFileInfo?> =
+    override suspend fun findDriveFolderByName(context: Context, name: String): Result<CloudFileInfo?> =
         withContext(Dispatchers.IO) {
             try {
                 val drive = getDriveReadonlyService(context)
@@ -115,50 +115,67 @@ class SyncProviderImpl : SyncProvider {
                     .setSpaces("drive")
                     .execute()
                 val folder = result.files.firstOrNull()
-                Result.success(folder?.let { DriveFileInfo(it.id, it.name, 0L) })
+                Result.success(folder?.let { CloudFileInfo(it.id, it.name, 0L) })
             } catch (e: Exception) {
                 Result.failure(e)
             }
         }
 
-    override suspend fun listDrivePdfs(context: Context, folderId: String): Result<List<DriveFileInfo>> =
+    override suspend fun listCloudDocuments(context: Context, folderId: String): Result<List<CloudFileInfo>> =
         withContext(Dispatchers.IO) {
             try {
                 val drive = getDriveReadonlyService(context)
                     ?: throw Exception("Sem autenticação. Conecte-se ao Google.")
-                val result = drive.files().list()
-                    .setQ("'$folderId' in parents and mimeType='application/pdf' and trashed=false")
-                    .setFields("files(id, name, size, modifiedTime)")
-                    .setOrderBy("name")
-                    .setSpaces("drive")
-                    .execute()
-                val files = result.files.map { f ->
-                    DriveFileInfo(
-                        id = f.id,
-                        name = f.name,
-                        sizeBytes = f.getSize() ?: 0L,
-                        modifiedTime = f.modifiedTime?.toStringRfc3339() ?: ""
-                    )
-                }
+                val files = mutableListOf<CloudFileInfo>()
+                var pageToken: String? = null
+                // Pagina até o fim: sem o loop, o Drive retorna no máximo 100 itens por chamada
+                do {
+                    val result = drive.files().list()
+                        .setQ("'$folderId' in parents and (mimeType='application/pdf' or mimeType='text/plain' or mimeType='text/markdown' or mimeType='text/x-markdown' or mimeType='application/vnd.google-apps.folder') and trashed=false")
+                        .setFields("nextPageToken, files(id, name, size, modifiedTime, mimeType)")
+                        .setOrderBy("folder, name")
+                        .setSpaces("drive")
+                        .setPageSize(1000)
+                        .setPageToken(pageToken)
+                        .execute()
+                    result.files.mapTo(files) { f ->
+                        CloudFileInfo(
+                            id = f.id,
+                            name = f.name,
+                            sizeBytes = f.getSize() ?: 0L,
+                            modifiedTime = f.modifiedTime?.toStringRfc3339() ?: "",
+                            isFolder = f.mimeType == "application/vnd.google-apps.folder",
+                            mimeType = f.mimeType ?: ""
+                        )
+                    }
+                    pageToken = result.nextPageToken
+                } while (pageToken != null)
                 Result.success(files)
             } catch (e: Exception) {
                 Result.failure(e)
             }
         }
 
-    override suspend fun listDriveFolders(context: Context, parentId: String): Result<List<DriveFileInfo>> =
+    override suspend fun listDriveFolders(context: Context, parentId: String): Result<List<CloudFileInfo>> =
         withContext(Dispatchers.IO) {
             try {
                 val drive = getDriveReadonlyService(context)
                     ?: throw Exception("Sem autenticação. Conecte-se ao Google.")
                 val safeId = parentId.ifBlank { "root" }
-                val result = drive.files().list()
-                    .setQ("'$safeId' in parents and mimeType='application/vnd.google-apps.folder' and trashed=false")
-                    .setFields("files(id, name)")
-                    .setOrderBy("name")
-                    .setSpaces("drive")
-                    .execute()
-                val folders = result.files.map { DriveFileInfo(it.id, it.name, 0L) }
+                val folders = mutableListOf<CloudFileInfo>()
+                var pageToken: String? = null
+                do {
+                    val result = drive.files().list()
+                        .setQ("'$safeId' in parents and mimeType='application/vnd.google-apps.folder' and trashed=false")
+                        .setFields("nextPageToken, files(id, name)")
+                        .setOrderBy("name")
+                        .setSpaces("drive")
+                        .setPageSize(1000)
+                        .setPageToken(pageToken)
+                        .execute()
+                    result.files.mapTo(folders) { CloudFileInfo(it.id, it.name, 0L) }
+                    pageToken = result.nextPageToken
+                } while (pageToken != null)
                 Result.success(folders)
             } catch (e: Exception) {
                 Result.failure(e)

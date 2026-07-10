@@ -194,15 +194,19 @@ class LibraryViewModel(private val repository: DocumentRepository, private val a
         result.fold(
             onSuccess = { files ->
                 val items = withContext(Dispatchers.IO) {
+                    // Uma query em lote em vez de uma por arquivo (blocos de 900 respeitam
+                    // o limite de variáveis do SQLite)
+                    val localByDriveId = files.map { it.id }.chunked(900)
+                        .flatMap { repository.getDocumentsByDriveFileIds(it) }
+                        .associateBy { it.driveFileId }
                     files.map { file ->
-                        val local = repository.getDocumentByDriveFileId(file.id)
                         DriveDocumentUiItem(
                             driveFileId = file.id,
                             name = file.name,
                             sizeBytes = file.sizeBytes,
                             isFolder = file.isFolder,
                             mimeType = file.mimeType,
-                            localDocId = local?.id
+                            localDocId = localByDriveId[file.id]?.id
                         )
                     }
                 }
@@ -225,7 +229,9 @@ class LibraryViewModel(private val repository: DocumentRepository, private val a
     fun navigateDriveUp(context: Context) {
         if (_drivePath.value.isNotEmpty()) {
             val newPath = _drivePath.value.toMutableList()
-            newPath.removeLast()
+            // removeAt em vez de removeLast(): com compileSdk 35, removeLast() resolve para
+            // java.util.List.removeLast (API 35+) e crasha com NoSuchMethodError em Android <15
+            newPath.removeAt(newPath.lastIndex)
             _drivePath.value = newPath
             loadDriveDocuments(context)
         }
@@ -248,6 +254,11 @@ class LibraryViewModel(private val repository: DocumentRepository, private val a
                 val ext = when {
                     item.name.endsWith(".txt", ignoreCase = true) -> "txt"
                     item.name.endsWith(".md", ignoreCase = true) -> "md"
+                    item.name.endsWith(".pdf", ignoreCase = true) -> "pdf"
+                    // Sem extensão no nome: decide pelo mimeType reportado pelo Drive,
+                    // senão um text/plain sem extensão seria salvo e aberto como PDF
+                    item.mimeType == "text/plain" -> "txt"
+                    item.mimeType == "text/markdown" || item.mimeType == "text/x-markdown" -> "md"
                     else -> "pdf"
                 }
                 

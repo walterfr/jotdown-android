@@ -11,7 +11,7 @@ android {
         includeInBundle = false
     }
     namespace 'br.com.jotdown'
-    compileSdk 34
+    compileSdk 35
 
         flavorDimensions "version"
     productFlavors {
@@ -22,9 +22,9 @@ android {
     defaultConfig {
         applicationId 'br.com.jotdown'
         minSdk 26
-        targetSdk 34
-        versionCode 20
-        versionName '3.1.0'
+        targetSdk 35
+        versionCode 23
+        versionName '3.1.3'
 
         testInstrumentationRunner 'androidx.test.runner.AndroidJUnitProcessor'
 
@@ -128,8 +128,8 @@ dependencies {
     // WorkManager
     implementation 'androidx.work:work-runtime-ktx:2.9.0'
 
-    // OCR ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â  Google ML Kit
-    fullImplementation 'com.google.mlkit:text-recognition:16.0.1'
+    // OCR - Google ML Kit (Unbundled to fix Kotlin removeFirst crash)
+    fullImplementation 'com.google.android.gms:play-services-mlkit-text-recognition:19.0.1'
 
     // Debug
     debugImplementation 'androidx.compose.ui:ui-tooling'
