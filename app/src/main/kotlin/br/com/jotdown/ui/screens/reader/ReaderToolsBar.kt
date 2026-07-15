@@ -24,8 +24,10 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import br.com.jotdown.R
 
 // Paleta de cores das ferramentas de desenho
 private val toolPalette = listOf(
@@ -39,20 +41,20 @@ private val toolPalette = listOf(
 
 // Espessuras pré-definidas: (multiplicador, tamanho visual do indicador)
 private val strokeWidths = listOf(
-    Triple(0.5f,  6.dp,  "Fino"),
-    Triple(1.0f,  10.dp, "Médio"),
-    Triple(2.0f,  15.dp, "Grosso"),
+    Pair(0.5f,  6.dp),
+    Pair(1.0f,  10.dp),
+    Pair(2.0f,  15.dp),
 )
 
-// Ferramentas disponíveis: (enum, ícone, rótulo tooltip)
+// Ferramentas disponíveis: (enum, ícone, id do rótulo/tooltip)
 private val toolButtons = listOf(
-    Triple(Tool.PEN,         Icons.Default.Edit,                          "Caneta"),
-    Triple(Tool.PENCIL,      Icons.Default.Brush,                         "Lápis"),
-    Triple(Tool.HIGHLIGHTER, Icons.Default.BorderColor,                   "Marca-texto"),
-    Triple(Tool.ERASER,      Icons.Default.AutoFixHigh,                   "Borracha"),
-    Triple(Tool.ANNOTATION,  Icons.AutoMirrored.Filled.StickyNote2,       "Post-it"),
-    Triple(Tool.SELECT,      Icons.Default.Crop,                          "Selecionar"),
-    Triple(Tool.DICTIONARY,  Icons.Default.Translate,                     "Dicionário"),
+    Triple(Tool.PEN,         Icons.Default.Edit,                          R.string.tool_pen),
+    Triple(Tool.PENCIL,      Icons.Default.Brush,                         R.string.tool_pencil),
+    Triple(Tool.HIGHLIGHTER, Icons.Default.BorderColor,                   R.string.tool_highlighter),
+    Triple(Tool.ERASER,      Icons.Default.AutoFixHigh,                   R.string.tool_eraser),
+    Triple(Tool.ANNOTATION,  Icons.AutoMirrored.Filled.StickyNote2,       R.string.tool_postit),
+    Triple(Tool.SELECT,      Icons.Default.Crop,                          R.string.tool_select),
+    Triple(Tool.DICTIONARY,  Icons.Default.Translate,                     R.string.tool_dictionary),
 )
 
 /**
@@ -132,11 +134,10 @@ fun ReaderToolsBar(
                         horizontalArrangement = Arrangement.spacedBy(10.dp),
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
-                        strokeWidths.forEach { (multiplier, dotSize, label) ->
+                        strokeWidths.forEach { (multiplier, dotSize) ->
                             ThicknessDot(
                                 visualSize = dotSize,
                                 isSelected = strokeWidthMultiplier == multiplier,
-                                label      = label,
                                 dotColor   = if (activeTool == Tool.ERASER)
                                                  MaterialTheme.colorScheme.onSurfaceVariant
                                              else Color(strokeColor),
@@ -160,10 +161,10 @@ fun ReaderToolsBar(
                 horizontalArrangement = Arrangement.spacedBy(2.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                toolButtons.forEach { (tool, icon, label) ->
+                toolButtons.forEach { (tool, icon, labelRes) ->
                     ToolIconButton(
                         icon       = icon,
-                        label      = label,
+                        label      = stringResource(labelRes),
                         isSelected = activeTool == tool,
                         onClick    = { onToolSelect(tool) },
                     )
@@ -180,14 +181,14 @@ fun ReaderToolsBar(
                 IconButton(onClick = onUndo, modifier = Modifier.size(40.dp)) {
                     Icon(
                         Icons.AutoMirrored.Filled.Undo,
-                        contentDescription = "Desfazer",
+                        contentDescription = stringResource(R.string.tool_undo),
                         tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f),
                     )
                 }
                 IconButton(onClick = onRedo, modifier = Modifier.size(40.dp)) {
                     Icon(
                         Icons.AutoMirrored.Filled.Redo,
-                        contentDescription = "Refazer",
+                        contentDescription = stringResource(R.string.tool_redo),
                         tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f),
                     )
                 }
@@ -225,7 +226,6 @@ private fun ColorDot(color: Color, isSelected: Boolean, onClick: () -> Unit) {
 private fun ThicknessDot(
     visualSize: Dp,
     isSelected: Boolean,
-    label: String,
     dotColor: Color,
     onClick: () -> Unit,
 ) {

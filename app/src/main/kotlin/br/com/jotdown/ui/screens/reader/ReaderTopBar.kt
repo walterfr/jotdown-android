@@ -13,7 +13,9 @@ import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.TextFieldValue
+import br.com.jotdown.R
 
 /**
  * TopBar do leitor, expandida com:
@@ -51,7 +53,7 @@ fun ReaderTopBar(
                 TextField(
                     value = searchQuery,
                     onValueChange = onSearchQueryChange,
-                    placeholder = { Text("Buscar em anotações e fichamentos…") },
+                    placeholder = { Text(stringResource(R.string.readerbar_search_placeholder)) },
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth(),
                     colors = TextFieldDefaults.colors(
@@ -62,13 +64,13 @@ fun ReaderTopBar(
             },
             navigationIcon = {
                 IconButton(onClick = onToggleSearch) {
-                    Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Fechar busca")
+                    Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.lib_close_search))
                 }
             },
             actions = {
                 if (searchQuery.isNotBlank()) {
                     IconButton(onClick = { onSearchQueryChange("") }) {
-                        Icon(Icons.Default.Clear, contentDescription = "Limpar busca")
+                        Icon(Icons.Default.Clear, contentDescription = stringResource(R.string.readerbar_clear_search))
                     }
                 }
             }
@@ -79,55 +81,55 @@ fun ReaderTopBar(
             title = {},
             navigationIcon = {
                 IconButton(onClick = onBack) {
-                    Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Voltar")
+                    Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.common_back))
                 }
             },
             actions = {
                 // Busca
                 IconButton(onClick = onToggleSearch) {
-                    Icon(Icons.Default.Search, contentDescription = "Buscar")
+                    Icon(Icons.Default.Search, contentDescription = stringResource(R.string.common_search))
                 }
                 // Metadados
                 IconButton(onClick = onMenuClick) {
-                    Icon(Icons.Default.MenuBook, contentDescription = "Metadados")
+                    Icon(Icons.Default.MenuBook, contentDescription = stringResource(R.string.readerbar_metadata))
                 }
                 // Modo Escuro
                 IconButton(onClick = onToggleDarkMode) {
-                    Icon(if (isDarkMode) Icons.Default.LightMode else Icons.Default.DarkMode, contentDescription = "Modo Noturno")
+                    Icon(if (isDarkMode) Icons.Default.LightMode else Icons.Default.DarkMode, contentDescription = stringResource(R.string.readerbar_night_mode))
                 }
                 // Tela cheia
                 IconButton(onClick = onToggleFullscreen) {
-                    Icon(if (isFullscreen) Icons.Default.FullscreenExit else Icons.Default.Fullscreen, contentDescription = "Tela Cheia")
+                    Icon(if (isFullscreen) Icons.Default.FullscreenExit else Icons.Default.Fullscreen, contentDescription = stringResource(R.string.readerbar_fullscreen))
                 }
                 // Anotações
                 IconButton(onClick = onAnnotations) {
                     BadgedBox(
                         badge = { if (annotationCount > 0) Badge { Text(annotationCount.toString()) } }
                     ) {
-                        Icon(Icons.AutoMirrored.Filled.Message, contentDescription = "Anotações")
+                        Icon(Icons.AutoMirrored.Filled.Message, contentDescription = stringResource(R.string.readerbar_annotations))
                     }
                 }
                 // Overflow menu
                 IconButton(onClick = { showOverflow = true }) {
-                    Icon(Icons.Default.MoreVert, contentDescription = "Menu")
+                    Icon(Icons.Default.MoreVert, contentDescription = stringResource(R.string.common_menu))
                 }
                 DropdownMenu(expanded = showOverflow, onDismissRequest = { showOverflow = false }) {
                     DropdownMenuItem(
-                        text = { Text("Sumário do Livro", fontWeight = androidx.compose.ui.text.font.FontWeight.Bold) },
+                        text = { Text(stringResource(R.string.readerbar_book_outline), fontWeight = androidx.compose.ui.text.font.FontWeight.Bold) },
                         onClick = { showOverflow = false; onOutlineClick() },
                         leadingIcon = { Icon(Icons.Default.FormatListBulleted, null) }
                     )
                     DropdownMenuItem(
-                        text = { Text("Citação ABNT") },
+                        text = { Text(stringResource(R.string.abnt_citation_title)) },
                         leadingIcon = { Icon(Icons.Default.FormatQuote, contentDescription = null) },
                         onClick = { showOverflow = false; onAbntClick() }
                     )
                     DropdownMenuItem(
-                        text = { Text("Exportar Markdown") },
+                        text = { Text(stringResource(R.string.export_markdown_chooser)) },
                         onClick = { showOverflow = false; onExportClick() }
                     )
                     DropdownMenuItem(
-                        text = { Text("Compartilhar PDF Original") },
+                        text = { Text(stringResource(R.string.readerbar_share_original_pdf)) },
                         onClick = { showOverflow = false; onSharePdf() }
                     )
                 }

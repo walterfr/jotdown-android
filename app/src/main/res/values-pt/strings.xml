@@ -1,0 +1,297 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Jotdown</string>
+    <string name="app_tagline">Fichador Acadêmico</string>
+
+    <!-- Common -->
+    <string name="common_cancel">Cancelar</string>
+    <string name="common_save">Salvar</string>
+    <string name="common_delete">Apagar</string>
+    <string name="common_close">Fechar</string>
+    <string name="common_back">Voltar</string>
+    <string name="common_rename">Renomear</string>
+    <string name="common_menu">Menu</string>
+    <string name="common_search">Buscar</string>
+    <string name="common_options">Opções</string>
+    <string name="common_new">Novo</string>
+    <string name="common_create">Criar</string>
+
+    <!-- Drawer -->
+    <string name="drawer_all">Tudo</string>
+    <string name="drawer_recent">Recentes</string>
+    <string name="drawer_favorites">Favoritos</string>
+    <string name="drawer_trash">Lixo</string>
+    <string name="drawer_my_labels">Meus Rótulos</string>
+    <string name="drawer_settings_cloud">Configurações e Nuvem</string>
+    <string name="drawer_about">Sobre</string>
+
+    <!-- Library -->
+    <string name="lib_title">A Minha Biblioteca</string>
+    <string name="lib_search_placeholder">Buscar arquivos…</string>
+    <string name="lib_close_search">Fechar Busca</string>
+    <string name="lib_syncing">Sincronizando…</string>
+    <string name="lib_synced">Sincronizado</string>
+    <string name="lib_sort">Ordenar</string>
+    <string name="sort_recent">Recentes</string>
+    <string name="sort_az">A-Z</string>
+    <string name="sort_za">Z-A</string>
+    <string name="sort_annotated">Fichamentos</string>
+    <string name="sort_favorites">Favoritos</string>
+    <string name="menu_export_backup_cloud">Exportar Backup (Nuvem/Apps)</string>
+    <string name="menu_export_backup_offline">Exportar Backup (Offline/Memória)</string>
+    <string name="menu_import_backup">Importar Backup</string>
+    <string name="fab_import_pdf">Importar PDF</string>
+    <string name="fab_new_notebook">Novo Caderno</string>
+    <string name="tab_all">Tudo</string>
+    <string name="tab_pdf">PDF</string>
+    <string name="tab_note">Nota</string>
+    <string name="tab_folder">Pasta</string>
+    <string name="tab_drive">Drive</string>
+    <string name="lib_stats">%1$d Cit. • %2$d Notas</string>
+    <string name="lib_read_prefix">Lido: %1$s</string>
+    <string name="lib_cover_desc">Capa do PDF</string>
+    <string name="lib_favorite">Favoritar</string>
+    <string name="menu_restore">Restaurar</string>
+    <string name="menu_delete_permanently">Apagar Definitivamente</string>
+    <string name="menu_remove_from_folder">Remover da Pasta</string>
+    <string name="menu_move_to_trash">Mover para o Lixo</string>
+
+    <!-- Empty states -->
+    <string name="empty_no_favorites">Nenhum PDF favoritado.</string>
+    <string name="empty_trash">A lixeira está vazia.</string>
+    <string name="empty_tag">Nenhum texto encontrado para esta etiqueta.</string>
+    <string name="empty_folders">Nenhuma pasta criada.</string>
+    <string name="empty_notes">Nenhum caderno ou PDF fichado.</string>
+    <string name="empty_library">A sua estante está vazia.</string>
+    <string name="empty_add_hint">Toque em + para adicionar</string>
+
+    <!-- Dialogs -->
+    <string name="dlg_new_notebook_title">Novo Caderno em Branco</string>
+    <string name="dlg_notebook_title_label">Título do Caderno</string>
+    <string name="default_notebook_title">Caderno Sem Título</string>
+    <string name="dlg_sheet_template">Template de Folha:</string>
+    <string name="template_lined">Pautado</string>
+    <string name="template_grid">Quadriculado</string>
+    <string name="template_notes">Fichamento</string>
+    <string name="template_blank">Branco</string>
+    <string name="dlg_rename_folder">Renomear Pasta</string>
+    <string name="dlg_folder_name">Nome da pasta</string>
+    <string name="dlg_rename_file">Renomear Arquivo</string>
+    <string name="dlg_new_title">Novo título</string>
+    <string name="dlg_rename_label">Renomear Etiqueta</string>
+    <string name="dlg_new_label_name">Novo nome (em todos os arquivos)</string>
+    <string name="dlg_delete_permanently_title">Apagar Definitivamente?</string>
+    <string name="dlg_delete_permanently_msg">"\"%1$s\" será removido permanentemente do tablet."</string>
+    <string name="dlg_edit_labels">Editar Rótulos</string>
+    <string name="dlg_labels_hint">Separe os rótulos por vírgula.</string>
+    <string name="dlg_labels">Rótulos</string>
+    <string name="dlg_import_backup_warning">ATENÇÃO: A sua biblioteca atual será substituída.</string>
+    <string name="dlg_import_confirm">Sim, Importar</string>
+    <string name="dlg_delete_folder_title">Apagar Pasta?</string>
+    <string name="dlg_delete_folder_msg">Os PDFs voltarão para a biblioteca principal.</string>
+
+    <!-- About -->
+    <string name="about_title">Sobre o Jotdown</string>
+    <string name="about_description">O Jotdown é um fichador acadêmico e leitor de PDF para Android criado para dar total controle e privacidade ao usuário. Focado em produtividade, permite fazer anotações à mão, ancorar notas em páginas de PDF e gerenciar a biblioteca de documentos de forma 100% offline — sem internet, sem contas e sem telemetria.</string>
+    <string name="about_author_title">Sobre o Autor</string>
+    <string name="about_author_text">Sou Walter Rebouças, desenvolvedor open-source, professor de história da rede estadual do Ceará e mestrando PPGHCE-UECE. Acredito na tecnologia que respeita a privacidade e entrega valor real aos usuários.</string>
+    <string name="about_footer">Feito com ♥ em Fortaleza.</string>
+
+    <!-- Drive library -->
+    <string name="drive_empty">Nenhum arquivo encontrado na pasta conectada.</string>
+    <string name="drive_downloaded">Baixado</string>
+    <string name="drive_download">Baixar do Drive</string>
+    <string name="drive_my_drive">Meu Drive</string>
+
+    <!-- Settings -->
+    <string name="settings_login_prompt">Faça login para sincronizar seus dados.</string>
+    <string name="settings_connect_google">Conectar com o Google</string>
+    <string name="settings_connected_as">Conectado como:\n%1$s</string>
+    <string name="settings_disconnect">Desconectar</string>
+    <string name="settings_auto_backup">Backup Automático</string>
+    <string name="settings_auto_backup_desc">Escolha a frequência para realizar backup em segundo plano.</string>
+    <string name="settings_frequency">Frequência: %1$s</string>
+    <string name="freq_1h">1 Hora</string>
+    <string name="freq_6h">6 Horas</string>
+    <string name="freq_12h">12 Horas</string>
+    <string name="freq_24h">24 Horas</string>
+    <string name="settings_manual_actions">Ações Manuais</string>
+    <string name="settings_backup_now">Forçar Backup Agora</string>
+    <string name="settings_restore">Baixar e Restaurar</string>
+    <string name="settings_drive_library">Biblioteca do Drive</string>
+    <string name="settings_drive_library_desc">Conecte uma pasta do seu Google Drive para acessar e baixar PDFs diretamente no app.</string>
+    <string name="settings_drive_library_login_hint">Faça login no Google (seção acima) para usar a Biblioteca do Drive.</string>
+    <string name="settings_connected_to">Conectado a:</string>
+    <string name="settings_change_folder">Mudar Pasta</string>
+    <string name="settings_browse_folder">Navegar e escolher pasta</string>
+    <string name="settings_dictionaries">Gerenciar Dicionários Offline</string>
+    <string name="settings_dictionaries_desc">Baixe ou remova dicionários para consulta rápida.</string>
+    <string name="lang_portuguese">Português</string>
+    <string name="lang_english">Inglês</string>
+    <string name="dict_not_downloaded">Não baixado</string>
+    <string name="dict_remove">Remover Dicionário</string>
+    <string name="dict_download">Baixar Dicionário</string>
+    <string name="err_foss_sync">Sincronização via Google Drive não está disponível na versão FOSS.</string>
+    <string name="err_google_login">Erro ao iniciar login do Google</string>
+
+    <!-- Settings ViewModel messages -->
+    <string name="msg_dict_downloaded">Dicionário [%1$s] baixado com sucesso!</string>
+    <string name="msg_dict_download_error">Erro ao baixar dicionário [%1$s].</string>
+    <string name="msg_dict_removed">Dicionário [%1$s] removido.</string>
+    <string name="msg_dict_remove_error">Erro ao remover dicionário [%1$s].</string>
+    <string name="msg_login_error">Erro ao fazer login: %1$s</string>
+    <string name="msg_backup_running">Fazendo backup para o Google Drive…</string>
+    <string name="msg_backup_done">Backup concluído com sucesso.</string>
+    <string name="msg_backup_error">Erro ao realizar backup: %1$s</string>
+    <string name="msg_restore_starting">Iniciando restauração…</string>
+    <string name="msg_restore_done">Restauração concluída. O aplicativo será reiniciado em instantes…</string>
+    <string name="msg_restore_error">Erro ao restaurar: %1$s</string>
+    <string name="msg_drive_auth_error">Erro ao autorizar acesso ao Drive: %1$s</string>
+    <string name="msg_drive_search_folder">Buscando pasta \"%1$s\" no Drive…</string>
+    <string name="msg_drive_folder_connected">✓ Pasta \"%1$s\" conectada com sucesso!</string>
+    <string name="msg_drive_folder_not_found">Pasta \"%1$s\" não encontrada no seu Drive.</string>
+    <string name="msg_drive_folder_error">Erro ao buscar pasta: %1$s</string>
+
+    <!-- Drive folder picker -->
+    <string name="picker_title">Escolher pasta do Drive</string>
+    <string name="picker_no_subfolders">Nenhuma subpasta aqui.\nPressione \"Selecionar\" para usar esta pasta.</string>
+    <string name="picker_select">Selecionar \"%1$s\"</string>
+    <string name="picker_enter_folder">Entrar na pasta</string>
+
+    <!-- Library ViewModel messages -->
+    <string name="err_drive_not_configured">Nenhuma pasta configurada. Vá em Configurações &gt; Biblioteca do Drive.</string>
+    <string name="err_drive_list">Erro ao listar arquivos: %1$s</string>
+    <string name="err_drive_download">Erro ao baixar: %1$s</string>
+    <string name="new_folder_name">Nova Pasta</string>
+    <string name="template_abnt_reference">Referência ABNT:</string>
+    <string name="template_main_ideas">Ideias Centrais:</string>
+    <string name="template_quotes">Citações Importantes:</string>
+
+    <!-- Reader -->
+    <string name="common_ok">OK</string>
+    <string name="common_share">Compartilhar</string>
+    <string name="reader_share_pdf_chooser">Compartilhar PDF</string>
+    <string name="reader_no_results">Nenhum resultado encontrado.</string>
+    <string name="reader_annotations_postits">Anotações (Post-its)</string>
+    <string name="reader_highlights">Fichamentos</string>
+    <string name="reader_page_n">Página %1$d</string>
+    <string name="reader_tap_to_annotate">Toque onde deseja adicionar uma anotação</string>
+    <string name="reader_pdf_page_of">PDF %1$d de %2$d</string>
+    <string name="reader_doc_page_of">Doc %1$d de %2$d</string>
+    <string name="reader_sync_page_title">Sincronizar Página</string>
+    <string name="reader_printed_page_number">Número impresso na folha</string>
+    <string name="reader_review_ocr_title">Revisar Texto Extraído</string>
+    <string name="reader_save_highlight">Salvar Fichamento</string>
+    <string name="annot_new_title">Nova Anotação</string>
+    <string name="annot_view_title">Consultar Anotação</string>
+    <string name="annot_write_here">Escreva a sua nota aqui…</string>
+    <string name="annot_save_postit">Guardar Post-it</string>
+    <string name="abnt_citation_title">Citação ABNT</string>
+    <string name="export_notes_title">Exportar Notas</string>
+    <string name="export_notes_msg">Seu fichamento contém aproximadamente %1$d palavras.\n\nDeseja exportar as notas para Markdown?</string>
+    <string name="export_markdown_chooser">Exportar Markdown</string>
+
+    <!-- Dictionary -->
+    <string name="dict_title">📖 Dicionário</string>
+    <string name="dict_en_chip">🇺🇸 EN → PT (Tradução)</string>
+    <string name="dict_pt_chip">🇧🇷 PT → PT (Definição)</string>
+    <string name="dict_searching">Buscando \'%1$s\'…</string>
+    <string name="dict_downloading">Baixando dicionário… %1$d%%</string>
+    <string name="dict_not_installed">O dicionário offline para \'%1$s\' não está instalado. Deseja baixar agora?</string>
+    <string name="dict_no_definition">⚠️ Nenhuma definição encontrada para \"%1$s\".</string>
+    <string name="dict_translation">Tradução</string>
+    <string name="dict_definition">Definição</string>
+    <string name="dict_error">❌ Erro: %1$s</string>
+    <string name="dict_translating_phrase">Traduzindo frase…</string>
+    <string name="dict_no_phrase_translation">⚠️ Nenhuma tradução encontrada para a frase selecionada.</string>
+    <plurals name="dict_phrase_words">
+        <item quantity="one">📝 Tradução da frase (%1$d palavra)</item>
+        <item quantity="other">📝 Tradução da frase (%1$d palavras)</item>
+    </plurals>
+
+    <!-- Text reader -->
+    <string name="txt_loading">Carregando…</string>
+    <string name="txt_file_not_found">Arquivo não encontrado.</string>
+    <string name="txt_read_error">Erro ao ler arquivo: %1$s</string>
+    <string name="txt_decrease_font">Diminuir Fonte</string>
+    <string name="txt_increase_font">Aumentar Fonte</string>
+
+    <!-- Reader top bar -->
+    <string name="readerbar_search_placeholder">Buscar em anotações e fichamentos…</string>
+    <string name="readerbar_clear_search">Limpar busca</string>
+    <string name="readerbar_metadata">Metadados</string>
+    <string name="readerbar_night_mode">Modo Noturno</string>
+    <string name="readerbar_fullscreen">Tela Cheia</string>
+    <string name="readerbar_annotations">Anotações</string>
+    <string name="readerbar_book_outline">Sumário do Livro</string>
+    <string name="readerbar_share_original_pdf">Compartilhar PDF Original</string>
+
+    <!-- Reader tools -->
+    <string name="tool_pen">Caneta</string>
+    <string name="tool_pencil">Lápis</string>
+    <string name="tool_highlighter">Marca-texto</string>
+    <string name="tool_eraser">Borracha</string>
+    <string name="tool_postit">Post-it</string>
+    <string name="tool_select">Selecionar</string>
+    <string name="tool_dictionary">Dicionário</string>
+    <string name="tool_undo">Desfazer</string>
+    <string name="tool_redo">Refazer</string>
+
+    <!-- Annotation sheet -->
+    <string name="annot_sheet_title">Minhas Anotações</string>
+    <string name="annot_sheet_empty">Nenhuma anotação criada.</string>
+
+    <!-- Metadata sheet -->
+    <string name="meta_title">Metadados &amp; Fichamento</string>
+    <string name="meta_abnt_reference">Referência ABNT</string>
+    <string name="meta_publication_type">Tipo de Publicação</string>
+    <string name="doctype_book">Livro / Monografia</string>
+    <string name="doctype_chapter">Capítulo de Livro</string>
+    <string name="doctype_article">Artigo de Periódico</string>
+    <string name="doctype_thesis">Trabalho Acadêmico</string>
+    <string name="doctype_legal">Documento Jurídico</string>
+    <string name="meta_last_name">Sobrenome</string>
+    <string name="meta_first_name">Nome</string>
+    <string name="meta_article_title">Título do Artigo</string>
+    <string name="meta_journal_title">Título da Revista / Jornal</string>
+    <string name="meta_city">Local (Cidade)</string>
+    <string name="meta_volume">Volume (v.)</string>
+    <string name="meta_number">Número (n.)</string>
+    <string name="meta_pages_range">Páginas (Início-Fim)</string>
+    <string name="meta_date_year">Data / Ano</string>
+    <string name="meta_last_name_chapter">Sobrenome (Autor do Cap.)</string>
+    <string name="meta_chapter_title">Título do Capítulo</string>
+    <string name="meta_book_author">Autor do Livro (Nome e Sobrenome)</string>
+    <string name="meta_book_title">Título do Livro</string>
+    <string name="meta_edition">Edição</string>
+    <string name="meta_location">Local</string>
+    <string name="meta_publisher">Editora</string>
+    <string name="meta_year">Ano</string>
+    <string name="meta_pagination">Paginação</string>
+    <string name="meta_work_title">Título do Trabalho</string>
+    <string name="meta_degree_course">Grau / Curso (ex: Dissertação)</string>
+    <string name="meta_deposit_year">Ano Depósito</string>
+    <string name="meta_institution">Instituição</string>
+    <string name="meta_jurisdiction">Jurisdição (ex: BRASIL)</string>
+    <string name="meta_law_title">Título / Lei / Ementa</string>
+    <string name="meta_date">Data (Ano)</string>
+    <string name="meta_publication_data">Dados Publicação (ex: DOU)</string>
+    <string name="meta_opus_title">Título da Obra</string>
+    <string name="meta_subtitle">Subtítulo</string>
+    <string name="meta_online_access">Acesso Online (Opcional)</string>
+    <string name="meta_available_at">Disponível em (URL)</string>
+    <string name="meta_accessed_on">Acesso em</string>
+    <string name="meta_edit_quotes">Editar Citações Capturadas (%1$d)</string>
+    <string name="meta_quote_label">Citação [%1$d] - Página %2$d (PDF: %3$d)</string>
+    <string name="meta_delete">Excluir</string>
+    <string name="meta_preview">Preview do Fichamento (Markdown)</string>
+    <string name="meta_save">Salvar Metadados e Citações</string>
+    <string name="meta_export_chooser">Exportar Fichamento</string>
+
+    <!-- Sumário / anotações do leitor -->
+    <string name="reader_outline_title">Sumário do Livro</string>
+    <string name="reader_outline_empty">Nenhum sumário encontrado neste PDF.</string>
+    <string name="reader_outline_untitled">Sem Título</string>
+    <string name="reader_open_annotation">Abrir anotação</string>
+    <string name="dict_download_failed">Falha ao baixar o dicionário (%1$s)</string>
+</resources>

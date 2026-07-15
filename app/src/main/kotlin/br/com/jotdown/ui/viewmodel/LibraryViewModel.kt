@@ -6,6 +6,7 @@ import android.provider.OpenableColumns
 import android.util.Log
 import androidx.lifecycle.*
 import br.com.jotdown.JotdownApplication
+import br.com.jotdown.R
 import br.com.jotdown.data.dao.DocumentSummary
 import br.com.jotdown.data.entity.DocumentEntity
 import br.com.jotdown.data.repository.DocumentRepository
@@ -141,7 +142,7 @@ class LibraryViewModel(private val repository: DocumentRepository, private val a
         if (isMerging) return@launch
         isMerging = true
         try {
-            val folderId = repository.insertFolder(FolderEntity(name = "Nova Pasta"))
+            val folderId = repository.insertFolder(FolderEntity(name = application.getString(R.string.new_folder_name)))
             repository.setDocumentFolder(doc1Id, folderId)
             repository.setDocumentFolder(doc2Id, folderId)
         } finally {
@@ -181,7 +182,7 @@ class LibraryViewModel(private val repository: DocumentRepository, private val a
         val prefs = context.getSharedPreferences("jotdown_drive", Context.MODE_PRIVATE)
         val rootFolderId = prefs.getString("folder_id", null)
         if (rootFolderId == null) {
-            _driveError.value = "Nenhuma pasta configurada. Vá em Configurações > Biblioteca do Drive."
+            _driveError.value = application.getString(R.string.err_drive_not_configured)
             return@launch
         }
         val currentFolderId = _drivePath.value.lastOrNull()?.id ?: rootFolderId
@@ -213,7 +214,7 @@ class LibraryViewModel(private val repository: DocumentRepository, private val a
                 _driveDocuments.value = items
             },
             onFailure = { e ->
-                _driveError.value = "Erro ao listar arquivos: ${e.message}"
+                _driveError.value = application.getString(R.string.err_drive_list, e.message ?: "")
             }
         )
         _driveLoading.value = false
@@ -301,7 +302,7 @@ class LibraryViewModel(private val repository: DocumentRepository, private val a
                 onComplete(docId)
             },
             onFailure = { e ->
-                _driveError.value = "Erro ao baixar: ${e.message}"
+                _driveError.value = application.getString(R.string.err_drive_download, e.message ?: "")
                 updateDriveProgress(item.driveFileId, null)
             }
         )
@@ -391,16 +392,16 @@ class LibraryViewModel(private val repository: DocumentRepository, private val a
                         
                         paint.textSize = 10f
                         paint.color = android.graphics.Color.parseColor("#9CA3AF")
-                        canvas.drawText("Referência ABNT:", 50f, 110f, paint)
+                        canvas.drawText(application.getString(R.string.template_abnt_reference), 50f, 110f, paint)
                         paint.strokeWidth = 1f
                         canvas.drawLine(50f, 130f, 545f, 130f, paint)
                         
-                        canvas.drawText("Ideias Centrais:", 50f, 160f, paint)
+                        canvas.drawText(application.getString(R.string.template_main_ideas), 50f, 160f, paint)
                         canvas.drawLine(50f, 180f, 545f, 180f, paint)
                         canvas.drawLine(50f, 210f, 545f, 210f, paint)
                         canvas.drawLine(50f, 240f, 545f, 240f, paint)
                         
-                        canvas.drawText("Citações Importantes:", 50f, 290f, paint)
+                        canvas.drawText(application.getString(R.string.template_quotes), 50f, 290f, paint)
                         canvas.drawLine(50f, 310f, 545f, 310f, paint)
                     }
                     // "Branco" não desenha linhas adicionais

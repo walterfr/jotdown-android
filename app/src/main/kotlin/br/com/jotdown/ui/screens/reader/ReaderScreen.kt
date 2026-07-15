@@ -30,8 +30,11 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.res.pluralStringResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.*
+import br.com.jotdown.R
 import br.com.jotdown.data.entity.*
 import br.com.jotdown.ui.theme.*
 import br.com.jotdown.ui.viewmodel.*
@@ -194,7 +197,7 @@ fun ReaderScreen(
                             putExtra(android.content.Intent.EXTRA_STREAM, uri)
                             addFlags(android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION)
                         }
-                        context.startActivity(android.content.Intent.createChooser(intent, "Compartilhar PDF"))
+                        context.startActivity(android.content.Intent.createChooser(intent, context.getString(R.string.reader_share_pdf_chooser)))
                     },
                     onOutlineClick = { showOutline = true }
                 )
@@ -280,10 +283,10 @@ fun ReaderScreen(
                 Surface(modifier = Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.surface) {
                     androidx.compose.foundation.lazy.LazyColumn(contentPadding = PaddingValues(16.dp)) {
                         if (matchingAnns.isEmpty() && matchingHighs.isEmpty()) {
-                            item { Text("Nenhum resultado encontrado.", modifier = Modifier.padding(16.dp)) }
+                            item { Text(stringResource(R.string.reader_no_results), modifier = Modifier.padding(16.dp)) }
                         }
                         if (matchingAnns.isNotEmpty()) {
-                            item { Text("Anotações (Post-its)", fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary, modifier = Modifier.padding(vertical = 8.dp)) }
+                            item { Text(stringResource(R.string.reader_annotations_postits), fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary, modifier = Modifier.padding(vertical = 8.dp)) }
                             items(matchingAnns.size) { i ->
                                 val a = matchingAnns[i]
                                 Card(
@@ -292,14 +295,14 @@ fun ReaderScreen(
                                     colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
                                 ) {
                                     Column(Modifier.padding(16.dp)) {
-                                        Text("Página ${a.page}", fontWeight = FontWeight.Bold, fontSize = 12.sp, color = MaterialTheme.colorScheme.primary)
+                                        Text(stringResource(R.string.reader_page_n, a.page), fontWeight = FontWeight.Bold, fontSize = 12.sp, color = MaterialTheme.colorScheme.primary)
                                         Text(a.text, maxLines = 3, modifier = Modifier.padding(top = 4.dp))
                                     }
                                 }
                             }
                         }
                         if (matchingHighs.isNotEmpty()) {
-                            item { Text("Fichamentos", fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary, modifier = Modifier.padding(vertical = 8.dp)) }
+                            item { Text(stringResource(R.string.reader_highlights), fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary, modifier = Modifier.padding(vertical = 8.dp)) }
                             items(matchingHighs.size) { i ->
                                 val h = matchingHighs[i]
                                 Card(
@@ -308,7 +311,7 @@ fun ReaderScreen(
                                     colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
                                 ) {
                                     Column(Modifier.padding(16.dp)) {
-                                        Text("Página ${h.page}", fontWeight = FontWeight.Bold, fontSize = 12.sp, color = MaterialTheme.colorScheme.primary)
+                                        Text(stringResource(R.string.reader_page_n, h.page), fontWeight = FontWeight.Bold, fontSize = 12.sp, color = MaterialTheme.colorScheme.primary)
                                         Text(h.text, maxLines = 3, modifier = Modifier.padding(top = 4.dp))
                                     }
                                 }
@@ -331,7 +334,7 @@ fun ReaderScreen(
                     Row(modifier = Modifier.padding(horizontal = 18.dp, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
                         Icon(Icons.Default.TouchApp, contentDescription = null, tint = Color.White, modifier = Modifier.size(16.dp))
                         Spacer(Modifier.width(6.dp))
-                        Text("Toque onde deseja adicionar uma anotação", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                        Text(stringResource(R.string.reader_tap_to_annotate), color = Color.White, fontWeight = FontWeight.Bold, fontSize = 12.sp)
                     }
                 }
             }
@@ -356,8 +359,8 @@ fun ReaderScreen(
                             horizontalAlignment = Alignment.CenterHorizontally,
                             modifier = Modifier.padding(horizontal = 16.dp, vertical = 6.dp)
                         ) {
-                            Text("PDF $currentPage de $numPages", color = MaterialTheme.colorScheme.inverseOnSurface.copy(alpha = 0.7f), fontSize = 10.sp)
-                            Text("Doc ${currentPage + pageOffset} de $numPages", color = MaterialTheme.colorScheme.inverseOnSurface, fontSize = 13.sp, fontWeight = FontWeight.Bold)
+                            Text(stringResource(R.string.reader_pdf_page_of, currentPage, numPages), color = MaterialTheme.colorScheme.inverseOnSurface.copy(alpha = 0.7f), fontSize = 10.sp)
+                            Text(stringResource(R.string.reader_doc_page_of, currentPage + pageOffset, numPages), color = MaterialTheme.colorScheme.inverseOnSurface, fontSize = 13.sp, fontWeight = FontWeight.Bold)
                         }
                     }
 
@@ -383,9 +386,9 @@ fun ReaderScreen(
         var input by remember { mutableStateOf((currentPage + pageOffset).toString()) }
         AlertDialog(
             onDismissRequest = { showOffsetDialog = false },
-            title = { Text("Sincronizar Página") },
-            text = { OutlinedTextField(value = input, onValueChange = { input = it }, label = { Text("Número impresso na folha") }) },
-            confirmButton = { Button(onClick = { pageOffset = (input.toIntOrNull() ?: currentPage) - currentPage; prefs.edit().putInt("page_offset_$docId", pageOffset).apply(); showOffsetDialog = false }) { Text("Ok") } }
+            title = { Text(stringResource(R.string.reader_sync_page_title)) },
+            text = { OutlinedTextField(value = input, onValueChange = { input = it }, label = { Text(stringResource(R.string.reader_printed_page_number)) }) },
+            confirmButton = { Button(onClick = { pageOffset = (input.toIntOrNull() ?: currentPage) - currentPage; prefs.edit().putInt("page_offset_$docId", pageOffset).apply(); showOffsetDialog = false }) { Text(stringResource(R.string.common_ok)) } }
         )
     }
 
@@ -415,7 +418,7 @@ fun ReaderScreen(
     if (ocrResult != null) {
         AlertDialog(
             onDismissRequest = { ocrResult = null },
-            title = { Text("Revisar Texto Extraído") },
+            title = { Text(stringResource(R.string.reader_review_ocr_title)) },
             text = {
                 OutlinedTextField(
                     value = textToEdit,
@@ -432,10 +435,10 @@ fun ReaderScreen(
                         viewModel.setActiveTool(Tool.NONE)
                     },
                     colors = ButtonDefaults.buttonColors(containerColor = Indigo600)
-                ) { Text("Salvar Fichamento") }
+                ) { Text(stringResource(R.string.reader_save_highlight)) }
             },
             dismissButton = {
-                TextButton(onClick = { ocrResult = null; viewModel.setActiveTool(Tool.NONE) }) { Text("Cancelar") }
+                TextButton(onClick = { ocrResult = null; viewModel.setActiveTool(Tool.NONE) }) { Text(stringResource(R.string.common_cancel)) }
             }
         )
     }
@@ -448,7 +451,7 @@ fun ReaderScreen(
             onDismissRequest = { viewModel.clearDictionaryState() },
             title = {
                 Text(
-                    text = "📖 Dicionário",
+                    text = stringResource(R.string.dict_title),
                     fontWeight = FontWeight.Bold,
                     fontSize = 18.sp
                 )
@@ -463,13 +466,13 @@ fun ReaderScreen(
                         FilterChip(
                             selected = currentLang == "en",
                             onClick = { viewModel.setDictionaryLanguage("en") },
-                            label = { Text("🇺🇸 EN → PT (Tradução)") }
+                            label = { Text(stringResource(R.string.dict_en_chip)) }
                         )
                         Spacer(Modifier.width(16.dp))
                         FilterChip(
                             selected = currentLang == "pt",
                             onClick = { viewModel.setDictionaryLanguage("pt") },
-                            label = { Text("🇧🇷 PT → PT (Definição)") }
+                            label = { Text(stringResource(R.string.dict_pt_chip)) }
                         )
                     }
 
@@ -479,7 +482,7 @@ fun ReaderScreen(
                                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
                                     CircularProgressIndicator(color = Color(0xFF3B82F6))
                                     Spacer(Modifier.height(12.dp))
-                                    Text("Buscando '${dictState.word}'...", fontSize = 13.sp, color = Color(0xFF6B7280))
+                                    Text(stringResource(R.string.dict_searching, dictState.word), fontSize = 13.sp, color = Color(0xFF6B7280))
                                 }
                             }
                         }
@@ -488,14 +491,14 @@ fun ReaderScreen(
                                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
                                     CircularProgressIndicator(color = Color(0xFF10B981), progress = { dictState.progress / 100f })
                                     Spacer(Modifier.height(12.dp))
-                                    Text("Baixando dicionário... ${dictState.progress}%", fontSize = 13.sp, color = Color(0xFF6B7280))
+                                    Text(stringResource(R.string.dict_downloading, dictState.progress), fontSize = 13.sp, color = Color(0xFF6B7280))
                                 }
                             }
                         }
                         is br.com.jotdown.ui.viewmodel.DictionaryLookupState.NotDownloaded -> {
                             Spacer(Modifier.height(8.dp))
                             Text(
-                                text = "O dicionário offline para '${dictState.language}' não está instalado. Deseja baixar agora?",
+                                text = stringResource(R.string.dict_not_installed, dictState.language),
                                 fontSize = 13.sp,
                                 color = Color(0xFF4B5563)
                             )
@@ -503,7 +506,7 @@ fun ReaderScreen(
                         is br.com.jotdown.ui.viewmodel.DictionaryLookupState.NotFound -> {
                             Spacer(Modifier.height(12.dp))
                             Text(
-                                text = "⚠️ Nenhuma definição encontrada para \"${dictState.word}\".",
+                                text = stringResource(R.string.dict_no_definition, dictState.word),
                                 fontSize = 13.sp,
                                 color = Color(0xFF92400E)
                             )
@@ -528,7 +531,7 @@ fun ReaderScreen(
                             if (!entry.translation.isNullOrBlank()) {
                                 Spacer(Modifier.height(12.dp))
                                 Text(
-                                    text = "Tradução",
+                                    text = stringResource(R.string.dict_translation),
                                     fontWeight = FontWeight.Bold,
                                     fontSize = 12.sp,
                                     color = Color(0xFF374151)
@@ -553,7 +556,7 @@ fun ReaderScreen(
                             if (!entry.definition.isNullOrBlank()) {
                                 Spacer(Modifier.height(12.dp))
                                 Text(
-                                    text = "Definição",
+                                    text = stringResource(R.string.dict_definition),
                                     fontWeight = FontWeight.Bold,
                                     fontSize = 12.sp,
                                     color = Color(0xFF374151)
@@ -576,7 +579,7 @@ fun ReaderScreen(
                         is br.com.jotdown.ui.viewmodel.DictionaryLookupState.Error -> {
                             Spacer(Modifier.height(8.dp))
                             Text(
-                                text = "❌ Erro: ${dictState.message}",
+                                text = stringResource(R.string.dict_error, dictState.message),
                                 fontSize = 13.sp,
                                 color = Color(0xFFDC2626)
                             )
@@ -586,14 +589,14 @@ fun ReaderScreen(
                                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
                                     CircularProgressIndicator(color = Color(0xFF8B5CF6))
                                     Spacer(Modifier.height(12.dp))
-                                    Text("Traduzindo frase...", fontSize = 13.sp, color = Color(0xFF6B7280))
+                                    Text(stringResource(R.string.dict_translating_phrase), fontSize = 13.sp, color = Color(0xFF6B7280))
                                 }
                             }
                         }
                         is br.com.jotdown.ui.viewmodel.DictionaryLookupState.PhraseNotFound -> {
                             Spacer(Modifier.height(12.dp))
                             Text(
-                                text = "⚠️ Nenhuma tradução encontrada para a frase selecionada.",
+                                text = stringResource(R.string.dict_no_phrase_translation),
                                 fontSize = 13.sp,
                                 color = Color(0xFF92400E)
                             )
@@ -602,7 +605,7 @@ fun ReaderScreen(
                             val entries = dictState.entries
                             Spacer(Modifier.height(8.dp))
                             Text(
-                                text = "📝 Tradução da frase (${entries.size} palavra${if (entries.size != 1) "s" else ""})",
+                                text = pluralStringResource(R.plurals.dict_phrase_words, entries.size, entries.size),
                                 fontWeight = FontWeight.Bold,
                                 fontSize = 13.sp,
                                 color = Color(0xFF374151)
@@ -652,18 +655,18 @@ fun ReaderScreen(
                     Button(
                         onClick = { viewModel.downloadDictionary(dictState.language, dictState.word) },
                         colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF10B981))
-                    ) { Text("Baixar Dicionário") }
+                    ) { Text(stringResource(R.string.dict_download)) }
                 } else if (dictState !is br.com.jotdown.ui.viewmodel.DictionaryLookupState.Downloading) {
                     Button(
                         onClick = { viewModel.clearDictionaryState() },
                         colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF3B82F6))
-                    ) { Text("Fechar") }
+                    ) { Text(stringResource(R.string.common_close)) }
                 }
             },
             dismissButton = {
                 if (dictState is br.com.jotdown.ui.viewmodel.DictionaryLookupState.NotDownloaded ||
                     dictState is br.com.jotdown.ui.viewmodel.DictionaryLookupState.Error) {
-                    TextButton(onClick = { viewModel.clearDictionaryState() }) { Text("Cancelar") }
+                    TextButton(onClick = { viewModel.clearDictionaryState() }) { Text(stringResource(R.string.common_cancel)) }
                 }
             }
         )
@@ -672,13 +675,13 @@ fun ReaderScreen(
     if (pendingAnnotation != null || editingAnnotation != null) {
         AlertDialog(
             onDismissRequest = { pendingAnnotation = null; editingAnnotation = null },
-            title = { Text(if (pendingAnnotation != null) "Nova Anotação" else "Consultar Anotação") },
+            title = { Text(if (pendingAnnotation != null) stringResource(R.string.annot_new_title) else stringResource(R.string.annot_view_title)) },
             text = {
                 OutlinedTextField(
                     value = annotationText,
                     onValueChange = { annotationText = it },
                     modifier = Modifier.fillMaxWidth().height(150.dp),
-                    label = { Text("Escreva a sua nota aqui...") }
+                    label = { Text(stringResource(R.string.annot_write_here)) }
                 )
             },
             confirmButton = {
@@ -695,17 +698,17 @@ fun ReaderScreen(
                         viewModel.setActiveTool(Tool.NONE)
                     },
                     colors = ButtonDefaults.buttonColors(containerColor = Indigo600)
-                ) { Text("Guardar Post-it") }
+                ) { Text(stringResource(R.string.annot_save_postit)) }
             },
             dismissButton = {
-                TextButton(onClick = { pendingAnnotation = null; editingAnnotation = null; viewModel.setActiveTool(Tool.NONE) }) { Text("Cancelar") }
+                TextButton(onClick = { pendingAnnotation = null; editingAnnotation = null; viewModel.setActiveTool(Tool.NONE) }) { Text(stringResource(R.string.common_cancel)) }
             }
         )
     }
     if (showAbntDialog && document != null) {
         AlertDialog(
             onDismissRequest = { showAbntDialog = false },
-            title = { Text("Citação ABNT") },
+            title = { Text(stringResource(R.string.abnt_citation_title)) },
             text = {
                 val abntText = AbntUtil.format(document!!)
                 OutlinedTextField(
@@ -716,7 +719,7 @@ fun ReaderScreen(
                 )
             },
             confirmButton = {
-                Button(onClick = { showAbntDialog = false }) { Text("OK") }
+                Button(onClick = { showAbntDialog = false }) { Text(stringResource(R.string.common_ok)) }
             }
         )
     }
@@ -727,8 +730,8 @@ fun ReaderScreen(
 
         AlertDialog(
             onDismissRequest = { showExportDialog = false },
-            title = { Text("Exportar Notas") },
-            text = { Text("Seu fichamento contém aproximadamente $wordCount palavras.\n\nDeseja exportar as notas para Markdown?") },
+            title = { Text(stringResource(R.string.export_notes_title)) },
+            text = { Text(stringResource(R.string.export_notes_msg, wordCount)) },
             confirmButton = {
                 Button(onClick = {
                     val mdContent = ExportUtil.toMarkdown(document!!, annotations, highlights)
@@ -742,12 +745,12 @@ fun ReaderScreen(
                         putExtra(android.content.Intent.EXTRA_STREAM, uri)
                         addFlags(android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION)
                     }
-                    context.startActivity(android.content.Intent.createChooser(intent, "Exportar Markdown"))
+                    context.startActivity(android.content.Intent.createChooser(intent, context.getString(R.string.export_markdown_chooser)))
                     showExportDialog = false
-                }) { Text("Compartilhar") }
+                }) { Text(stringResource(R.string.common_share)) }
             },
             dismissButton = {
-                TextButton(onClick = { showExportDialog = false }) { Text("Cancelar") }
+                TextButton(onClick = { showExportDialog = false }) { Text(stringResource(R.string.common_cancel)) }
             }
         )
     }
@@ -755,10 +758,10 @@ fun ReaderScreen(
     if (showOutline) {
         ModalBottomSheet(onDismissRequest = { showOutline = false }) {
             Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp).padding(bottom = 32.dp)) {
-                Text("Sumário do Livro", fontSize = 20.sp, fontWeight = FontWeight.Black, color = Indigo600)
+                Text(stringResource(R.string.reader_outline_title), fontSize = 20.sp, fontWeight = FontWeight.Black, color = Indigo600)
                 Spacer(Modifier.height(16.dp))
                 if (pdfBookmarks.isEmpty()) {
-                    Text("Nenhum sumário encontrado neste PDF.", color = MaterialTheme.colorScheme.outline)
+                    Text(stringResource(R.string.reader_outline_empty), color = MaterialTheme.colorScheme.outline)
                 } else {
                     androidx.compose.foundation.lazy.LazyColumn {
                         items(pdfBookmarks.size) { i ->
@@ -1224,7 +1227,7 @@ fun DrawingLayer(
                 // Balão principal
                 Icon(
                     imageVector = Icons.Default.ChatBubble,
-                    contentDescription = "Abrir anotação",
+                    contentDescription = stringResource(R.string.reader_open_annotation),
                     tint = Color(0xFFF59E0B),
                     modifier = Modifier.fillMaxSize()
                 )

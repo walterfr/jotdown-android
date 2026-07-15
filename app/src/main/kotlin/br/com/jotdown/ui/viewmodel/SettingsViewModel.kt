@@ -6,6 +6,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import br.com.jotdown.JotdownApplication
+import br.com.jotdown.R
 import br.com.jotdown.data.sync.CloudFileInfo
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -51,9 +52,9 @@ class SettingsViewModel(private val application: JotdownApplication) : ViewModel
                 _dictDownloadProgress.value = _dictDownloadProgress.value.toMutableMap().apply { put(lang, progress) }
             }
             if (success) {
-                _syncMessage.value = "Dicionário [$lang] baixado com sucesso!"
+                _syncMessage.value = application.getString(R.string.msg_dict_downloaded, lang)
             } else {
-                _syncMessage.value = "Erro ao baixar dicionário [$lang]."
+                _syncMessage.value = application.getString(R.string.msg_dict_download_error, lang)
             }
             _dictDownloadProgress.value = _dictDownloadProgress.value.toMutableMap().apply { remove(lang) }
             checkDictionaryStatus()
@@ -62,9 +63,9 @@ class SettingsViewModel(private val application: JotdownApplication) : ViewModel
 
     fun deleteDictionary(lang: String) {
         if (dictionaryRepository.deleteDictionary(lang)) {
-            _syncMessage.value = "Dicionário [$lang] removido."
+            _syncMessage.value = application.getString(R.string.msg_dict_removed, lang)
         } else {
-            _syncMessage.value = "Erro ao remover dicionário [$lang]."
+            _syncMessage.value = application.getString(R.string.msg_dict_remove_error, lang)
         }
         checkDictionaryStatus()
     }
@@ -87,7 +88,7 @@ class SettingsViewModel(private val application: JotdownApplication) : ViewModel
             if (result.isSuccess) {
                 checkSignInStatus()
             } else {
-                _syncMessage.value = "Erro ao fazer login: ${result.exceptionOrNull()?.message}"
+                _syncMessage.value = application.getString(R.string.msg_login_error, result.exceptionOrNull()?.message ?: "")
             }
         }
     }
@@ -100,13 +101,13 @@ class SettingsViewModel(private val application: JotdownApplication) : ViewModel
     fun backupNow() {
         viewModelScope.launch {
             _isSyncing.value = true
-            _syncMessage.value = "Fazendo backup para o Google Drive..."
+            _syncMessage.value = application.getString(R.string.msg_backup_running)
             val result = syncProvider.backupNow(application)
             _isSyncing.value = false
             if (result.isSuccess) {
-                _syncMessage.value = "Backup concluído com sucesso."
+                _syncMessage.value = application.getString(R.string.msg_backup_done)
             } else {
-                _syncMessage.value = "Erro ao realizar backup: ${result.exceptionOrNull()?.message}"
+                _syncMessage.value = application.getString(R.string.msg_backup_error, result.exceptionOrNull()?.message ?: "")
             }
         }
     }
@@ -114,11 +115,11 @@ class SettingsViewModel(private val application: JotdownApplication) : ViewModel
     fun restoreNow() {
         viewModelScope.launch {
             _isSyncing.value = true
-            _syncMessage.value = "Iniciando restauração..."
+            _syncMessage.value = application.getString(R.string.msg_restore_starting)
             val result = syncProvider.restoreNow(application)
             _isSyncing.value = false
             if (result.isSuccess) {
-                _syncMessage.value = "Restauração concluída. O aplicativo será reiniciado em instantes..."
+                _syncMessage.value = application.getString(R.string.msg_restore_done)
                 kotlinx.coroutines.delay(2000)
                 val intent = application.packageManager.getLaunchIntentForPackage(application.packageName)
                 if (intent != null) {
@@ -127,7 +128,7 @@ class SettingsViewModel(private val application: JotdownApplication) : ViewModel
                 }
                 Runtime.getRuntime().exit(0)
             } else {
-                _syncMessage.value = "Erro ao restaurar: ${result.exceptionOrNull()?.message}"
+                _syncMessage.value = application.getString(R.string.msg_restore_error, result.exceptionOrNull()?.message ?: "")
             }
         }
     }
@@ -157,14 +158,14 @@ class SettingsViewModel(private val application: JotdownApplication) : ViewModel
                 checkSignInStatus()
                 // Picker will be opened by the launcher callback in SettingsScreen
             } else {
-                _syncMessage.value = "Erro ao autorizar acesso ao Drive: ${result.exceptionOrNull()?.message}"
+                _syncMessage.value = application.getString(R.string.msg_drive_auth_error, result.exceptionOrNull()?.message ?: "")
             }
         }
     }
 
     fun connectDriveFolder(folderName: String) = viewModelScope.launch {
         _driveFolderConnecting.value = true
-        _syncMessage.value = "Buscando pasta \"$folderName\" no Drive..."
+        _syncMessage.value = application.getString(R.string.msg_drive_search_folder, folderName)
         val result = syncProvider.findDriveFolderByName(application, folderName)
         result.fold(
             onSuccess = { folder ->
@@ -174,13 +175,13 @@ class SettingsViewModel(private val application: JotdownApplication) : ViewModel
                         .putString("folder_name", folderName)
                         .apply()
                     _driveFolderName.value = folderName
-                    _syncMessage.value = "✓ Pasta \"$folderName\" conectada com sucesso!"
+                    _syncMessage.value = application.getString(R.string.msg_drive_folder_connected, folderName)
                 } else {
-                    _syncMessage.value = "Pasta \"$folderName\" não encontrada no seu Drive."
+                    _syncMessage.value = application.getString(R.string.msg_drive_folder_not_found, folderName)
                 }
             },
             onFailure = { e ->
-                _syncMessage.value = "Erro ao buscar pasta: ${e.message}"
+                _syncMessage.value = application.getString(R.string.msg_drive_folder_error, e.message ?: "")
             }
         )
         _driveFolderConnecting.value = false
@@ -209,8 +210,12 @@ class SettingsViewModel(private val application: JotdownApplication) : ViewModel
     val pickerState: StateFlow<DriveFolderPickerState> = _pickerState.asStateFlow()
 
     fun openFolderPicker() {
-        _pickerState.value = DriveFolderPickerState(isOpen = true)
-        loadPickerFolder("root", "Meu Drive")
+        val rootName = application.getString(R.string.drive_my_drive)
+        _pickerState.value = DriveFolderPickerState(
+            isOpen = true,
+            breadcrumb = listOf(BreadcrumbEntry("root", rootName))
+        )
+        loadPickerFolder("root", rootName)
     }
 
     fun closeFolderPicker() {
@@ -251,7 +256,7 @@ class SettingsViewModel(private val application: JotdownApplication) : ViewModel
             .putString("folder_name", current.name)
             .apply()
         _driveFolderName.value = current.name
-        _syncMessage.value = "✓ Pasta \"${current.name}\" conectada com sucesso!"
+        _syncMessage.value = application.getString(R.string.msg_drive_folder_connected, current.name)
         closeFolderPicker()
     }
 }

@@ -13,9 +13,12 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import br.com.jotdown.R
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.io.File
@@ -27,9 +30,10 @@ fun TextReader(
     title: String,
     onBack: () -> Unit
 ) {
-    var content by remember { mutableStateOf("Carregando...") }
+    val context = LocalContext.current
+    var content by remember { mutableStateOf(context.getString(R.string.txt_loading)) }
     var fontSize by remember { mutableStateOf(18f) }
-    
+
     LaunchedEffect(filePath) {
         withContext(Dispatchers.IO) {
             try {
@@ -37,10 +41,10 @@ fun TextReader(
                 if (file.exists()) {
                     content = file.readText()
                 } else {
-                    content = "Arquivo não encontrado."
+                    content = context.getString(R.string.txt_file_not_found)
                 }
             } catch (e: Exception) {
-                content = "Erro ao ler arquivo: ${e.message}"
+                content = context.getString(R.string.txt_read_error, e.message ?: "")
             }
         }
     }
@@ -51,15 +55,15 @@ fun TextReader(
                 title = { Text(title, maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis) },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Voltar")
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.common_back))
                     }
                 },
                 actions = {
                     IconButton(onClick = { if (fontSize > 12f) fontSize -= 2f }) {
-                        Icon(Icons.Default.ZoomOut, contentDescription = "Diminuir Fonte")
+                        Icon(Icons.Default.ZoomOut, contentDescription = stringResource(R.string.txt_decrease_font))
                     }
                     IconButton(onClick = { if (fontSize < 48f) fontSize += 2f }) {
-                        Icon(Icons.Default.ZoomIn, contentDescription = "Aumentar Fonte")
+                        Icon(Icons.Default.ZoomIn, contentDescription = stringResource(R.string.txt_increase_font))
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(

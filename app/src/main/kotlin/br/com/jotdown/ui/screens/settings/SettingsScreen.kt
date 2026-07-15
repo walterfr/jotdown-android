@@ -11,10 +11,12 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.rememberScrollState
+import br.com.jotdown.R
 import br.com.jotdown.ui.viewmodel.SettingsViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -53,10 +55,10 @@ fun SettingsScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Configurações e Nuvem") },
+                title = { Text(stringResource(R.string.drawer_settings_cloud)) },
                 navigationIcon = {
                     IconButton(onClick = onNavigateBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Voltar")
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.common_back))
                     }
                 }
             )
@@ -73,42 +75,48 @@ fun SettingsScreen(
             Text("Google Drive", style = MaterialTheme.typography.titleLarge)
 
             if (signedInEmail == null) {
-                Text("Faça login para sincronizar seus dados.")
+                Text(stringResource(R.string.settings_login_prompt))
                 Button(onClick = {
                     val intent = viewModel.getSignInIntent()
                     if (intent != null) {
                         signInLauncher.launch(intent)
                     } else {
                         // Exibe mensagem caso seja a versão FOSS
-                        viewModel.setSyncMessage("Sincronização via Google Drive não está disponível na versão FOSS.")
+                        viewModel.setSyncMessage(context.getString(R.string.err_foss_sync))
                     }
                 }) {
-                    Text("Conectar com o Google")
+                    Text(stringResource(R.string.settings_connect_google))
                 }
             } else {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Icon(Icons.Default.CloudDone, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
                     Spacer(Modifier.width(8.dp))
-                    Text("Conectado como:\n$signedInEmail", style = MaterialTheme.typography.bodyMedium)
+                    Text(stringResource(R.string.settings_connected_as, signedInEmail ?: ""), style = MaterialTheme.typography.bodyMedium)
                 }
                 OutlinedButton(onClick = { viewModel.signOut() }) {
-                    Text("Desconectar")
+                    Text(stringResource(R.string.settings_disconnect))
                 }
 
                 HorizontalDivider()
 
-                Text("Backup Automático", style = MaterialTheme.typography.titleMedium)
-                Text("Escolha a frequência para realizar backup em segundo plano.", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.outline)
+                Text(stringResource(R.string.settings_auto_backup), style = MaterialTheme.typography.titleMedium)
+                Text(stringResource(R.string.settings_auto_backup_desc), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.outline)
 
                 var expanded by remember { mutableStateOf(false) }
-                var selectedFrequency by remember { mutableStateOf("1 Hora") }
-                
+                val defaultFrequency = stringResource(R.string.freq_1h)
+                var selectedFrequency by remember { mutableStateOf(defaultFrequency) }
+
                 Box {
                     OutlinedButton(onClick = { expanded = true }) {
-                        Text("Frequência: $selectedFrequency")
+                        Text(stringResource(R.string.settings_frequency, selectedFrequency))
                     }
                     DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
-                        listOf("1 Hora" to 1L, "6 Horas" to 6L, "12 Horas" to 12L, "24 Horas" to 24L).forEach { (label, hours) ->
+                        listOf(
+                            stringResource(R.string.freq_1h) to 1L,
+                            stringResource(R.string.freq_6h) to 6L,
+                            stringResource(R.string.freq_12h) to 12L,
+                            stringResource(R.string.freq_24h) to 24L
+                        ).forEach { (label, hours) ->
                             DropdownMenuItem(
                                 text = { Text(label) },
                                 onClick = {
@@ -123,7 +131,7 @@ fun SettingsScreen(
 
                 HorizontalDivider()
 
-                Text("Ações Manuais", style = MaterialTheme.typography.titleMedium)
+                Text(stringResource(R.string.settings_manual_actions), style = MaterialTheme.typography.titleMedium)
                 
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     Button(
@@ -132,7 +140,7 @@ fun SettingsScreen(
                     ) {
                         Icon(Icons.Default.CloudUpload, contentDescription = null)
                         Spacer(Modifier.width(8.dp))
-                        Text("Forçar Backup Agora")
+                        Text(stringResource(R.string.settings_backup_now))
                     }
 
                     Button(
@@ -142,7 +150,7 @@ fun SettingsScreen(
                     ) {
                         Icon(Icons.Default.CloudDownload, contentDescription = null)
                         Spacer(Modifier.width(8.dp))
-                        Text("Baixar e Restaurar")
+                        Text(stringResource(R.string.settings_restore))
                     }
                 }
 
@@ -157,16 +165,16 @@ fun SettingsScreen(
             HorizontalDivider()
 
             // ── Drive Library ────────────────────────────────────────────────
-            Text("Biblioteca do Drive", style = MaterialTheme.typography.titleMedium)
+            Text(stringResource(R.string.settings_drive_library), style = MaterialTheme.typography.titleMedium)
             Text(
-                "Conecte uma pasta do seu Google Drive para acessar e baixar PDFs diretamente no app.",
+                stringResource(R.string.settings_drive_library_desc),
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.outline
             )
 
             if (signedInEmail == null) {
                 Text(
-                    "Faça login no Google (seção acima) para usar a Biblioteca do Drive.",
+                    stringResource(R.string.settings_drive_library_login_hint),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.outline
                 )
@@ -177,7 +185,7 @@ fun SettingsScreen(
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     Icon(Icons.Default.Folder, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
-                    Text("Conectado a:", style = MaterialTheme.typography.bodyMedium)
+                    Text(stringResource(R.string.settings_connected_to), style = MaterialTheme.typography.bodyMedium)
                     Text(
                         driveFolderName ?: "",
                         fontWeight = FontWeight.Bold,
@@ -192,16 +200,16 @@ fun SettingsScreen(
                                 viewModel.openFolderPicker()
                             } else {
                                 viewModel.getDriveLibraryIntent()?.let { driveLibraryLauncher.launch(it) }
-                                    ?: viewModel.setSyncMessage("Erro ao iniciar login do Google")
+                                    ?: viewModel.setSyncMessage(context.getString(R.string.err_google_login))
                             }
                         }
                     ) {
                         Icon(Icons.Default.FolderOpen, contentDescription = null, modifier = Modifier.size(16.dp))
                         Spacer(Modifier.width(6.dp))
-                        Text("Mudar Pasta")
+                        Text(stringResource(R.string.settings_change_folder))
                     }
                     OutlinedButton(onClick = { viewModel.disconnectDriveFolder() }) {
-                        Text("Desconectar", color = MaterialTheme.colorScheme.error)
+                        Text(stringResource(R.string.settings_disconnect), color = MaterialTheme.colorScheme.error)
                     }
                 }
             } else {
@@ -213,21 +221,21 @@ fun SettingsScreen(
                         } else {
                             // Request DRIVE_READONLY, then open picker after grant
                             viewModel.getDriveLibraryIntent()?.let { driveLibraryLauncher.launch(it) }
-                                ?: viewModel.setSyncMessage("Erro ao iniciar login do Google")
+                                ?: viewModel.setSyncMessage(context.getString(R.string.err_google_login))
                         }
                     },
                     modifier = Modifier.fillMaxWidth()
                 ) {
                     Icon(Icons.Default.FolderOpen, contentDescription = null)
                     Spacer(Modifier.width(8.dp))
-                    Text("Navegar e escolher pasta")
+                    Text(stringResource(R.string.settings_browse_folder))
                 }
             }
 
             HorizontalDivider()
 
-            Text("Gerenciar Dicionários Offline", style = MaterialTheme.typography.titleMedium)
-            Text("Baixe ou remova dicionários para consulta rápida.", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.outline)
+            Text(stringResource(R.string.settings_dictionaries), style = MaterialTheme.typography.titleMedium)
+            Text(stringResource(R.string.settings_dictionaries_desc), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.outline)
             
             Spacer(Modifier.height(8.dp))
             val isPtDownloaded by viewModel.isPtDictDownloaded.collectAsState()
@@ -235,7 +243,7 @@ fun SettingsScreen(
             val dictProgress by viewModel.dictDownloadProgress.collectAsState()
 
             DictionaryItemRow(
-                langName = "Português",
+                langName = stringResource(R.string.lang_portuguese),
                 langCode = "pt",
                 isDownloaded = isPtDownloaded,
                 progress = dictProgress["pt"],
@@ -244,7 +252,7 @@ fun SettingsScreen(
             )
             
             DictionaryItemRow(
-                langName = "Inglês",
+                langName = stringResource(R.string.lang_english),
                 langCode = "en",
                 isDownloaded = isEnDownloaded,
                 progress = dictProgress["en"],
@@ -285,20 +293,20 @@ fun DictionaryItemRow(
                 LinearProgressIndicator(progress = progress / 100f, modifier = Modifier.fillMaxWidth().padding(top = 4.dp))
                 Text("$progress%", style = MaterialTheme.typography.bodySmall)
             } else if (isDownloaded) {
-                Text("Baixado", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.primary)
+                Text(stringResource(R.string.drive_downloaded), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.primary)
             } else {
-                Text("Não baixado", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.outline)
+                Text(stringResource(R.string.dict_not_downloaded), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.outline)
             }
         }
         
         if (progress == null) {
             if (isDownloaded) {
                 IconButton(onClick = onDelete) {
-                    Icon(Icons.Default.Delete, contentDescription = "Remover Dicionário", tint = MaterialTheme.colorScheme.error)
+                    Icon(Icons.Default.Delete, contentDescription = stringResource(R.string.dict_remove), tint = MaterialTheme.colorScheme.error)
                 }
             } else {
                 IconButton(onClick = onDownload) {
-                    Icon(Icons.Default.Download, contentDescription = "Baixar Dicionário", tint = MaterialTheme.colorScheme.primary)
+                    Icon(Icons.Default.Download, contentDescription = stringResource(R.string.dict_download), tint = MaterialTheme.colorScheme.primary)
                 }
             }
         }

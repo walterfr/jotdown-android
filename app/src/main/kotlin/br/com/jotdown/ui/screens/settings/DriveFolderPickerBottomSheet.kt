@@ -15,9 +15,11 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import br.com.jotdown.R
 import br.com.jotdown.data.sync.CloudFileInfo
 import br.com.jotdown.ui.viewmodel.SettingsViewModel
 
@@ -53,12 +55,12 @@ fun DriveFolderPickerBottomSheet(
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
                 Text(
-                    text = "Escolher pasta do Drive",
+                    text = stringResource(R.string.picker_title),
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold
                 )
                 IconButton(onClick = onDismiss) {
-                    Icon(Icons.Default.Close, contentDescription = "Fechar")
+                    Icon(Icons.Default.Close, contentDescription = stringResource(R.string.common_close))
                 }
             }
 
@@ -159,7 +161,7 @@ fun DriveFolderPickerBottomSheet(
                             )
                             Spacer(Modifier.height(8.dp))
                             Text(
-                                "Nenhuma subpasta aqui.\nPressione \"Selecionar\" para usar esta pasta.",
+                                stringResource(R.string.picker_no_subfolders),
                                 color = MaterialTheme.colorScheme.outline,
                                 style = MaterialTheme.typography.bodyMedium
                             )
@@ -192,7 +194,7 @@ fun DriveFolderPickerBottomSheet(
                 Icon(Icons.Default.Check, contentDescription = null)
                 Spacer(Modifier.width(8.dp))
                 val name = state.breadcrumb.last().name
-                Text("Selecionar \"$name\"")
+                Text(stringResource(R.string.picker_select, name))
             }
         }
     }
@@ -224,7 +226,7 @@ private fun FolderPickerRow(folder: CloudFileInfo, onTap: () -> Unit) {
         )
         Icon(
             imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
-            contentDescription = "Entrar na pasta",
+            contentDescription = stringResource(R.string.picker_enter_folder),
             tint = MaterialTheme.colorScheme.outline,
             modifier = Modifier.size(20.dp)
         )

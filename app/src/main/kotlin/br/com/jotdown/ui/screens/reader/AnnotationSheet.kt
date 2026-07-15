@@ -15,11 +15,13 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
+import br.com.jotdown.R
 import br.com.jotdown.data.entity.AnnotationEntity
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -46,10 +48,10 @@ fun AnnotationSheet(
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Icon(Icons.AutoMirrored.Filled.StickyNote2, contentDescription = null, tint = Color.White, modifier = Modifier.size(20.dp))
                         Spacer(modifier = Modifier.width(8.dp))
-                        Text("Minhas Anota\u00e7\u00f5es", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 16.sp)
+                        Text(stringResource(R.string.annot_sheet_title), color = Color.White, fontWeight = FontWeight.Bold, fontSize = 16.sp)
                     }
                     IconButton(onClick = onDismiss, modifier = Modifier.size(24.dp)) {
-                        Icon(Icons.Default.Close, contentDescription = "Fechar", tint = Color.White)
+                        Icon(Icons.Default.Close, contentDescription = stringResource(R.string.common_close), tint = Color.White)
                     }
                 }
 
@@ -58,7 +60,7 @@ fun AnnotationSheet(
                         Column(horizontalAlignment = Alignment.CenterHorizontally) {
                             Icon(Icons.AutoMirrored.Filled.StickyNote2, contentDescription = null, modifier = Modifier.size(48.dp), tint = Color.Gray.copy(alpha = 0.5f))
                             Spacer(Modifier.height(8.dp))
-                            Text("Nenhuma anota\u00e7\u00e3o criada.", color = Color.Gray)
+                            Text(stringResource(R.string.annot_sheet_empty), color = Color.Gray)
                         }
                     }
                 } else {
@@ -71,9 +73,9 @@ fun AnnotationSheet(
                             ) {
                                 Column(modifier = Modifier.padding(12.dp)) {
                                     Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.Top) {
-                                        Text("P\u00e1gina ${annot.page + pageOffset}", fontWeight = FontWeight.Bold, color = Color(0xFFB45309), fontSize = 12.sp)
+                                        Text(stringResource(R.string.reader_page_n, annot.page + pageOffset), fontWeight = FontWeight.Bold, color = Color(0xFFB45309), fontSize = 12.sp)
                                         IconButton(onClick = { onDelete(annot.id) }, modifier = Modifier.size(20.dp)) {
-                                            Icon(Icons.Default.Delete, contentDescription = "Apagar", tint = Color.Red.copy(alpha = 0.7f))
+                                            Icon(Icons.Default.Delete, contentDescription = stringResource(R.string.common_delete), tint = Color.Red.copy(alpha = 0.7f))
                                         }
                                     }
                                     Spacer(Modifier.height(4.dp))

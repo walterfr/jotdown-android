@@ -16,12 +16,14 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
+import br.com.jotdown.R
 import br.com.jotdown.data.entity.DocumentEntity
 import br.com.jotdown.data.entity.HighlightEntity
 import java.io.File
@@ -83,73 +85,73 @@ fun MetadataSheet(
                 Row(modifier = Modifier.fillMaxWidth().background(Color(0xFF1E1B4B)).padding(16.dp), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Icon(Icons.Default.Folder, contentDescription = null, tint = Color.White, modifier = Modifier.size(20.dp)); Spacer(modifier = Modifier.width(8.dp))
-                        Text("Metadados & Fichamento", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 16.sp)
+                        Text(stringResource(R.string.meta_title), color = Color.White, fontWeight = FontWeight.Bold, fontSize = 16.sp)
                     }
-                    IconButton(onClick = onDismiss, modifier = Modifier.size(24.dp)) { Icon(Icons.Default.Close, contentDescription = "Fechar", tint = Color.White) }
+                    IconButton(onClick = onDismiss, modifier = Modifier.size(24.dp)) { Icon(Icons.Default.Close, contentDescription = stringResource(R.string.common_close), tint = Color.White) }
                 }
 
                 Column(modifier = Modifier.weight(1f).verticalScroll(rememberScrollState()).padding(16.dp)) {
-                    Text("Refer\u00eancia ABNT", color = Color.Gray, fontSize = 12.sp, fontWeight = FontWeight.Bold); Spacer(Modifier.height(8.dp))
-                    
+                    Text(stringResource(R.string.meta_abnt_reference), color = Color.Gray, fontSize = 12.sp, fontWeight = FontWeight.Bold); Spacer(Modifier.height(8.dp))
+
                     ExposedDropdownMenuBox(expanded = expandedType, onExpandedChange = { expandedType = !expandedType }, modifier = Modifier.fillMaxWidth()) {
-                        OutlinedTextField(value = docType, onValueChange = {}, readOnly = true, label = { Text("Tipo de Publica\u00e7\u00e3o") }, trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expandedType) }, colors = ExposedDropdownMenuDefaults.outlinedTextFieldColors(), modifier = Modifier.menuAnchor().fillMaxWidth())
-                        ExposedDropdownMenu(expanded = expandedType, onDismissRequest = { expandedType = false }) { typeOptions.forEach { selectionOption -> DropdownMenuItem(text = { Text(selectionOption) }, onClick = { docType = selectionOption; expandedType = false }) } }
+                        OutlinedTextField(value = stringResource(docTypeLabelRes(docType)), onValueChange = {}, readOnly = true, label = { Text(stringResource(R.string.meta_publication_type)) }, trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expandedType) }, colors = ExposedDropdownMenuDefaults.outlinedTextFieldColors(), modifier = Modifier.menuAnchor().fillMaxWidth())
+                        ExposedDropdownMenu(expanded = expandedType, onDismissRequest = { expandedType = false }) { typeOptions.forEach { selectionOption -> DropdownMenuItem(text = { Text(stringResource(docTypeLabelRes(selectionOption))) }, onClick = { docType = selectionOption; expandedType = false }) } }
                     }; Spacer(Modifier.height(16.dp))
 
                     // 🛡️ FORMULÁRIO CAMALEÃO: Muda de acordo com o tipo escolhido
                     when (docType) {
                         "Artigo de Peri\u00f3dico" -> {
-                            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) { OutlinedTextField(value = authorLastName, onValueChange = { authorLastName = it }, label = { Text("Sobrenome") }, modifier = Modifier.weight(1f)); OutlinedTextField(value = authorFirstName, onValueChange = { authorFirstName = it }, label = { Text("Nome") }, modifier = Modifier.weight(1f)) }; Spacer(Modifier.height(8.dp))
-                            OutlinedTextField(value = title, onValueChange = { title = it }, label = { Text("T\u00edtulo do Artigo") }, modifier = Modifier.fillMaxWidth()); Spacer(Modifier.height(8.dp))
-                            OutlinedTextField(value = journal, onValueChange = { journal = it }, label = { Text("T\u00edtulo da Revista / Jornal") }, modifier = Modifier.fillMaxWidth()); Spacer(Modifier.height(8.dp))
-                            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) { OutlinedTextField(value = city, onValueChange = { city = it }, label = { Text("Local (Cidade)") }, modifier = Modifier.weight(1f)); OutlinedTextField(value = volume, onValueChange = { volume = it }, label = { Text("Volume (v.)") }, modifier = Modifier.weight(1f)) }; Spacer(Modifier.height(8.dp))
-                            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) { OutlinedTextField(value = edition, onValueChange = { edition = it }, label = { Text("N\u00famero (n.)") }, modifier = Modifier.weight(1f)); OutlinedTextField(value = pages, onValueChange = { pages = it }, label = { Text("P\u00e1ginas (In\u00edcio-Fim)") }, modifier = Modifier.weight(1f)); OutlinedTextField(value = year, onValueChange = { year = it }, label = { Text("Data / Ano") }, modifier = Modifier.weight(1f)) }
+                            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) { OutlinedTextField(value = authorLastName, onValueChange = { authorLastName = it }, label = { Text(stringResource(R.string.meta_last_name)) }, modifier = Modifier.weight(1f)); OutlinedTextField(value = authorFirstName, onValueChange = { authorFirstName = it }, label = { Text(stringResource(R.string.meta_first_name)) }, modifier = Modifier.weight(1f)) }; Spacer(Modifier.height(8.dp))
+                            OutlinedTextField(value = title, onValueChange = { title = it }, label = { Text(stringResource(R.string.meta_article_title)) }, modifier = Modifier.fillMaxWidth()); Spacer(Modifier.height(8.dp))
+                            OutlinedTextField(value = journal, onValueChange = { journal = it }, label = { Text(stringResource(R.string.meta_journal_title)) }, modifier = Modifier.fillMaxWidth()); Spacer(Modifier.height(8.dp))
+                            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) { OutlinedTextField(value = city, onValueChange = { city = it }, label = { Text(stringResource(R.string.meta_city)) }, modifier = Modifier.weight(1f)); OutlinedTextField(value = volume, onValueChange = { volume = it }, label = { Text(stringResource(R.string.meta_volume)) }, modifier = Modifier.weight(1f)) }; Spacer(Modifier.height(8.dp))
+                            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) { OutlinedTextField(value = edition, onValueChange = { edition = it }, label = { Text(stringResource(R.string.meta_number)) }, modifier = Modifier.weight(1f)); OutlinedTextField(value = pages, onValueChange = { pages = it }, label = { Text(stringResource(R.string.meta_pages_range)) }, modifier = Modifier.weight(1f)); OutlinedTextField(value = year, onValueChange = { year = it }, label = { Text(stringResource(R.string.meta_date_year)) }, modifier = Modifier.weight(1f)) }
                         }
                         "Cap\u00edtulo de Livro" -> {
-                            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) { OutlinedTextField(value = authorLastName, onValueChange = { authorLastName = it }, label = { Text("Sobrenome (Autor do Cap.)") }, modifier = Modifier.weight(1f)); OutlinedTextField(value = authorFirstName, onValueChange = { authorFirstName = it }, label = { Text("Nome") }, modifier = Modifier.weight(1f)) }; Spacer(Modifier.height(8.dp))
-                            OutlinedTextField(value = title, onValueChange = { title = it }, label = { Text("T\u00edtulo do Cap\u00edtulo") }, modifier = Modifier.fillMaxWidth()); Spacer(Modifier.height(8.dp))
-                            OutlinedTextField(value = subtitle, onValueChange = { subtitle = it }, label = { Text("Autor do Livro (Nome e Sobrenome)") }, modifier = Modifier.fillMaxWidth()); Spacer(Modifier.height(8.dp))
-                            OutlinedTextField(value = journal, onValueChange = { journal = it }, label = { Text("T\u00edtulo do Livro") }, modifier = Modifier.fillMaxWidth()); Spacer(Modifier.height(8.dp))
-                            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) { OutlinedTextField(value = edition, onValueChange = { edition = it }, label = { Text("Edi\u00e7\u00e3o") }, modifier = Modifier.weight(1f)); OutlinedTextField(value = city, onValueChange = { city = it }, label = { Text("Local") }, modifier = Modifier.weight(1f)) }; Spacer(Modifier.height(8.dp))
-                            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) { OutlinedTextField(value = publisher, onValueChange = { publisher = it }, label = { Text("Editora") }, modifier = Modifier.weight(1f)); OutlinedTextField(value = year, onValueChange = { year = it }, label = { Text("Ano") }, modifier = Modifier.weight(1f)); OutlinedTextField(value = pages, onValueChange = { pages = it }, label = { Text("Pagina\u00e7\u00e3o") }, modifier = Modifier.weight(1f)) }
+                            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) { OutlinedTextField(value = authorLastName, onValueChange = { authorLastName = it }, label = { Text(stringResource(R.string.meta_last_name_chapter)) }, modifier = Modifier.weight(1f)); OutlinedTextField(value = authorFirstName, onValueChange = { authorFirstName = it }, label = { Text(stringResource(R.string.meta_first_name)) }, modifier = Modifier.weight(1f)) }; Spacer(Modifier.height(8.dp))
+                            OutlinedTextField(value = title, onValueChange = { title = it }, label = { Text(stringResource(R.string.meta_chapter_title)) }, modifier = Modifier.fillMaxWidth()); Spacer(Modifier.height(8.dp))
+                            OutlinedTextField(value = subtitle, onValueChange = { subtitle = it }, label = { Text(stringResource(R.string.meta_book_author)) }, modifier = Modifier.fillMaxWidth()); Spacer(Modifier.height(8.dp))
+                            OutlinedTextField(value = journal, onValueChange = { journal = it }, label = { Text(stringResource(R.string.meta_book_title)) }, modifier = Modifier.fillMaxWidth()); Spacer(Modifier.height(8.dp))
+                            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) { OutlinedTextField(value = edition, onValueChange = { edition = it }, label = { Text(stringResource(R.string.meta_edition)) }, modifier = Modifier.weight(1f)); OutlinedTextField(value = city, onValueChange = { city = it }, label = { Text(stringResource(R.string.meta_location)) }, modifier = Modifier.weight(1f)) }; Spacer(Modifier.height(8.dp))
+                            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) { OutlinedTextField(value = publisher, onValueChange = { publisher = it }, label = { Text(stringResource(R.string.meta_publisher)) }, modifier = Modifier.weight(1f)); OutlinedTextField(value = year, onValueChange = { year = it }, label = { Text(stringResource(R.string.meta_year)) }, modifier = Modifier.weight(1f)); OutlinedTextField(value = pages, onValueChange = { pages = it }, label = { Text(stringResource(R.string.meta_pagination)) }, modifier = Modifier.weight(1f)) }
                         }
                         "Trabalho Acad\u00eamico" -> {
-                            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) { OutlinedTextField(value = authorLastName, onValueChange = { authorLastName = it }, label = { Text("Sobrenome") }, modifier = Modifier.weight(1f)); OutlinedTextField(value = authorFirstName, onValueChange = { authorFirstName = it }, label = { Text("Nome") }, modifier = Modifier.weight(1f)) }; Spacer(Modifier.height(8.dp))
-                            OutlinedTextField(value = title, onValueChange = { title = it }, label = { Text("T\u00edtulo do Trabalho") }, modifier = Modifier.fillMaxWidth()); Spacer(Modifier.height(8.dp))
-                            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) { OutlinedTextField(value = journal, onValueChange = { journal = it }, label = { Text("Grau / Curso (ex: Disserta\u00e7\u00e3o)") }, modifier = Modifier.weight(1f)); OutlinedTextField(value = year, onValueChange = { year = it }, label = { Text("Ano Dep\u00f3sito") }, modifier = Modifier.weight(1f)) }; Spacer(Modifier.height(8.dp))
-                            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) { OutlinedTextField(value = publisher, onValueChange = { publisher = it }, label = { Text("Institui\u00e7\u00e3o") }, modifier = Modifier.weight(1f)); OutlinedTextField(value = city, onValueChange = { city = it }, label = { Text("Local (Cidade)") }, modifier = Modifier.weight(1f)) }
+                            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) { OutlinedTextField(value = authorLastName, onValueChange = { authorLastName = it }, label = { Text(stringResource(R.string.meta_last_name)) }, modifier = Modifier.weight(1f)); OutlinedTextField(value = authorFirstName, onValueChange = { authorFirstName = it }, label = { Text(stringResource(R.string.meta_first_name)) }, modifier = Modifier.weight(1f)) }; Spacer(Modifier.height(8.dp))
+                            OutlinedTextField(value = title, onValueChange = { title = it }, label = { Text(stringResource(R.string.meta_work_title)) }, modifier = Modifier.fillMaxWidth()); Spacer(Modifier.height(8.dp))
+                            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) { OutlinedTextField(value = journal, onValueChange = { journal = it }, label = { Text(stringResource(R.string.meta_degree_course)) }, modifier = Modifier.weight(1f)); OutlinedTextField(value = year, onValueChange = { year = it }, label = { Text(stringResource(R.string.meta_deposit_year)) }, modifier = Modifier.weight(1f)) }; Spacer(Modifier.height(8.dp))
+                            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) { OutlinedTextField(value = publisher, onValueChange = { publisher = it }, label = { Text(stringResource(R.string.meta_institution)) }, modifier = Modifier.weight(1f)); OutlinedTextField(value = city, onValueChange = { city = it }, label = { Text(stringResource(R.string.meta_city)) }, modifier = Modifier.weight(1f)) }
                         }
                         "Documento Jur\u00eddico" -> {
-                            OutlinedTextField(value = authorLastName, onValueChange = { authorLastName = it }, label = { Text("Jurisdi\u00e7\u00e3o (ex: BRASIL)") }, modifier = Modifier.fillMaxWidth()); Spacer(Modifier.height(8.dp))
-                            OutlinedTextField(value = title, onValueChange = { title = it }, label = { Text("T\u00edtulo / Lei / Ementa") }, modifier = Modifier.fillMaxWidth()); Spacer(Modifier.height(8.dp))
-                            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) { OutlinedTextField(value = edition, onValueChange = { edition = it }, label = { Text("N\u00famero") }, modifier = Modifier.weight(1f)); OutlinedTextField(value = year, onValueChange = { year = it }, label = { Text("Data (Ano)") }, modifier = Modifier.weight(1f)) }; Spacer(Modifier.height(8.dp))
-                            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) { OutlinedTextField(value = publisher, onValueChange = { publisher = it }, label = { Text("Dados Publica\u00e7\u00e3o (ex: DOU)") }, modifier = Modifier.weight(1f)); OutlinedTextField(value = city, onValueChange = { city = it }, label = { Text("Local") }, modifier = Modifier.weight(1f)) }
+                            OutlinedTextField(value = authorLastName, onValueChange = { authorLastName = it }, label = { Text(stringResource(R.string.meta_jurisdiction)) }, modifier = Modifier.fillMaxWidth()); Spacer(Modifier.height(8.dp))
+                            OutlinedTextField(value = title, onValueChange = { title = it }, label = { Text(stringResource(R.string.meta_law_title)) }, modifier = Modifier.fillMaxWidth()); Spacer(Modifier.height(8.dp))
+                            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) { OutlinedTextField(value = edition, onValueChange = { edition = it }, label = { Text(stringResource(R.string.meta_number)) }, modifier = Modifier.weight(1f)); OutlinedTextField(value = year, onValueChange = { year = it }, label = { Text(stringResource(R.string.meta_date)) }, modifier = Modifier.weight(1f)) }; Spacer(Modifier.height(8.dp))
+                            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) { OutlinedTextField(value = publisher, onValueChange = { publisher = it }, label = { Text(stringResource(R.string.meta_publication_data)) }, modifier = Modifier.weight(1f)); OutlinedTextField(value = city, onValueChange = { city = it }, label = { Text(stringResource(R.string.meta_location)) }, modifier = Modifier.weight(1f)) }
                         }
                         else -> { // Livro / Monografia
-                            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) { OutlinedTextField(value = authorLastName, onValueChange = { authorLastName = it }, label = { Text("Sobrenome") }, modifier = Modifier.weight(1f)); OutlinedTextField(value = authorFirstName, onValueChange = { authorFirstName = it }, label = { Text("Nome") }, modifier = Modifier.weight(1f)) }; Spacer(Modifier.height(8.dp))
-                            OutlinedTextField(value = title, onValueChange = { title = it }, label = { Text("T\u00edtulo da Obra") }, modifier = Modifier.fillMaxWidth()); Spacer(Modifier.height(8.dp))
-                            OutlinedTextField(value = subtitle, onValueChange = { subtitle = it }, label = { Text("Subt\u00edtulo") }, modifier = Modifier.fillMaxWidth()); Spacer(Modifier.height(8.dp))
-                            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) { OutlinedTextField(value = edition, onValueChange = { edition = it }, label = { Text("Edi\u00e7\u00e3o") }, modifier = Modifier.weight(1f)); OutlinedTextField(value = city, onValueChange = { city = it }, label = { Text("Cidade") }, modifier = Modifier.weight(1f)) }; Spacer(Modifier.height(8.dp))
-                            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) { OutlinedTextField(value = publisher, onValueChange = { publisher = it }, label = { Text("Editora") }, modifier = Modifier.weight(1f)); OutlinedTextField(value = year, onValueChange = { year = it }, label = { Text("Ano") }, modifier = Modifier.weight(1f)) }
+                            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) { OutlinedTextField(value = authorLastName, onValueChange = { authorLastName = it }, label = { Text(stringResource(R.string.meta_last_name)) }, modifier = Modifier.weight(1f)); OutlinedTextField(value = authorFirstName, onValueChange = { authorFirstName = it }, label = { Text(stringResource(R.string.meta_first_name)) }, modifier = Modifier.weight(1f)) }; Spacer(Modifier.height(8.dp))
+                            OutlinedTextField(value = title, onValueChange = { title = it }, label = { Text(stringResource(R.string.meta_opus_title)) }, modifier = Modifier.fillMaxWidth()); Spacer(Modifier.height(8.dp))
+                            OutlinedTextField(value = subtitle, onValueChange = { subtitle = it }, label = { Text(stringResource(R.string.meta_subtitle)) }, modifier = Modifier.fillMaxWidth()); Spacer(Modifier.height(8.dp))
+                            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) { OutlinedTextField(value = edition, onValueChange = { edition = it }, label = { Text(stringResource(R.string.meta_edition)) }, modifier = Modifier.weight(1f)); OutlinedTextField(value = city, onValueChange = { city = it }, label = { Text(stringResource(R.string.meta_city)) }, modifier = Modifier.weight(1f)) }; Spacer(Modifier.height(8.dp))
+                            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) { OutlinedTextField(value = publisher, onValueChange = { publisher = it }, label = { Text(stringResource(R.string.meta_publisher)) }, modifier = Modifier.weight(1f)); OutlinedTextField(value = year, onValueChange = { year = it }, label = { Text(stringResource(R.string.meta_year)) }, modifier = Modifier.weight(1f)) }
                         }
                     }
 
                     Spacer(Modifier.height(16.dp))
-                    Text("Acesso Online (Opcional)", color = Color.Gray, fontSize = 12.sp, fontWeight = FontWeight.Bold); Spacer(Modifier.height(8.dp))
-                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) { OutlinedTextField(value = url, onValueChange = { url = it }, label = { Text("Dispon\u00edvel em (URL)") }, modifier = Modifier.weight(1.5f)); OutlinedTextField(value = accessDate, onValueChange = { accessDate = it }, label = { Text("Acesso em") }, modifier = Modifier.weight(1f)) }
-                    
+                    Text(stringResource(R.string.meta_online_access), color = Color.Gray, fontSize = 12.sp, fontWeight = FontWeight.Bold); Spacer(Modifier.height(8.dp))
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) { OutlinedTextField(value = url, onValueChange = { url = it }, label = { Text(stringResource(R.string.meta_available_at)) }, modifier = Modifier.weight(1.5f)); OutlinedTextField(value = accessDate, onValueChange = { accessDate = it }, label = { Text(stringResource(R.string.meta_accessed_on)) }, modifier = Modifier.weight(1f)) }
+
                     Spacer(Modifier.height(24.dp))
                     if (highlights.isNotEmpty()) {
-                        Text("Editar Cita\u00e7\u00f5es Capturadas (${highlights.size})", color = Color.Gray, fontSize = 12.sp, fontWeight = FontWeight.Bold); Spacer(Modifier.height(8.dp))
-                        highlights.forEachIndexed { index, h -> OutlinedTextField(value = editableHighlights[h.id] ?: "", onValueChange = { editableHighlights[h.id] = it }, label = { Text("Cita\u00e7\u00e3o [${index + 1}] - P\u00e1gina ${h.page + pageOffset} (PDF: ${h.page})") }, modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp), maxLines = 5, trailingIcon = { IconButton(onClick = { onDeleteHighlight(h.id) }) { Icon(Icons.Default.Close, contentDescription = "Excluir", tint = Color.Red.copy(alpha = 0.8f)) } }) }; Spacer(Modifier.height(16.dp))
+                        Text(stringResource(R.string.meta_edit_quotes, highlights.size), color = Color.Gray, fontSize = 12.sp, fontWeight = FontWeight.Bold); Spacer(Modifier.height(8.dp))
+                        highlights.forEachIndexed { index, h -> OutlinedTextField(value = editableHighlights[h.id] ?: "", onValueChange = { editableHighlights[h.id] = it }, label = { Text(stringResource(R.string.meta_quote_label, index + 1, h.page + pageOffset, h.page)) }, modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp), maxLines = 5, trailingIcon = { IconButton(onClick = { onDeleteHighlight(h.id) }) { Icon(Icons.Default.Close, contentDescription = stringResource(R.string.meta_delete), tint = Color.Red.copy(alpha = 0.8f)) } }) }; Spacer(Modifier.height(16.dp))
                     }
 
-                    Text("Preview do Fichamento (Markdown)", color = Color.Gray, fontSize = 12.sp, fontWeight = FontWeight.Bold); Spacer(Modifier.height(8.dp))
+                    Text(stringResource(R.string.meta_preview), color = Color.Gray, fontSize = 12.sp, fontWeight = FontWeight.Bold); Spacer(Modifier.height(8.dp))
                     Box(modifier = Modifier.fillMaxWidth().background(Color(0xFF0F172A), RoundedCornerShape(8.dp)).padding(16.dp)) { Text(markdownPreview, color = Color(0xFFE2E8F0), fontFamily = FontFamily.Monospace, fontSize = 12.sp) }
                 }
 
                 Column(modifier = Modifier.background(Color(0xFF1E1B4B)).padding(16.dp)) {
-                    Button(onClick = { highlights.forEach { h -> val newText = editableHighlights[h.id]; if (newText != null && newText != h.text) { onUpdateHighlight(h.id, newText) } }; onSave(MetadataParams(docType, authorLastName, authorFirstName, title, subtitle, edition, city, publisher, year, journal, volume, pages, url, accessDate)); onDismiss() }, modifier = Modifier.fillMaxWidth(), colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF4F46E5))) { Text("Salvar Metadados e Cita\u00e7\u00f5es") }
+                    Button(onClick = { highlights.forEach { h -> val newText = editableHighlights[h.id]; if (newText != null && newText != h.text) { onUpdateHighlight(h.id, newText) } }; onSave(MetadataParams(docType, authorLastName, authorFirstName, title, subtitle, edition, city, publisher, year, journal, volume, pages, url, accessDate)); onDismiss() }, modifier = Modifier.fillMaxWidth(), colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF4F46E5))) { Text(stringResource(R.string.meta_save)) }
                     Spacer(Modifier.height(8.dp))
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) { Button(onClick = { exportFile(context, title, markdownPreview, "pdf") }, modifier = Modifier.weight(1f), colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF450a0a))) { Text(".PDF") }; Button(onClick = { exportFile(context, title, markdownPreview, "txt") }, modifier = Modifier.weight(1f), colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF064E3B))) { Text(".TXT") }; Button(onClick = { exportFile(context, title, markdownPreview, "md") }, modifier = Modifier.weight(1f), colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF1E1B4B))) { Text(".MD") } }
                 }
@@ -165,6 +167,19 @@ fun exportFile(context: Context, title: String, content: String, extension: Stri
         file.writeText(content)
         val uri = androidx.core.content.FileProvider.getUriForFile(context, "${context.packageName}.provider", file)
         val intent = Intent(Intent.ACTION_SEND).apply { type = if (extension == "md" || extension == "txt") "text/plain" else "application/pdf"; putExtra(Intent.EXTRA_STREAM, uri); addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION) }
-        context.startActivity(Intent.createChooser(intent, "Exportar Fichamento"))
+        context.startActivity(Intent.createChooser(intent, context.getString(R.string.meta_export_chooser)))
     } catch (e: Exception) { e.printStackTrace() }
+}
+
+/**
+ * Mapeia a chave interna (estável, persistida em PT) do tipo de documento
+ * para o recurso de string localizado exibido ao usuário.
+ */
+@androidx.annotation.StringRes
+private fun docTypeLabelRes(docType: String): Int = when (docType) {
+    "Capítulo de Livro"   -> R.string.doctype_chapter
+    "Artigo de Periódico" -> R.string.doctype_article
+    "Trabalho Acadêmico"  -> R.string.doctype_thesis
+    "Documento Jurídico"  -> R.string.doctype_legal
+    else                       -> R.string.doctype_book
 }
