@@ -43,24 +43,36 @@ jobs:
       - name: Grant execute permission for gradlew
         run: chmod +x gradlew
 
-      - name: Decode keystore
+      # Dois canais, duas chaves distintas — ambas legitimas:
+      #  - APK (GitHub/F-Droid): chave historica SHA1 12:FA:3C:7A...
+      #    Trocar quebraria a atualizacao de quem instalou por fora da Play.
+      #  - AAB (Play): chave de upload SHA1 E4:EE:B5:B3..., alias
+      #    jotdown_upload, registrada no Play App Signing.
+      - name: Decode keystores
         env:
-          KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
-        run: echo "$KEYSTORE_BASE64" | base64 -d > "$RUNNER_TEMP/upload.keystore"
+          KEYSTORE_BASE64:      ${{ secrets.KEYSTORE_BASE64 }}
+          PLAY_KEYSTORE_BASE64: ${{ secrets.PLAY_KEYSTORE_BASE64 }}
+        run: |
+          echo "$KEYSTORE_BASE64"      | base64 -d > "$RUNNER_TEMP/github.keystore"
+          echo "$PLAY_KEYSTORE_BASE64" | base64 -d > "$RUNNER_TEMP/play-upload.p12"
 
-      # Keystore unico (SHA1 12:FA:3C:7A...) para APK e AAB.
-      # Depende da redefinicao da chave de upload no Play App Signing:
-      # a chave original E4:EE:B5:B3... foi perdida. O Google continua
-      # assinando a entrega com a app signing key D4:C5:73..., entao os
-      # usuarios nao sao afetados.
-      # O Gradle assina e faz zipalign sozinho; apksigner nao serve p/ AAB.
-      - name: Build signed APK + AAB (flavor full)
+      # O Gradle assina e faz zipalign sozinho.
+      # apksigner nao funciona em AAB, por isso a assinatura e feita aqui.
+      - name: Build signed APK (chave GitHub/F-Droid)
         env:
-          KEYSTORE_FILE:     ${{ runner.temp }}/upload.keystore
+          KEYSTORE_FILE:     ${{ runner.temp }}/github.keystore
           KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
           KEY_ALIAS:         ${{ secrets.KEY_ALIAS }}
           KEY_PASSWORD:      ${{ secrets.KEY_PASSWORD }}
-        run: ./gradlew assembleFullRelease bundleFullRelease --no-daemon
+        run: ./gradlew assembleFullRelease --no-daemon
+
+      - name: Build signed AAB (chave de upload do Play)
+        env:
+          KEYSTORE_FILE:     ${{ runner.temp }}/play-upload.p12
+          KEYSTORE_PASSWORD: ${{ secrets.PLAY_KEYSTORE_PASSWORD }}
+          KEY_ALIAS:         ${{ secrets.PLAY_KEY_ALIAS }}
+          KEY_PASSWORD:      ${{ secrets.PLAY_KEY_PASSWORD }}
+        run: ./gradlew bundleFullRelease --no-daemon
 
       - name: Locate artifacts
         id: artifacts
