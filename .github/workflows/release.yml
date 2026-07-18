@@ -3,11 +3,11 @@ name: Android Release Build
 on:
   push:
     tags:
-      - 'v*' # Esse fluxo vai rodar sempre que você enviar uma tag começando com 'v', tipo v2.0.0
+      - 'v*' # Roda ao enviar uma tag começando com 'v', ex.: v3.1.4
 
 jobs:
   build-and-release:
-    name: Build & Release APK
+    name: Build, Release APK & Publish AAB
     runs-on: ubuntu-latest
 
     # Permissão necessária para o GitHub Actions criar o Release
@@ -28,31 +28,41 @@ jobs:
       - name: Grant execute permission for gradlew
         run: chmod +x gradlew
 
-      - name: Build Full Release APK
-        # Vai compilar a versão "Full" (sem ser FOSS) em modo Release
-        run: ./gradlew assembleFullRelease
-
-      - name: Sign APK
+      - name: Decode keystore
         env:
           KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
-          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
-          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
-          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
-        run: |
-          # Decodifica o keystore
-          echo $KEYSTORE_BASE64 | base64 -d > my.keystore
-          
-          # Encontra a ferramenta de assinatura do Android (build-tools 34.0.0)
-          BUILD_TOOLS_DIR="$ANDROID_HOME/build-tools/34.0.0"
-          
-          # Otimiza o APK
-          $BUILD_TOOLS_DIR/zipalign -v -p 4 app/build/outputs/apk/full/release/app-full-release-unsigned.apk app-full-release-aligned.apk
-          
-          # Assina o APK
-          $BUILD_TOOLS_DIR/apksigner sign --ks my.keystore --ks-key-alias "$KEY_ALIAS" --ks-pass pass:"$KEYSTORE_PASSWORD" --key-pass pass:"$KEY_PASSWORD" --out app-full-release.apk app-full-release-aligned.apk
+        run: echo "$KEYSTORE_BASE64" | base64 -d > "$RUNNER_TEMP/upload.keystore"
 
-      - name: Create Release and Upload APK
+      # O Gradle assina APK e AAB sozinho (inclui zipalign).
+      # apksigner nao funciona em AAB, por isso a assinatura e feita aqui.
+      - name: Build signed APK + AAB (flavor full)
+        env:
+          KEYSTORE_FILE:     ${{ runner.temp }}/upload.keystore
+          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+          KEY_ALIAS:         ${{ secrets.KEY_ALIAS }}
+          KEY_PASSWORD:      ${{ secrets.KEY_PASSWORD }}
+        run: ./gradlew assembleFullRelease bundleFullRelease --no-daemon
+
+      - name: Locate artifacts
+        id: artifacts
+        run: |
+          echo "apk=$(find app/build/outputs/apk/full/release -name '*.apk' | head -1)" >> "$GITHUB_OUTPUT"
+          echo "aab=$(find app/build/outputs/bundle/fullRelease -name '*.aab' | head -1)" >> "$GITHUB_OUTPUT"
+
+      # Sobe o AAB para a faixa INTERNA como RASCUNHO.
+      # Nada chega a usuarios ate voce promover manualmente no Play Console.
+      - name: Publish AAB to Play Console (internal / draft)
+        uses: r0adkll/upload-google-play@v1
+        with:
+          serviceAccountJsonPlainText: ${{ secrets.PLAY_SERVICE_ACCOUNT_JSON }}
+          packageName: br.com.jotdown
+          releaseFiles: ${{ steps.artifacts.outputs.aab }}
+          track: internal
+          status: draft
+          mappingFile: app/build/outputs/mapping/fullRelease/mapping.txt
+
+      - name: Create GitHub Release and Upload APK
         uses: softprops/action-gh-release@v1
         with:
-          files: app-full-release.apk
+          files: ${{ steps.artifacts.outputs.apk }}
           generate_release_notes: true

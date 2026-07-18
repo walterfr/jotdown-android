@@ -36,5 +36,12 @@ captures/
 *.jks
 *.keystore
 
+# Chaves de service account do Google Play / Google Cloud — NUNCA commitar.
+# Dao acesso de publicacao ao app; o repositorio e publico.
+play-service-account.json
+*service-account*.json
+*-credentials.json
+gcloud-key*.json
+
 # Mac OS files
 .DS_Store

@@ -34,8 +34,27 @@ android {
         }
     }
 
+    // Assinatura de release via variaveis de ambiente (usado pelo CI).
+    // Localmente nada muda: sem as variaveis, use
+    // Build > Generate Signed Bundle / APK no Android Studio.
+    signingConfigs {
+        release {
+            def ksPath = System.getenv('KEYSTORE_FILE')
+            if (ksPath) {
+                storeFile     file(ksPath)
+                storePassword System.getenv('KEYSTORE_PASSWORD')
+                keyAlias      System.getenv('KEY_ALIAS')
+                keyPassword   System.getenv('KEY_PASSWORD')
+            }
+        }
+    }
+
     buildTypes {
         release {
+            // So aplica a assinatura quando o keystore foi fornecido pelo ambiente.
+            if (System.getenv('KEYSTORE_FILE')) {
+                signingConfig signingConfigs.release
+            }
             minifyEnabled true
             shrinkResources true
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
