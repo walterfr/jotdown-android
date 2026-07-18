@@ -43,5 +43,9 @@ play-service-account.json
 *-credentials.json
 gcloud-key*.json
 
+# Certificado exportado para redefinicao da chave de upload.
+# E dado publico (nao e segredo), mas nao pertence ao repositorio.
+upload_certificate.pem
+
 # Mac OS files
 .DS_Store
