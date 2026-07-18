@@ -2,8 +2,11 @@ package br.com.jotdown.data.sync
 
 import android.content.Context
 import android.content.Intent
+import android.util.Log
 import com.google.android.gms.auth.api.signin.GoogleSignIn
 import com.google.android.gms.auth.api.signin.GoogleSignInOptions
+import com.google.android.gms.common.api.ApiException
+import com.google.android.gms.common.api.CommonStatusCodes
 import com.google.android.gms.common.api.Scope
 
 import com.google.api.client.googleapis.extensions.android.gms.auth.GoogleAccountCredential
@@ -54,10 +57,19 @@ class SyncProviderImpl : SyncProvider {
     override suspend fun handleSignInResult(context: Context, intent: Intent?): Result<Unit> {
         return try {
             val task = GoogleSignIn.getSignedInAccountFromIntent(intent)
-            val account = task.result
+            val account = task.getResult(ApiException::class.java)
             if (account != null) Result.success(Unit)
             else Result.failure(Exception("Account is null"))
+        } catch (e: ApiException) {
+            // Sem isto a UI mostra so o toString() da excecao, que o R8 ofusca
+            // para algo como "j1.d: 10" — inutil para diagnostico. O nome do
+            // status distingue DEVELOPER_ERROR (10, cliente OAuth mal
+            // configurado) de NETWORK_ERROR (7), SIGN_IN_CANCELLED (12501) etc.
+            val name = CommonStatusCodes.getStatusCodeString(e.statusCode)
+            Log.e(TAG, "Google Sign-In falhou: $name (${e.statusCode})", e)
+            Result.failure(Exception("$name (${e.statusCode})", e))
         } catch (e: Exception) {
+            Log.e(TAG, "Google Sign-In falhou", e)
             Result.failure(e)
         }
     }
@@ -323,5 +335,9 @@ class SyncProviderImpl : SyncProvider {
             e.printStackTrace()
             Result.failure(e)
         }
+    }
+
+    private companion object {
+        const val TAG = "JotdownSync"
     }
 }
