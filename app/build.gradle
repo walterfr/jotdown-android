@@ -11,7 +11,7 @@ android {
         includeInBundle = false
     }
     namespace 'br.com.jotdown'
-    compileSdk 35
+    compileSdk 36
 
         flavorDimensions "version"
     productFlavors {
@@ -22,9 +22,9 @@ android {
     defaultConfig {
         applicationId 'br.com.jotdown'
         minSdk 26
-        targetSdk 35
-        versionCode 24
-        versionName '3.1.4'
+        targetSdk 36
+        versionCode 25
+        versionName '3.1.5'
 
         testInstrumentationRunner 'androidx.test.runner.AndroidJUnitProcessor'
 
