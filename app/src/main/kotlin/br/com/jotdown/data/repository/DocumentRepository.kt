@@ -60,7 +60,6 @@ class DocumentRepository(
     fun getAllNotes() = noteDao?.getAllNotes() ?: kotlinx.coroutines.flow.emptyFlow()
     suspend fun getNoteById(id: String) = noteDao?.getNoteById(id)
     fun getNotesForDocument(docId: String) = noteDao?.getNotesForDocument(docId) ?: kotlinx.coroutines.flow.emptyFlow()
-    fun searchNotes(query: String) = noteDao?.searchNotes(query) ?: kotlinx.coroutines.flow.emptyFlow()
     suspend fun upsertNote(note: br.com.jotdown.data.entity.NoteEntity) { noteDao?.upsertNote(note); triggerSync() }
     suspend fun deleteNote(id: String) { noteDao?.deleteNote(id); triggerSync() }
     suspend fun updateNote(id: String, title: String, content: String) { noteDao?.updateNote(id, title, content, System.currentTimeMillis()); triggerSync() }

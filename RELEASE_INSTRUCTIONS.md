@@ -1,8 +1,11 @@
-# Jotdown v3.1.7 — Release Instructions
+# Jotdown v3.1.8 — Release Instructions
 
 ## Version Info
-- **Version:** 3.1.7
-- **Build Code:** 27
+- **Version:** 3.1.8
+- **Build Code:** 28
+
+> Build 27 (3.1.7) was uploaded to the internal track as a draft but should **not**
+> be promoted: tapping a ficha in the library did nothing there. Build 28 fixes it.
 - **Release Date:** August 2026
 - **AAB Path:** `app/build/outputs/bundle/fullRelease/app-full-release.aab`
 
@@ -20,36 +23,28 @@
 
 ## Upload to Google Play Console
 
-### Option 1: Web Console (Easiest)
-1. Open https://play.google.com/console
-2. Select **Jotdown** app
-3. **Release** → **Production** (or Internal/Staging for testing)
-4. Click **Create new release**
-5. Upload AAB: `app/build/outputs/bundle/fullRelease/app-full-release.aab`
-6. Fill release notes:
-   - **English:** See `RELEASE_NOTES_EN.txt` below
-   - **Portuguese:** See `RELEASE_NOTES_PT.txt` below
-7. Review and publish
+Upload always goes through `.github/workflows/release.yml`. The CI signs the AAB
+with the Play upload key (`PLAY_KEYSTORE_*`, alias `jotdown_upload`,
+SHA1 `E4:EE:B5:B3…`). A locally built AAB is signed with a different key and
+Play App Signing rejects it — do not upload one by hand.
 
-### Option 2: CLI (Python Script)
-Requires service account JSON key from Play Console.
-
-**Setup:**
+### By workflow dispatch (no tag)
 ```bash
-pip install google-auth-oauthlib google-auth-httplib2 google-api-python-client
+gh workflow run "Android Release Build" -f track=internal -f status=draft
+```
+`track`: internal | alpha | beta · `status`: draft | completed
+
+### By tag (also creates a GitHub Release with the APK)
+```bash
+git tag v3.1.8 && git push --tags
 ```
 
-**Usage:**
-```bash
-python upload_play_console.py <service-account-key.json> [track]
-```
+### Promotion is manual
+The service account can only upload to test tracks — it cannot release to
+production, by design. Promote in the Play Console:
+**Release → Testing → Internal testing → select the draft → Review → Start rollout**
 
-Examples:
-```bash
-python upload_play_console.py key.json internal
-python upload_play_console.py key.json staging
-python upload_play_console.py key.json production
-```
+Each upload needs a fresh `versionCode`; Play rejects a repeat.
 
 ---
 

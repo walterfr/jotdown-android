@@ -121,12 +121,28 @@ DOI (Identificador de Objeto Digital) é um código único que identifica artigo
 
 ---
 
-## 7. Vincular Fichas a Documentos (Futuro)
+## 7. Vincular Citações a Documentos
 
-**Funcionalidade em desenvolvimento (F6):**
-- Visualização de grafo de conhecimento (notes ↔ docs ↔ highlights)
-- Vincular fichas a documentos citados
-- Rastrear citações entre documentos
+Quando um trecho destacado cita outra obra, você pode registrar esse vínculo.
+
+### Criar Vínculo
+1. No leitor, abra **Metadados** (ícone 📖)
+2. Role até a seção de **citações** (aparece quando há destaques)
+3. Em cada citação há um ícone de **corrente (link)**, ao lado do excluir
+4. Clique no link → abre lista de documentos da sua biblioteca
+5. Busque e selecione o documento citado
+
+### Ler o Estado
+- Ícone de link **azul** = citação já vinculada
+- Ícone de link **cinza** = sem vínculo
+
+### Remover Vínculo
+- Abra o seletor e clique **"Remover Vínculo"** na base
+
+**Nota:** o documento aberto não aparece na lista — uma citação não se vincula à própria obra.
+
+### Em desenvolvimento (F6)
+- Visualização de grafo de conhecimento (fichas ↔ documentos ↔ citações)
 
 ---
 

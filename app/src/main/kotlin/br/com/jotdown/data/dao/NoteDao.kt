@@ -15,9 +15,6 @@ interface NoteDao {
     @Query("SELECT * FROM notes WHERE sourceDocId = :docId ORDER BY updatedAt DESC")
     fun getNotesForDocument(docId: String): Flow<List<NoteEntity>>
 
-    @Query("SELECT * FROM notes WHERE title LIKE '%' || :query || '%' OR content LIKE '%' || :query || '%' ORDER BY updatedAt DESC")
-    fun searchNotes(query: String): Flow<List<NoteEntity>>
-
     @Upsert
     suspend fun upsertNote(note: NoteEntity): Long
 
