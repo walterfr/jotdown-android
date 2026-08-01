@@ -194,7 +194,7 @@ class ReaderViewModel(
 
     fun updateHighlight(id: Long, text: String) = viewModelScope.launch(Dispatchers.IO) { highlights.value.find { it.id == id }?.let { repository.insertHighlight(it.copy(text = text)) } }
     fun deleteHighlight(id: Long) = viewModelScope.launch(Dispatchers.IO) { repository.deleteHighlight(id) }
-    fun linkHighlight(highlightId: Long, linkedDocId: String?) = viewModelScope.launch(Dispatchers.IO) { repository.linkHighlightToDocument(highlightId, linkedDocId) }
+    fun setHighlightNote(highlightId: Long, note: String) = viewModelScope.launch(Dispatchers.IO) { repository.updateHighlightNote(highlightId, note) }
     fun addHighlight(page: Int, text: String) = viewModelScope.launch(Dispatchers.IO) {
         repository.insertHighlight(HighlightEntity(id = 0L, documentId = documentId, page = page, text = text))
     }

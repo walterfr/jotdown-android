@@ -10,7 +10,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Folder
-import androidx.compose.material.icons.filled.Link
+import androidx.compose.material.icons.filled.EditNote
 import br.com.jotdown.ui.theme.Indigo600
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -37,7 +37,7 @@ data class MetadataParams(val docType: String, val authorLastName: String, val a
 fun MetadataSheet(
     document: DocumentEntity?, highlights: List<HighlightEntity>, pageOffset: Int,
     onSave: (MetadataParams) -> Unit, onUpdateHighlight: (Long, String) -> Unit, onDeleteHighlight: (Long) -> Unit, onDismiss: () -> Unit,
-    onImportDOI: (String) -> Unit = {}, doiImportStatus: String? = null, onLinkHighlight: (Long) -> Unit = {}
+    onImportDOI: (String) -> Unit = {}, doiImportStatus: String? = null, onEditHighlightNote: (Long) -> Unit = {}
 ) {
     val context = LocalContext.current
     var docType by remember { mutableStateOf(document?.docType?.takeIf { it.isNotBlank() } ?: "Livro / Monografia") }
@@ -80,6 +80,8 @@ fun MetadataSheet(
             val text = editableHighlights[h.id] ?: h.text
             // 🛡️ PADRÃO DE CITAÇÃO EXATO: (Sobrenome, Ano, p. X)
             append("[${index + 1}] > $text ($citationName, $citationYear, p. ${h.page + pageOffset})\n\n")
+            // Fichamento da citação, logo abaixo do trecho que o motivou.
+            if (h.note.isNotBlank()) append("${h.note}\n\n")
         }
 
     }
@@ -161,7 +163,7 @@ fun MetadataSheet(
                         Text(stringResource(R.string.meta_edit_quotes, highlights.size), color = Color.Gray, fontSize = 12.sp, fontWeight = FontWeight.Bold); Spacer(Modifier.height(8.dp))
                         highlights.forEachIndexed { index, h -> OutlinedTextField(value = editableHighlights[h.id] ?: "", onValueChange = { editableHighlights[h.id] = it }, label = { Text(stringResource(R.string.meta_quote_label, index + 1, h.page + pageOffset, h.page)) }, modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp), maxLines = 5, trailingIcon = {
                             Row(verticalAlignment = Alignment.CenterVertically) {
-                                IconButton(onClick = { onLinkHighlight(h.id) }) { Icon(Icons.Default.Link, contentDescription = stringResource(R.string.link_highlight_title), tint = if (h.linkedDocId != null) Indigo600 else Color.Gray) }
+                                IconButton(onClick = { onEditHighlightNote(h.id) }) { Icon(Icons.Default.EditNote, contentDescription = stringResource(R.string.highlight_note_title), tint = if (h.note.isNotBlank()) Indigo600 else Color.Gray) }
                                 IconButton(onClick = { onDeleteHighlight(h.id) }) { Icon(Icons.Default.Close, contentDescription = stringResource(R.string.meta_delete), tint = Color.Red.copy(alpha = 0.8f)) }
                             }
                         }) }; Spacer(Modifier.height(16.dp))

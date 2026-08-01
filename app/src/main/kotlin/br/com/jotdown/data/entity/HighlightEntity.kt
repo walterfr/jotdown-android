@@ -20,6 +20,8 @@ data class HighlightEntity(
     val documentId: String,
     val page: Int,
     val text: String,
-    val linkedDocId: String? = null
+    /** Fichamento da citação: o comentário do leitor sobre este trecho.
+     *  Sai no export logo abaixo da citação que o originou. */
+    val note: String = ""
 )
 

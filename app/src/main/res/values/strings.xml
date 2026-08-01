@@ -229,9 +229,8 @@
     <string name="readerbar_annotations">Notes</string>
     <string name="readerbar_book_outline">Book Outline</string>
     <string name="readerbar_share_original_pdf">Share Original PDF</string>
-    <string name="link_highlight_title">Link to Document</string>
-    <string name="link_highlight_search">Search documents...</string>
-    <string name="link_highlight_clear">Clear Link</string>
+    <string name="highlight_note_title">Note on this quote</string>
+    <string name="highlight_note_hint">What this passage means for your research…</string>
     <string name="doi_label">DOI (Digital Object Identifier)</string>
 
     <!-- Reader tools -->

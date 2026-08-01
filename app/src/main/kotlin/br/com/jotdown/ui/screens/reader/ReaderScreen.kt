@@ -34,6 +34,7 @@ import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.*
 import br.com.jotdown.R
 import br.com.jotdown.data.entity.*
@@ -80,7 +81,7 @@ fun ReaderScreen(
     var numPages        by remember { mutableIntStateOf(0) }
     var showSidebar     by remember { mutableStateOf(false) }
     var showAnnotations by remember { mutableStateOf(false) }
-    var showLinkHighlight by remember { mutableStateOf(false) }
+    var showHighlightNote by remember { mutableStateOf(false) }
     var selectedHighlightId by remember { mutableStateOf<Long?>(null) }
 
     var ocrResult        by remember { mutableStateOf<Pair<Int, String>?>(null) }
@@ -407,7 +408,7 @@ fun ReaderScreen(
             onDismiss = { showSidebar = false },
             onImportDOI = { doi -> viewModel.importDOI(doi) },
             doiImportStatus = doiImportStatus,
-            onLinkHighlight = { id -> selectedHighlightId = id; showLinkHighlight = true }
+            onEditHighlightNote = { id -> selectedHighlightId = id; showHighlightNote = true }
         )
     }
     
@@ -422,14 +423,16 @@ fun ReaderScreen(
         )
     }
 
-    if (showLinkHighlight && selectedHighlightId != null) {
-        val allDocs by viewModel.allDocuments.collectAsState()
-        LinkHighlightDialog(
-            highlightId = selectedHighlightId!!,
-            allDocuments = allDocs.filter { it.id != docId },
-            onLink = { hId, docId -> viewModel.linkHighlight(hId, docId) },
-            onDismiss = { showLinkHighlight = false; selectedHighlightId = null }
-        )
+    if (showHighlightNote && selectedHighlightId != null) {
+        val target = highlights.find { it.id == selectedHighlightId }
+        if (target != null) {
+            HighlightNoteDialog(
+                quote = target.text,
+                initialNote = target.note,
+                onSave = { texto -> viewModel.setHighlightNote(target.id, texto) },
+                onDismiss = { showHighlightNote = false; selectedHighlightId = null }
+            )
+        }
     }
 
     if (ocrResult != null) {
@@ -1339,44 +1342,40 @@ fun parseDrawingsJson(json: String): List<DrawnPath> {
 }
 
 @Composable
-fun LinkHighlightDialog(
-    highlightId: Long,
-    allDocuments: List<DocumentEntity>,
-    onLink: (Long, String?) -> Unit,
+fun HighlightNoteDialog(
+    quote: String,
+    initialNote: String,
+    onSave: (String) -> Unit,
     onDismiss: () -> Unit
 ) {
-    var searchQuery by remember { mutableStateOf("") }
-    val filtered = allDocuments.filter { it.title.contains(searchQuery, ignoreCase = true) }
+    var note by remember(initialNote) { mutableStateOf(initialNote) }
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text(stringResource(R.string.link_highlight_title)) },
+        title = { Text(stringResource(R.string.highlight_note_title)) },
         text = {
-            Column(modifier = Modifier.fillMaxWidth().heightIn(max = 300.dp)) {
+            Column(modifier = Modifier.fillMaxWidth()) {
+                // A citação fica à vista enquanto se escreve sobre ela.
+                Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                    Box(Modifier.width(3.dp).height(IntrinsicSize.Min).background(Indigo600.copy(alpha = 0.5f)))
+                    Text(quote, fontSize = 13.sp, maxLines = 6, overflow = TextOverflow.Ellipsis, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+                Spacer(Modifier.height(12.dp))
                 OutlinedTextField(
-                    value = searchQuery,
-                    onValueChange = { searchQuery = it },
-                    placeholder = { Text(stringResource(R.string.link_highlight_search)) },
-                    modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp),
-                    singleLine = true
+                    value = note,
+                    onValueChange = { note = it },
+                    placeholder = { Text(stringResource(R.string.highlight_note_hint)) },
+                    modifier = Modifier.fillMaxWidth().heightIn(min = 120.dp)
                 )
-                filtered.forEach { doc ->
-                    TextButton(
-                        onClick = { onLink(highlightId, doc.id); onDismiss() },
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        val displayTitle = if (doc.title.isNotBlank()) doc.title else doc.fileName
-                        Text(displayTitle, modifier = Modifier.fillMaxWidth(), textAlign = TextAlign.Start)
-                    }
-                }
-                Spacer(Modifier.height(8.dp))
-                TextButton(onClick = { onLink(highlightId, null); onDismiss() }) {
-                    Text(stringResource(R.string.link_highlight_clear), color = Color.Gray)
-                }
             }
         },
         confirmButton = {
-            TextButton(onClick = onDismiss) { Text("Close") }
+            TextButton(onClick = { onSave(note); onDismiss() }) {
+                Text(stringResource(R.string.common_save), color = Indigo600, fontWeight = FontWeight.Bold)
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) { Text(stringResource(R.string.common_cancel)) }
         }
     )
 }

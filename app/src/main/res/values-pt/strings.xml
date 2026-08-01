@@ -229,9 +229,8 @@
     <string name="readerbar_annotations">Anotações</string>
     <string name="readerbar_book_outline">Sumário do Livro</string>
     <string name="readerbar_share_original_pdf">Compartilhar PDF Original</string>
-    <string name="link_highlight_title">Vincular a Documento</string>
-    <string name="link_highlight_search">Buscar documentos...</string>
-    <string name="link_highlight_clear">Remover Vínculo</string>
+    <string name="highlight_note_title">Fichamento da citação</string>
+    <string name="highlight_note_hint">O que este trecho significa para a sua pesquisa…</string>
     <string name="doi_label">DOI (Identificador de Objeto Digital)</string>
 
     <!-- Reader tools -->

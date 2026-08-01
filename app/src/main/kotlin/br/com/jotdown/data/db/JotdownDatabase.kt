@@ -18,7 +18,7 @@ import br.com.jotdown.data.entity.*
         FolderEntity::class,
         DictionaryCache::class
     ],
-    version = 18,
+    version = 19,
     exportSchema = false
 )
 abstract class JotdownDatabase : RoomDatabase() {
@@ -112,6 +112,30 @@ abstract class JotdownDatabase : RoomDatabase() {
             }
         }
 
+        /**
+         * A citação passa a carregar o próprio fichamento. Troca linkedDocId por
+         * note — o vínculo citação→documento saiu de cena. Tabela reconstruída
+         * porque não há DROP COLUMN aqui; as citações em si são preservadas.
+         */
+        private val MIGRATION_18_19 = object : Migration(18, 19) {
+            override fun migrate(database: SupportSQLiteDatabase) {
+                database.execSQL("""
+                    CREATE TABLE highlights_new (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+                        documentId TEXT NOT NULL,
+                        page INTEGER NOT NULL,
+                        text TEXT NOT NULL,
+                        note TEXT NOT NULL DEFAULT '',
+                        FOREIGN KEY(documentId) REFERENCES documents(id) ON DELETE CASCADE
+                    )
+                """)
+                database.execSQL("INSERT INTO highlights_new (id, documentId, page, text) SELECT id, documentId, page, text FROM highlights")
+                database.execSQL("DROP TABLE highlights")
+                database.execSQL("ALTER TABLE highlights_new RENAME TO highlights")
+                database.execSQL("CREATE INDEX IF NOT EXISTS index_highlights_documentId ON highlights(documentId)")
+            }
+        }
+
         fun getInstance(context: Context): JotdownDatabase {
             return INSTANCE ?: synchronized(this) {
                 Room.databaseBuilder(
@@ -119,7 +143,7 @@ abstract class JotdownDatabase : RoomDatabase() {
                     JotdownDatabase::class.java,
                     "jotdown_stable.db"
                 )
-                .addMigrations(MIGRATION_10_11, MIGRATION_11_12, MIGRATION_12_13, MIGRATION_13_14, MIGRATION_14_15, MIGRATION_15_16, MIGRATION_16_17, MIGRATION_17_18)
+                .addMigrations(MIGRATION_10_11, MIGRATION_11_12, MIGRATION_12_13, MIGRATION_13_14, MIGRATION_14_15, MIGRATION_15_16, MIGRATION_16_17, MIGRATION_17_18, MIGRATION_18_19)
                 .fallbackToDestructiveMigration()
                 .build()
                 .also { INSTANCE = it }
