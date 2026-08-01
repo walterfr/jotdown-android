@@ -1359,13 +1359,13 @@ fun LinkHighlightDialog(
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Link to Document") },
+        title = { Text(stringResource(R.string.link_highlight_title)) },
         text = {
             Column(modifier = Modifier.fillMaxWidth().heightIn(max = 300.dp)) {
                 OutlinedTextField(
                     value = searchQuery,
                     onValueChange = { searchQuery = it },
-                    placeholder = { Text("Search documents...") },
+                    placeholder = { Text(stringResource(R.string.link_highlight_search)) },
                     modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp),
                     singleLine = true
                 )
@@ -1380,7 +1380,7 @@ fun LinkHighlightDialog(
                 }
                 Spacer(Modifier.height(8.dp))
                 TextButton(onClick = { onLink(highlightId, null); onDismiss() }) {
-                    Text("Clear Link", color = Color.Gray)
+                    Text(stringResource(R.string.link_highlight_clear), color = Color.Gray)
                 }
             }
         },

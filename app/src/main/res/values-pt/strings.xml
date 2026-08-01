@@ -240,6 +240,11 @@
     <string name="readerbar_notes">Fichas (Atômicas)</string>
     <string name="readerbar_book_outline">Sumário do Livro</string>
     <string name="readerbar_share_original_pdf">Compartilhar PDF Original</string>
+    <string name="link_highlight_title">Vincular a Documento</string>
+    <string name="link_highlight_search">Buscar documentos...</string>
+    <string name="link_highlight_clear">Remover Vínculo</string>
+    <string name="doi_label">DOI (Identificador de Objeto Digital)</string>
+    <string name="note_delete_confirm">Deletar esta ficha permanentemente?</string>
 
     <!-- Reader tools -->
     <string name="tool_pen">Caneta</string>

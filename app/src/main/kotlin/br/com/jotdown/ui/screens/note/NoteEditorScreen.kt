@@ -125,7 +125,7 @@ fun NoteEditorScreen(noteId: String, repository: DocumentRepository, onBack: () 
         AlertDialog(
             onDismissRequest = { showDeleteDialog = false },
             title = { Text(stringResource(R.string.common_delete)) },
-            text = { Text("Delete this note permanently?") },
+            text = { Text(stringResource(R.string.note_delete_confirm)) },
             confirmButton = {
                 TextButton(onClick = { viewModel.deleteNote(); onBack() }) {
                     Text(stringResource(R.string.common_delete), color = MaterialTheme.colorScheme.error)

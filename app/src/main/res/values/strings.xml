@@ -240,6 +240,11 @@
     <string name="readerbar_notes">Notes (Atomic)</string>
     <string name="readerbar_book_outline">Book Outline</string>
     <string name="readerbar_share_original_pdf">Share Original PDF</string>
+    <string name="link_highlight_title">Link to Document</string>
+    <string name="link_highlight_search">Search documents...</string>
+    <string name="link_highlight_clear">Clear Link</string>
+    <string name="doi_label">DOI (Digital Object Identifier)</string>
+    <string name="note_delete_confirm">Delete this note permanently?</string>
 
     <!-- Reader tools -->
     <string name="tool_pen">Pen</string>
