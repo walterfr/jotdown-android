@@ -412,11 +412,12 @@ fun ReaderScreen(
             highlights = highlights,
             pageOffset = pageOffset,
             onSave = { p -> viewModel.saveMetadata(p.docType, p.authorLastName, p.authorFirstName, p.title, p.subtitle, p.edition, p.city, p.publisher, p.year, p.journal, p.volume, p.pages, p.url, p.accessDate) },
-            onUpdateHighlight = { _, _ -> },
+            onUpdateHighlight = { id, text -> viewModel.updateHighlight(id, text) },
             onDeleteHighlight = { id -> viewModel.deleteHighlight(id) },
             onDismiss = { showSidebar = false },
             onImportDOI = { doi -> viewModel.importDOI(doi) },
-            doiImportStatus = doiImportStatus
+            doiImportStatus = doiImportStatus,
+            onLinkHighlight = { id -> selectedHighlightId = id; showLinkHighlight = true }
         )
     }
     
@@ -435,7 +436,7 @@ fun ReaderScreen(
         val allDocs by viewModel.allDocuments.collectAsState()
         LinkHighlightDialog(
             highlightId = selectedHighlightId!!,
-            allDocuments = allDocs,
+            allDocuments = allDocs.filter { it.id != docId },
             onLink = { hId, docId -> viewModel.linkHighlight(hId, docId) },
             onDismiss = { showLinkHighlight = false; selectedHighlightId = null }
         )

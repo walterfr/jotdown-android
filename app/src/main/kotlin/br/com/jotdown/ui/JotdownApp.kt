@@ -47,6 +47,7 @@ fun JotdownApp() {
             LibraryScreen(
                 viewModel = vm,
                 onOpenDocument = { docId -> navController.navigate(Screen.Reader.createRoute(docId)) },
+                onOpenNote = { noteId -> navController.navigate(Screen.Note.createRoute(noteId)) },
                 onOpenSettings = { navController.navigate(Screen.Settings.route) }
             )
         }
