@@ -64,7 +64,10 @@ class DocumentRepository(
     suspend fun deleteNote(id: String) { noteDao?.deleteNote(id); triggerSync() }
     suspend fun updateNote(id: String, title: String, content: String) { noteDao?.updateNote(id, title, content, System.currentTimeMillis()); triggerSync() }
 
-    suspend fun createNoteForDocument(docId: String, page: Int?, title: String = "", content: String = ""): String {
+    suspend fun createNoteForDocument(
+        docId: String, page: Int?, title: String = "", content: String = "",
+        sourceHighlightId: Long? = null
+    ): String {
         val noteId = java.util.UUID.randomUUID().toString()
         upsertNote(NoteEntity(
             id = noteId,
@@ -74,8 +77,25 @@ class DocumentRepository(
             updatedAt = System.currentTimeMillis(),
             labels = "",
             sourceDocId = docId,
-            sourcePage = page
+            sourcePage = page,
+            sourceHighlightId = sourceHighlightId
         ))
+        return noteId
+    }
+
+    /**
+     * Move o post-it para ficha: cria a ficha com o texto do post-it e remove o
+     * post-it. Ordem importa — só apaga depois que a ficha existe, senão uma
+     * falha no meio perde o texto do usuário.
+     */
+    suspend fun promoteAnnotationToNote(annotation: AnnotationEntity): String {
+        val noteId = createNoteForDocument(
+            docId = annotation.documentId,
+            page = annotation.page,
+            title = "",
+            content = annotation.text
+        )
+        deleteAnnotation(annotation.id)
         return noteId
     }
 

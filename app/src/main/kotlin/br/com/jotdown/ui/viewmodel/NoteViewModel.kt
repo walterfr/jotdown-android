@@ -23,6 +23,10 @@ class NoteViewModel(
     private val _content = MutableStateFlow("")
     val content: StateFlow<String> = _content
 
+    /** Texto do destaque que originou a ficha, resolvido pelo id. */
+    private val _quote = MutableStateFlow<String?>(null)
+    val quote: StateFlow<String?> = _quote
+
     init {
         viewModelScope.launch(Dispatchers.IO) {
             val loadedNote = repository.getNoteById(noteId)
@@ -30,6 +34,11 @@ class NoteViewModel(
             loadedNote?.let {
                 _title.value = it.title
                 _content.value = it.content
+                val hid = it.sourceHighlightId
+                val docId = it.sourceDocId
+                if (hid != null && docId != null) {
+                    _quote.value = repository.getHighlightsForDocument(docId).first().find { h -> h.id == hid }?.text
+                }
             }
         }
     }

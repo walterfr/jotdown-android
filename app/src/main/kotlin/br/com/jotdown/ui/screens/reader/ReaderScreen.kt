@@ -84,6 +84,7 @@ fun ReaderScreen(
     var showAnnotations by remember { mutableStateOf(false) }
     var showLinkHighlight by remember { mutableStateOf(false) }
     var selectedHighlightId by remember { mutableStateOf<Long?>(null) }
+    var showPickHighlight by remember { mutableStateOf(false) }
 
     var ocrResult        by remember { mutableStateOf<Pair<Int, String>?>(null) }
     var textToEdit       by remember { mutableStateOf("") }
@@ -211,7 +212,12 @@ fun ReaderScreen(
                         context.startActivity(android.content.Intent.createChooser(intent, context.getString(R.string.reader_share_pdf_chooser)))
                     },
                     onOutlineClick = { showOutline = true },
-                    onCreateNote = { viewModel.createNote(currentPage) },
+                    onCreateNote = {
+                        // Com destaques na página, deixa escolher qual vira citação
+                        // da ficha. Sem nenhum, cria direto — nada a perguntar.
+                        if (highlights.any { it.page == currentPage }) showPickHighlight = true
+                        else viewModel.createNote(currentPage)
+                    },
                     notesCount = notes.size
                 )
             }
@@ -417,7 +423,8 @@ fun ReaderScreen(
             onDismiss = { showSidebar = false },
             onImportDOI = { doi -> viewModel.importDOI(doi) },
             doiImportStatus = doiImportStatus,
-            onLinkHighlight = { id -> selectedHighlightId = id; showLinkHighlight = true }
+            onLinkHighlight = { id -> selectedHighlightId = id; showLinkHighlight = true },
+            notes = notes
         )
     }
     
@@ -428,7 +435,36 @@ fun ReaderScreen(
             pageOffset = pageOffset,
             onDismiss = { showAnnotations = false },
             onDelete = { id -> viewModel.deleteAnnotation(id) },
-            onGoToPage = { page -> viewModel.setCurrentPage(page); scrollToPage = page }
+            onGoToPage = { page -> viewModel.setCurrentPage(page); scrollToPage = page },
+            onPromote = { annot -> viewModel.promoteAnnotation(annot) }
+        )
+    }
+
+    if (showPickHighlight) {
+        val pageHighlights = highlights.filter { it.page == currentPage }
+        AlertDialog(
+            onDismissRequest = { showPickHighlight = false },
+            title = { Text(stringResource(R.string.pick_highlight_title)) },
+            text = {
+                Column(modifier = Modifier.fillMaxWidth().heightIn(max = 320.dp)) {
+                    pageHighlights.forEach { h ->
+                        TextButton(
+                            onClick = { viewModel.createNote(currentPage, h.id); showPickHighlight = false },
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Text(h.text, modifier = Modifier.fillMaxWidth(), textAlign = TextAlign.Start, maxLines = 3, fontSize = 13.sp)
+                        }
+                    }
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = { viewModel.createNote(currentPage); showPickHighlight = false }) {
+                    Text(stringResource(R.string.pick_highlight_none))
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showPickHighlight = false }) { Text(stringResource(R.string.common_cancel)) }
+            }
         )
     }
 

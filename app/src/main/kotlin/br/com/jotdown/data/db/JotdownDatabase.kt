@@ -19,7 +19,7 @@ import br.com.jotdown.data.entity.*
         DictionaryCache::class,
         NoteEntity::class
     ],
-    version = 16,
+    version = 17,
     exportSchema = false
 )
 abstract class JotdownDatabase : RoomDatabase() {
@@ -92,6 +92,13 @@ abstract class JotdownDatabase : RoomDatabase() {
             }
         }
 
+        /** Liga a ficha ao destaque que a originou (citação por referência). */
+        private val MIGRATION_16_17 = object : Migration(16, 17) {
+            override fun migrate(database: SupportSQLiteDatabase) {
+                database.execSQL("ALTER TABLE notes ADD COLUMN sourceHighlightId INTEGER DEFAULT NULL")
+            }
+        }
+
         fun getInstance(context: Context): JotdownDatabase {
             return INSTANCE ?: synchronized(this) {
                 Room.databaseBuilder(
@@ -99,7 +106,7 @@ abstract class JotdownDatabase : RoomDatabase() {
                     JotdownDatabase::class.java,
                     "jotdown_stable.db"
                 )
-                .addMigrations(MIGRATION_10_11, MIGRATION_11_12, MIGRATION_12_13, MIGRATION_13_14, MIGRATION_14_15, MIGRATION_15_16)
+                .addMigrations(MIGRATION_10_11, MIGRATION_11_12, MIGRATION_12_13, MIGRATION_13_14, MIGRATION_14_15, MIGRATION_15_16, MIGRATION_16_17)
                 .fallbackToDestructiveMigration()
                 .build()
                 .also { INSTANCE = it }

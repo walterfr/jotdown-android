@@ -240,6 +240,10 @@
     <string name="readerbar_notes">Notes (Atomic)</string>
     <string name="readerbar_book_outline">Book Outline</string>
     <string name="readerbar_share_original_pdf">Share Original PDF</string>
+    <string name="pick_highlight_title">Quote for this note</string>
+    <string name="pick_highlight_none">No quote</string>
+    <string name="annot_promote">Turn into note</string>
+    <string name="annot_promote_confirm">The text becomes a note and this post-it is removed from the page.</string>
     <string name="link_highlight_title">Link to Document</string>
     <string name="link_highlight_search">Search documents...</string>
     <string name="link_highlight_clear">Clear Link</string>

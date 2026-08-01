@@ -12,5 +12,8 @@ data class NoteEntity(
     val updatedAt: Long,
     val labels: String = "",
     val sourceDocId: String? = null,
-    val sourcePage: Int? = null
+    val sourcePage: Int? = null,
+    /** Destaque que originou a ficha. Referência, não cópia: editar o
+     *  trecho no MetadataSheet corrige a citação aqui também. */
+    val sourceHighlightId: Long? = null
 )

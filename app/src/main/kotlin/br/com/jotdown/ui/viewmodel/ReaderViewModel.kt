@@ -203,9 +203,13 @@ class ReaderViewModel(
     private val _noteCreatedEvent = MutableSharedFlow<String>()
     val noteCreatedEvent: SharedFlow<String> = _noteCreatedEvent
 
-    fun createNote(page: Int? = null) = viewModelScope.launch(Dispatchers.IO) {
-        val noteId = repository.createNoteForDocument(documentId, page, "", "")
+    fun createNote(page: Int? = null, sourceHighlightId: Long? = null) = viewModelScope.launch(Dispatchers.IO) {
+        val noteId = repository.createNoteForDocument(documentId, page, "", "", sourceHighlightId)
         _noteCreatedEvent.emit(noteId)
+    }
+
+    fun promoteAnnotation(annotation: AnnotationEntity) = viewModelScope.launch(Dispatchers.IO) {
+        _noteCreatedEvent.emit(repository.promoteAnnotationToNote(annotation))
     }
 
     private val _doiImportStatus = MutableStateFlow<String?>(null)

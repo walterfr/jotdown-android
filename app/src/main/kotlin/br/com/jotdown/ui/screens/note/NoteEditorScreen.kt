@@ -37,6 +37,7 @@ fun NoteEditorScreen(noteId: String, repository: DocumentRepository, onBack: () 
     val title by viewModel.title.collectAsState()
     val content by viewModel.content.collectAsState()
     val note by viewModel.note.collectAsState()
+    val quote by viewModel.quote.collectAsState()
 
     var showDeleteDialog by remember { mutableStateOf(false) }
 
@@ -101,6 +102,20 @@ fun NoteEditorScreen(noteId: String, repository: DocumentRepository, onBack: () 
                     unfocusedContainerColor = MaterialTheme.colorScheme.surface
                 )
             )
+
+            quote?.let { q ->
+                Surface(
+                    modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
+                    color = Indigo600.copy(alpha = 0.06f),
+                    shape = RoundedCornerShape(8.dp)
+                ) {
+                    Row(modifier = Modifier.padding(12.dp), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                        Box(Modifier.width(3.dp).height(IntrinsicSize.Min).background(Indigo600.copy(alpha = 0.5f)))
+                        Text(q, fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+                }
+                Spacer(Modifier.height(8.dp))
+            }
 
             if (note?.sourceDocId != null) {
                 Surface(

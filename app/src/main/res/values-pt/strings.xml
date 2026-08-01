@@ -240,6 +240,10 @@
     <string name="readerbar_notes">Fichas (Atômicas)</string>
     <string name="readerbar_book_outline">Sumário do Livro</string>
     <string name="readerbar_share_original_pdf">Compartilhar PDF Original</string>
+    <string name="pick_highlight_title">Citação desta ficha</string>
+    <string name="pick_highlight_none">Sem citação</string>
+    <string name="annot_promote">Transformar em ficha</string>
+    <string name="annot_promote_confirm">O texto vira uma ficha e este post-it sai da página.</string>
     <string name="link_highlight_title">Vincular a Documento</string>
     <string name="link_highlight_search">Buscar documentos...</string>
     <string name="link_highlight_clear">Remover Vínculo</string>
