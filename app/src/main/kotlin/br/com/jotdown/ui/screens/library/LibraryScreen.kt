@@ -27,6 +27,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.*
@@ -126,7 +127,33 @@ fun LibraryScreen(viewModel: LibraryViewModel, onOpenDocument: (String) -> Unit,
                 // Corpo rolável: sem isto, os itens abaixo da dobra ficam
                 // inalcançáveis — foi o que engoliu o "Sobre" quando as seções
                 // de status e metas entraram.
-                Column(modifier = Modifier.weight(1f).verticalScroll(rememberScrollState())) {
+                val drawerScroll = rememberScrollState()
+                val thumbColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.35f)
+                Column(
+                    modifier = Modifier
+                        .weight(1f)
+                        // Trilho fino no canto direito: sem ele nada denuncia que
+                        // "Lido" e "Metas" continuam abaixo da dobra. Desenhado
+                        // antes do verticalScroll para ficar no espaço do viewport,
+                        // parado, em vez de rolar junto com o conteúdo.
+                        .drawWithContent {
+                            drawContent()
+                            if (drawerScroll.maxValue > 0) {
+                                val viewport = size.height
+                                val track = viewport - 16.dp.toPx()
+                                val thumb = (viewport / (viewport + drawerScroll.maxValue) * track)
+                                    .coerceAtLeast(32.dp.toPx())
+                                val progress = drawerScroll.value.toFloat() / drawerScroll.maxValue
+                                drawRoundRect(
+                                    color = thumbColor,
+                                    topLeft = Offset(size.width - 6.dp.toPx(), 8.dp.toPx() + progress * (track - thumb)),
+                                    size = androidx.compose.ui.geometry.Size(3.dp.toPx(), thumb),
+                                    cornerRadius = androidx.compose.ui.geometry.CornerRadius(1.5.dp.toPx())
+                                )
+                            }
+                        }
+                        .verticalScroll(drawerScroll)
+                ) {
                 // ── Cabeçalho com avatar ───────────────────────────────────
                 Box(
                     modifier = Modifier
