@@ -42,6 +42,9 @@
     <string name="dlg_goal_name">Goal Name</string>
     <string name="dlg_goal_description">Description (optional)</string>
     <string name="dlg_goal_deadline">Deadline (optional)</string>
+    <string name="fab_new_note">New Note</string>
+    <string name="dlg_new_note_title">Create Note</string>
+    <string name="dlg_note_title">Note Title</string>
     <string name="sort_recent">Recent</string>
     <string name="sort_az">A-Z</string>
     <string name="sort_za">Z-A</string>
@@ -57,6 +60,7 @@
     <string name="tab_note">Note</string>
     <string name="tab_folder">Folder</string>
     <string name="tab_drive">Drive</string>
+    <string name="tab_notes">Notes</string>
     <string name="lib_stats">%1$d Quotes • %2$d Notes</string>
     <string name="lib_read_prefix">Read: %1$s</string>
     <string name="lib_cover_desc">PDF cover</string>

@@ -12,6 +12,7 @@ class DocumentRepository(
     private val annotationDao: AnnotationDao,
     private val drawingDao: DrawingDao,
     private val highlightDao: HighlightDao,
+    private val noteDao: br.com.jotdown.data.dao.NoteDao? = null,
     private val syncManager: br.com.jotdown.data.sync.SyncManager? = null
 ) {
     private fun triggerSync() {
@@ -52,6 +53,14 @@ class DocumentRepository(
     fun getDocumentSummariesByFolder(folderId: Long?) = documentDao.getDocumentSummariesByFolder(folderId)
 
     fun getFolderProgress() = folderDao.getFolderProgress()
+
+    fun getAllNotes() = noteDao?.getAllNotes() ?: kotlinx.coroutines.flow.emptyFlow()
+    suspend fun getNoteById(id: String) = noteDao?.getNoteById(id)
+    fun getNotesForDocument(docId: String) = noteDao?.getNotesForDocument(docId) ?: kotlinx.coroutines.flow.emptyFlow()
+    fun searchNotes(query: String) = noteDao?.searchNotes(query) ?: kotlinx.coroutines.flow.emptyFlow()
+    suspend fun upsertNote(note: br.com.jotdown.data.entity.NoteEntity) { noteDao?.upsertNote(note); triggerSync() }
+    suspend fun deleteNote(id: String) { noteDao?.deleteNote(id); triggerSync() }
+    suspend fun updateNote(id: String, title: String, content: String) { noteDao?.updateNote(id, title, content, System.currentTimeMillis()); triggerSync() }
 
     suspend fun updateMetadata(id: String, type: String, last: String, first: String, title: String, subtitle: String, edition: String, city: String, publisher: String, year: String, journal: String, volume: String, pages: String, url: String, accessDate: String) { 
         getDocumentById(id)?.let { 

@@ -6,6 +6,9 @@ sealed class Screen(val route: String) {
     object Reader  : Screen("reader/{documentId}") {
         fun createRoute(documentId: String) = "reader/$documentId"
     }
+    object Note    : Screen("note/{noteId}") {
+        fun createRoute(noteId: String) = "note/$noteId"
+    }
     object Settings : Screen("settings")
 }
 

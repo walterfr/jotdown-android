@@ -474,6 +474,21 @@ class LibraryViewModel(private val repository: DocumentRepository, private val a
     fun createGoal(name: String, description: String, deadline: Long?) = viewModelScope.launch {
         repository.insertFolder(FolderEntity(name = name, description = description, deadline = deadline, isGoal = true))
     }
+
+    val allNotes: StateFlow<List<br.com.jotdown.data.entity.NoteEntity>> = repository.getAllNotes()
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    fun createNote(title: String) = viewModelScope.launch {
+        val noteId = java.util.UUID.randomUUID().toString()
+        val note = br.com.jotdown.data.entity.NoteEntity(
+            id = noteId,
+            title = title,
+            content = "",
+            createdAt = System.currentTimeMillis(),
+            updatedAt = System.currentTimeMillis()
+        )
+        repository.upsertNote(note)
+    }
 }
 
 class LibraryViewModelFactory(

@@ -16,9 +16,10 @@ import br.com.jotdown.data.entity.*
         HighlightEntity::class,
         DrawingEntity::class,
         FolderEntity::class,
-        DictionaryCache::class
+        DictionaryCache::class,
+        NoteEntity::class
     ],
-    version = 13,
+    version = 14,
     exportSchema = false
 )
 abstract class JotdownDatabase : RoomDatabase() {
@@ -29,6 +30,7 @@ abstract class JotdownDatabase : RoomDatabase() {
     abstract fun drawingDao(): DrawingDao
     abstract fun folderDao(): FolderDao
     abstract fun dictionaryCacheDao(): DictionaryCacheDao
+    abstract fun noteDao(): br.com.jotdown.data.dao.NoteDao
 
     companion object {
         @Volatile
@@ -57,6 +59,25 @@ abstract class JotdownDatabase : RoomDatabase() {
             }
         }
 
+        /** Creates notes table for atomic notes (Zettelkasten). */
+        private val MIGRATION_13_14 = object : Migration(13, 14) {
+            override fun migrate(database: SupportSQLiteDatabase) {
+                database.execSQL("""
+                    CREATE TABLE notes (
+                        id TEXT PRIMARY KEY NOT NULL,
+                        title TEXT NOT NULL DEFAULT '',
+                        content TEXT NOT NULL DEFAULT '',
+                        createdAt INTEGER NOT NULL,
+                        updatedAt INTEGER NOT NULL,
+                        labels TEXT NOT NULL DEFAULT '',
+                        sourceDocId TEXT DEFAULT NULL,
+                        sourcePage INTEGER DEFAULT NULL
+                    )
+                """)
+                database.execSQL("CREATE INDEX idx_notes_source ON notes(sourceDocId)")
+            }
+        }
+
         fun getInstance(context: Context): JotdownDatabase {
             return INSTANCE ?: synchronized(this) {
                 Room.databaseBuilder(
@@ -64,7 +85,7 @@ abstract class JotdownDatabase : RoomDatabase() {
                     JotdownDatabase::class.java,
                     "jotdown_stable.db"
                 )
-                .addMigrations(MIGRATION_10_11, MIGRATION_11_12, MIGRATION_12_13)
+                .addMigrations(MIGRATION_10_11, MIGRATION_11_12, MIGRATION_12_13, MIGRATION_13_14)
                 .fallbackToDestructiveMigration()
                 .build()
                 .also { INSTANCE = it }

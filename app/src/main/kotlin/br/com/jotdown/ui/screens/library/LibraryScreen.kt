@@ -56,7 +56,7 @@ import kotlin.math.roundToInt
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun LibraryScreen(viewModel: LibraryViewModel, onOpenDocument: (String) -> Unit, onOpenSettings: () -> Unit = {}) {
+fun LibraryScreen(viewModel: LibraryViewModel, onOpenDocument: (String) -> Unit, onOpenNote: (String) -> Unit = {}, onOpenSettings: () -> Unit = {}) {
     val context = LocalContext.current
     val displayDocuments by viewModel.displayDocuments.collectAsState()
     val folders by viewModel.folders.collectAsState()
@@ -86,6 +86,8 @@ fun LibraryScreen(viewModel: LibraryViewModel, onOpenDocument: (String) -> Unit,
     var goalName by remember { mutableStateOf("") }
     var goalDescription by remember { mutableStateOf("") }
     var goalDeadline by remember { mutableStateOf<Long?>(null) }
+    var showCreateNoteSheetDialog by remember { mutableStateOf(false) }
+    var noteSheetTitle by remember { mutableStateOf("") }
 
     val pdfPicker = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri -> uri ?: return@rememberLauncherForActivityResult; viewModel.importPdf(context, uri) }
     val backupPicker = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri -> uri ?: return@rememberLauncherForActivityResult; viewModel.importBackup(context, uri) }
@@ -336,6 +338,14 @@ fun LibraryScreen(viewModel: LibraryViewModel, onOpenDocument: (String) -> Unit,
                                 text = { Text(stringResource(R.string.fab_new_goal), fontWeight = FontWeight.Bold) },
                                 containerColor = MaterialTheme.colorScheme.surfaceVariant,
                                 contentColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                                modifier = Modifier.padding(bottom = 12.dp)
+                            )
+                            ExtendedFloatingActionButton(
+                                onClick = { showFabMenu = false; showCreateNoteSheetDialog = true; noteSheetTitle = "" },
+                                icon = { Icon(Icons.AutoMirrored.Filled.StickyNote2, contentDescription = null) },
+                                text = { Text(stringResource(R.string.fab_new_note), fontWeight = FontWeight.Bold) },
+                                containerColor = MaterialTheme.colorScheme.surfaceVariant,
+                                contentColor = MaterialTheme.colorScheme.onSurfaceVariant,
                                 modifier = Modifier.padding(bottom = 16.dp)
                             )
                         }
@@ -372,6 +382,7 @@ fun LibraryScreen(viewModel: LibraryViewModel, onOpenDocument: (String) -> Unit,
                     "PDF" to stringResource(R.string.tab_pdf),
                     "Nota" to stringResource(R.string.tab_note),
                     "Pasta" to stringResource(R.string.tab_folder),
+                    "Fichas" to stringResource(R.string.tab_notes),
                     "Drive" to stringResource(R.string.tab_drive)
                 )
                 LazyRow(
@@ -404,6 +415,7 @@ fun LibraryScreen(viewModel: LibraryViewModel, onOpenDocument: (String) -> Unit,
                 val showFolders = currentFolder == null && currentFilter == "Tudo" && (currentTab == "Tudo" || currentTab == "Pasta")
                 val goalsToShow by viewModel.goalFolders.collectAsState()
                 val folderProgress by viewModel.folderProgress.collectAsState()
+                val notesToShow by viewModel.allNotes.collectAsState()
 
                 if (currentTab == "Drive") {
                         DriveLibraryContent(
@@ -411,6 +423,22 @@ fun LibraryScreen(viewModel: LibraryViewModel, onOpenDocument: (String) -> Unit,
                             context = context,
                             onOpenDocument = onOpenDocument
                         )
+                    } else if (currentTab == "Fichas") {
+                        if (notesToShow.isEmpty()) {
+                            EmptyLibrary(currentFilter, currentTab)
+                        } else {
+                            LazyVerticalGrid(
+                                columns = GridCells.Adaptive(minSize = 140.dp),
+                                horizontalArrangement = Arrangement.spacedBy(20.dp),
+                                verticalArrangement = Arrangement.spacedBy(32.dp),
+                                contentPadding = PaddingValues(bottom = 120.dp, top = 8.dp),
+                                modifier = Modifier.fillMaxSize()
+                            ) {
+                                items(notesToShow, key = { it.id }) { note ->
+                                    NoteCard(note = note, onClick = { onOpenNote(note.id) })
+                                }
+                            }
+                        }
                     } else if (currentFilter == "Metas") {
                         if (goalsToShow.isEmpty()) {
                             EmptyLibrary(currentFilter, currentTab)
@@ -514,6 +542,18 @@ fun LibraryScreen(viewModel: LibraryViewModel, onOpenDocument: (String) -> Unit,
     docToDelete?.let { doc -> AlertDialog(onDismissRequest = { docToDelete = null }, title = { Text(stringResource(R.string.dlg_delete_permanently_title)) }, text = { Text(stringResource(R.string.dlg_delete_permanently_msg, doc.title)) }, confirmButton = { TextButton(onClick = { viewModel.deleteDocument(context, doc.id); docToDelete = null }) { Text(stringResource(R.string.common_delete), color = MaterialTheme.colorScheme.error) } }, dismissButton = { TextButton(onClick = { docToDelete = null }) { Text(stringResource(R.string.common_cancel)) } }) }
     docToTag?.let { doc -> AlertDialog(onDismissRequest = { docToTag = null }, title = { Text(stringResource(R.string.dlg_edit_labels)) }, text = { Column { Text(stringResource(R.string.dlg_labels_hint), fontSize = 12.sp, color = MaterialTheme.colorScheme.outline); Spacer(Modifier.height(8.dp)); OutlinedTextField(value = tagText, onValueChange = { tagText = it }, label = { Text(stringResource(R.string.dlg_labels)) }, modifier = Modifier.fillMaxWidth()) } }, confirmButton = { TextButton(onClick = { viewModel.updateLabels(doc.id, tagText); docToTag = null }) { Text(stringResource(R.string.common_save), color = Indigo600, fontWeight = FontWeight.Bold) } }, dismissButton = { TextButton(onClick = { docToTag = null }) { Text(stringResource(R.string.common_cancel)) } }) }
     if (showImportWarning) { AlertDialog(onDismissRequest = { showImportWarning = false }, title = { Text(stringResource(R.string.menu_import_backup)) }, text = { Text(stringResource(R.string.dlg_import_backup_warning)) }, confirmButton = { TextButton(onClick = { showImportWarning = false; backupPicker.launch("application/zip") }) { Text(stringResource(R.string.dlg_import_confirm), color = MaterialTheme.colorScheme.error, fontWeight = FontWeight.Bold) } }, dismissButton = { TextButton(onClick = { showImportWarning = false }) { Text(stringResource(R.string.common_cancel)) } }) }
+    if (showCreateNoteSheetDialog) {
+        AlertDialog(
+            onDismissRequest = { showCreateNoteSheetDialog = false },
+            title = { Text(stringResource(R.string.dlg_new_note_title)) },
+            text = {
+                OutlinedTextField(value = noteSheetTitle, onValueChange = { noteSheetTitle = it }, singleLine = true, label = { Text(stringResource(R.string.dlg_note_title)) }, modifier = Modifier.fillMaxWidth())
+            },
+            confirmButton = { TextButton(onClick = { if (noteSheetTitle.isNotBlank()) { viewModel.createNote(noteSheetTitle.trim()); showCreateNoteSheetDialog = false; } }) { Text(stringResource(R.string.common_create), color = Indigo600, fontWeight = FontWeight.Bold) } },
+            dismissButton = { TextButton(onClick = { showCreateNoteSheetDialog = false }) { Text(stringResource(R.string.common_cancel)) } }
+        )
+    }
+
     if (showCreateGoalDialog) {
         AlertDialog(
             onDismissRequest = { showCreateGoalDialog = false },
@@ -1042,5 +1082,51 @@ private fun formatDriveFileSize(bytes: Long): String {
         bytes >= 1_048_576L -> "${"%.1f".format(bytes / 1_048_576.0)} MB"
         bytes >= 1_024L -> "${bytes / 1_024} KB"
         else -> "$bytes B"
+    }
+}
+
+@Composable
+fun NoteCard(note: br.com.jotdown.data.entity.NoteEntity, onClick: () -> Unit) {
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .aspectRatio(0.75f)
+            .clickable { onClick() },
+        colors = CardDefaults.cardColors(containerColor = Color(0xFFFFFBEB)),
+        elevation = CardDefaults.cardElevation(2.dp),
+        shape = RoundedCornerShape(12.dp)
+    ) {
+        Column(modifier = Modifier.fillMaxSize().padding(12.dp)) {
+            Text(
+                note.title,
+                fontWeight = FontWeight.Bold,
+                fontSize = 14.sp,
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis,
+                color = MaterialTheme.colorScheme.onBackground
+            )
+            Spacer(Modifier.height(8.dp))
+            Text(
+                note.content,
+                fontSize = 11.sp,
+                maxLines = 4,
+                overflow = TextOverflow.Ellipsis,
+                color = MaterialTheme.colorScheme.outline
+            )
+            Spacer(Modifier.weight(1f))
+            if (note.labels.isNotBlank()) {
+                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                    note.labels.split(",").map { it.trim() }.filter { it.isNotEmpty() }.take(2).forEach { tag ->
+                        Box(
+                            modifier = Modifier
+                                .background(Color(0xFFFEF3C7), RoundedCornerShape(2.dp))
+                                .padding(horizontal = 3.dp, vertical = 1.dp)
+                        ) {
+                            Text(tag, fontSize = 8.sp, fontWeight = FontWeight.Bold, color = Color(0xFFD97706))
+                        }
+                    }
+                }
+            }
+        }
     }
 }

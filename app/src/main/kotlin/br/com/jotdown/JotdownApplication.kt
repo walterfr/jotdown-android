@@ -22,7 +22,8 @@ class JotdownApplication : Application() {
             annotationDao = database.annotationDao(),
             highlightDao  = database.highlightDao(),
             drawingDao    = database.drawingDao(),
-            folderDao     = database.folderDao()
+            folderDao     = database.folderDao(),
+            noteDao       = database.noteDao()
         )
     }
 
