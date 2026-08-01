@@ -33,6 +33,7 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.*
 import br.com.jotdown.R
 import br.com.jotdown.data.entity.*
@@ -81,6 +82,8 @@ fun ReaderScreen(
     var numPages        by remember { mutableIntStateOf(0) }
     var showSidebar     by remember { mutableStateOf(false) }
     var showAnnotations by remember { mutableStateOf(false) }
+    var showLinkHighlight by remember { mutableStateOf(false) }
+    var selectedHighlightId by remember { mutableStateOf<Long?>(null) }
 
     var ocrResult        by remember { mutableStateOf<Pair<Int, String>?>(null) }
     var textToEdit       by remember { mutableStateOf("") }
@@ -425,6 +428,16 @@ fun ReaderScreen(
             onDismiss = { showAnnotations = false },
             onDelete = { id -> viewModel.deleteAnnotation(id) },
             onGoToPage = { page -> viewModel.setCurrentPage(page); scrollToPage = page }
+        )
+    }
+
+    if (showLinkHighlight && selectedHighlightId != null) {
+        val allDocs by viewModel.allDocuments.collectAsState()
+        LinkHighlightDialog(
+            highlightId = selectedHighlightId!!,
+            allDocuments = allDocs,
+            onLink = { hId, docId -> viewModel.linkHighlight(hId, docId) },
+            onDismiss = { showLinkHighlight = false; selectedHighlightId = null }
         )
     }
 
@@ -1332,4 +1345,47 @@ fun parseDrawingsJson(json: String): List<DrawnPath> {
         }
     } catch(e: Exception) {}
     return res
+}
+
+@Composable
+fun LinkHighlightDialog(
+    highlightId: Long,
+    allDocuments: List<DocumentEntity>,
+    onLink: (Long, String?) -> Unit,
+    onDismiss: () -> Unit
+) {
+    var searchQuery by remember { mutableStateOf("") }
+    val filtered = allDocuments.filter { it.title.contains(searchQuery, ignoreCase = true) }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Link to Document") },
+        text = {
+            Column(modifier = Modifier.fillMaxWidth().heightIn(max = 300.dp)) {
+                OutlinedTextField(
+                    value = searchQuery,
+                    onValueChange = { searchQuery = it },
+                    placeholder = { Text("Search documents...") },
+                    modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp),
+                    singleLine = true
+                )
+                filtered.forEach { doc ->
+                    TextButton(
+                        onClick = { onLink(highlightId, doc.id); onDismiss() },
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        val displayTitle = if (doc.title.isNotBlank()) doc.title else doc.fileName
+                        Text(displayTitle, modifier = Modifier.fillMaxWidth(), textAlign = TextAlign.Start)
+                    }
+                }
+                Spacer(Modifier.height(8.dp))
+                TextButton(onClick = { onLink(highlightId, null); onDismiss() }) {
+                    Text("Clear Link", color = Color.Gray)
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = onDismiss) { Text("Close") }
+        }
+    )
 }

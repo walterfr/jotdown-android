@@ -14,4 +14,7 @@ interface HighlightDao {
 
     @Query("DELETE FROM highlights WHERE id = :id")
     fun deleteHighlightById(id: Long): Int
+
+    @Query("UPDATE highlights SET linkedDocId = :linkedDocId WHERE id = :highlightId")
+    fun updateLinkedDoc(highlightId: Long, linkedDocId: String?): Int
 }

@@ -19,7 +19,7 @@ import br.com.jotdown.data.entity.*
         DictionaryCache::class,
         NoteEntity::class
     ],
-    version = 15,
+    version = 16,
     exportSchema = false
 )
 abstract class JotdownDatabase : RoomDatabase() {
@@ -85,6 +85,13 @@ abstract class JotdownDatabase : RoomDatabase() {
             }
         }
 
+        /** Adds linkedDocId to highlights for citation linking. */
+        private val MIGRATION_15_16 = object : Migration(15, 16) {
+            override fun migrate(database: SupportSQLiteDatabase) {
+                database.execSQL("ALTER TABLE highlights ADD COLUMN linkedDocId TEXT DEFAULT NULL")
+            }
+        }
+
         fun getInstance(context: Context): JotdownDatabase {
             return INSTANCE ?: synchronized(this) {
                 Room.databaseBuilder(
@@ -92,7 +99,7 @@ abstract class JotdownDatabase : RoomDatabase() {
                     JotdownDatabase::class.java,
                     "jotdown_stable.db"
                 )
-                .addMigrations(MIGRATION_10_11, MIGRATION_11_12, MIGRATION_12_13, MIGRATION_13_14, MIGRATION_14_15)
+                .addMigrations(MIGRATION_10_11, MIGRATION_11_12, MIGRATION_12_13, MIGRATION_13_14, MIGRATION_14_15, MIGRATION_15_16)
                 .fallbackToDestructiveMigration()
                 .build()
                 .also { INSTANCE = it }

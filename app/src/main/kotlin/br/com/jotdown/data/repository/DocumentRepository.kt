@@ -36,6 +36,7 @@ class DocumentRepository(
     fun getHighlightsForDocument(docId: String) = highlightDao.getHighlightsForDocument(docId)
     suspend fun insertHighlight(highlight: HighlightEntity) = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { highlightDao.insertHighlight(highlight); triggerSync() }
     suspend fun deleteHighlight(id: Long) = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { highlightDao.deleteHighlightById(id); triggerSync() }
+    suspend fun linkHighlightToDocument(highlightId: Long, linkedDocId: String?) = withContext(Dispatchers.IO) { highlightDao.updateLinkedDoc(highlightId, linkedDocId); triggerSync() }
 
     fun getAllFolders(): Flow<List<FolderEntity>> = folderDao.getAllFolders()
     

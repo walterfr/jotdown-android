@@ -50,6 +50,7 @@ class ReaderViewModel(
     val highlights = repository.getHighlightsForDocument(documentId).stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
     val drawings = repository.getDrawingsForDocument(documentId).stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
     val notes = repository.getNotesForDocument(documentId).stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+    val allDocuments = repository.getAllDocuments().stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     private val _dictionaryState = MutableStateFlow<DictionaryLookupState>(DictionaryLookupState.Idle)
     val dictionaryState: StateFlow<DictionaryLookupState> = _dictionaryState
@@ -194,6 +195,7 @@ class ReaderViewModel(
 
     fun updateHighlight(id: Long, text: String) = viewModelScope.launch(Dispatchers.IO) { highlights.value.find { it.id == id }?.let { repository.insertHighlight(it.copy(text = text)) } }
     fun deleteHighlight(id: Long) = viewModelScope.launch(Dispatchers.IO) { repository.deleteHighlight(id) }
+    fun linkHighlight(highlightId: Long, linkedDocId: String?) = viewModelScope.launch(Dispatchers.IO) { repository.linkHighlightToDocument(highlightId, linkedDocId) }
     fun addHighlight(page: Int, text: String) = viewModelScope.launch(Dispatchers.IO) {
         repository.insertHighlight(HighlightEntity(id = 0L, documentId = documentId, page = page, text = text))
     }

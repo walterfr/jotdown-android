@@ -19,6 +19,7 @@ data class HighlightEntity(
     @PrimaryKey(autoGenerate = true) val id: Long = 0,
     val documentId: String,
     val page: Int,
-    val text: String
+    val text: String,
+    val linkedDocId: String? = null
 )
 
