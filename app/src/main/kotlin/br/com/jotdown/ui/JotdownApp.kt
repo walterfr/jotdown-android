@@ -55,7 +55,11 @@ fun JotdownApp() {
             val documentId = backStack.arguments?.getString("documentId") ?: return@composable
             val app = context.applicationContext as JotdownApplication
             val vm: ReaderViewModel = viewModel(factory = ReaderViewModelFactory(repository, documentId, app.dictionaryRepository))
-            ReaderScreen(viewModel = vm, onBack = { navController.popBackStack() })
+            ReaderScreen(
+                viewModel = vm,
+                onBack = { navController.popBackStack() },
+                onOpenNote = { noteId -> navController.navigate(Screen.Note.createRoute(noteId)) }
+            )
         }
 
         composable(Screen.Note.route) { backStack ->

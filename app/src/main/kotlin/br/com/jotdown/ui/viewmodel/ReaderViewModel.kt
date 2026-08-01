@@ -49,6 +49,7 @@ class ReaderViewModel(
     val annotations = repository.getAnnotationsForDocument(documentId).stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
     val highlights = repository.getHighlightsForDocument(documentId).stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
     val drawings = repository.getDrawingsForDocument(documentId).stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+    val notes = repository.getNotesForDocument(documentId).stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     private val _dictionaryState = MutableStateFlow<DictionaryLookupState>(DictionaryLookupState.Idle)
     val dictionaryState: StateFlow<DictionaryLookupState> = _dictionaryState
@@ -195,6 +196,14 @@ class ReaderViewModel(
     fun deleteHighlight(id: Long) = viewModelScope.launch(Dispatchers.IO) { repository.deleteHighlight(id) }
     fun addHighlight(page: Int, text: String) = viewModelScope.launch(Dispatchers.IO) {
         repository.insertHighlight(HighlightEntity(id = 0L, documentId = documentId, page = page, text = text))
+    }
+
+    private val _noteCreatedEvent = MutableSharedFlow<String>()
+    val noteCreatedEvent: SharedFlow<String> = _noteCreatedEvent
+
+    fun createNote(page: Int? = null) = viewModelScope.launch(Dispatchers.IO) {
+        val noteId = repository.createNoteForDocument(documentId, page, "", "")
+        _noteCreatedEvent.emit(noteId)
     }
 
     fun saveMetadata(docType: String, authorLastName: String, authorFirstName: String, title: String, subtitle: String, edition: String, city: String, publisher: String, year: String, journal: String, volume: String, pages: String, url: String, accessDate: String) = viewModelScope.launch(Dispatchers.IO) {

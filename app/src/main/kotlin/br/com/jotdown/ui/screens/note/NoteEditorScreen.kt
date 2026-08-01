@@ -3,10 +3,12 @@ package br.com.jotdown.ui.screens.note
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Description
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -85,13 +87,37 @@ fun NoteEditorScreen(noteId: String, repository: DocumentRepository, onBack: () 
                 onValueChange = { viewModel.updateContent(it) },
                 placeholder = { Text(stringResource(R.string.lib_search_placeholder)) },
                 modifier = Modifier
-                    .fillMaxSize()
+                    .weight(1f)
+                    .fillMaxWidth()
                     .padding(16.dp),
                 colors = TextFieldDefaults.colors(
                     focusedContainerColor = MaterialTheme.colorScheme.surface,
                     unfocusedContainerColor = MaterialTheme.colorScheme.surface
                 )
             )
+
+            if (note?.sourceDocId != null) {
+                Surface(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(16.dp),
+                    color = Indigo600.copy(alpha = 0.1f),
+                    shape = RoundedCornerShape(8.dp)
+                ) {
+                    Row(
+                        modifier = Modifier.padding(12.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        Icon(Icons.Default.Description, null, tint = Indigo600, modifier = Modifier.size(16.dp))
+                        Text(
+                            text = "Source: Page ${note?.sourcePage ?: "?"}",
+                            fontSize = 12.sp,
+                            color = Indigo600
+                        )
+                    }
+                }
+            }
         }
     }
 

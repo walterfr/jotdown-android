@@ -237,6 +237,7 @@
     <string name="readerbar_night_mode">Night Mode</string>
     <string name="readerbar_fullscreen">Fullscreen</string>
     <string name="readerbar_annotations">Notes</string>
+    <string name="readerbar_notes">Notes (Atomic)</string>
     <string name="readerbar_book_outline">Book Outline</string>
     <string name="readerbar_share_original_pdf">Share Original PDF</string>
 

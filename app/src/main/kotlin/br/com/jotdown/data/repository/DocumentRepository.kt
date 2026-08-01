@@ -62,6 +62,21 @@ class DocumentRepository(
     suspend fun deleteNote(id: String) { noteDao?.deleteNote(id); triggerSync() }
     suspend fun updateNote(id: String, title: String, content: String) { noteDao?.updateNote(id, title, content, System.currentTimeMillis()); triggerSync() }
 
+    suspend fun createNoteForDocument(docId: String, page: Int?, title: String = "", content: String = ""): String {
+        val noteId = java.util.UUID.randomUUID().toString()
+        upsertNote(NoteEntity(
+            id = noteId,
+            title = title,
+            content = content,
+            createdAt = System.currentTimeMillis(),
+            updatedAt = System.currentTimeMillis(),
+            labels = "",
+            sourceDocId = docId,
+            sourcePage = page
+        ))
+        return noteId
+    }
+
     suspend fun updateMetadata(id: String, type: String, last: String, first: String, title: String, subtitle: String, edition: String, city: String, publisher: String, year: String, journal: String, volume: String, pages: String, url: String, accessDate: String) { 
         getDocumentById(id)?.let { 
             upsertDocument(it.copy(docType = type, authorLastName = last, authorFirstName = first, title = title, subtitle = subtitle, edition = edition, city = city, publisher = publisher, year = year, journal = journal, volume = volume, pages = pages, url = url, accessDate = accessDate)) 

@@ -55,7 +55,8 @@ enum class Tool { NONE, SELECT, PEN, PENCIL, HIGHLIGHTER, ERASER, ANNOTATION, DI
 @Composable
 fun ReaderScreen(
     viewModel: ReaderViewModel,
-    onBack: () -> Unit
+    onBack: () -> Unit,
+    onOpenNote: (String) -> Unit = {}
 ) {
     val pdfFile         by viewModel.pdfFile.collectAsState()
     val currentPage     by viewModel.currentPage.collectAsState()
@@ -66,6 +67,7 @@ fun ReaderScreen(
     val drawings        by viewModel.drawings.collectAsState()
     val document        by viewModel.document.collectAsState()
     val strokeWidthMultiplier by viewModel.strokeWidthMultiplier.collectAsState()
+    val notes           by viewModel.notes.collectAsState()
 
     val context = LocalContext.current
     val prefs = remember { context.getSharedPreferences("pdf_prefs", android.content.Context.MODE_PRIVATE) }
@@ -156,6 +158,12 @@ fun ReaderScreen(
         }
     }
 
+    LaunchedEffect(Unit) {
+        viewModel.noteCreatedEvent.collect { noteId ->
+            onOpenNote(noteId)
+        }
+    }
+
     if (isTextFormat && pdfFile != null) {
         TextReader(
             filePath = pdfFile!!.absolutePath,
@@ -186,9 +194,9 @@ fun ReaderScreen(
                     onAbntClick = { showAbntDialog = true },
                     onExportClick = { showExportDialog = true },
                     isDarkMode = isDarkMode,
-                    onToggleDarkMode = { 
+                    onToggleDarkMode = {
                         isDarkMode = !isDarkMode
-                        prefs.edit().putBoolean("dark_mode_$docId", isDarkMode).apply() 
+                        prefs.edit().putBoolean("dark_mode_$docId", isDarkMode).apply()
                     },
                     onSharePdf = {
                         val uri = androidx.core.content.FileProvider.getUriForFile(context, "${context.packageName}.provider", pdfFile!!)
@@ -199,7 +207,9 @@ fun ReaderScreen(
                         }
                         context.startActivity(android.content.Intent.createChooser(intent, context.getString(R.string.reader_share_pdf_chooser)))
                     },
-                    onOutlineClick = { showOutline = true }
+                    onOutlineClick = { showOutline = true },
+                    onCreateNote = { viewModel.createNote(currentPage) },
+                    notesCount = notes.size
                 )
             }
         },
