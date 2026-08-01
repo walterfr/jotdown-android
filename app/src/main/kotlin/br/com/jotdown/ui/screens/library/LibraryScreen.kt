@@ -415,6 +415,7 @@ fun LibraryScreen(viewModel: LibraryViewModel, onOpenDocument: (String) -> Unit,
                                         onMoveToTrash = { viewModel.moveToTrash(doc.id) },
                                         onRestore = { viewModel.restoreFromTrash(doc.id) },
                                         onToggleFavorite = { viewModel.toggleFavorite(doc.id, !doc.isFavorite) },
+                                        onUpdateReadingStatus = { status -> viewModel.updateReadingStatus(doc.id, status) },
                                         onGloballyPositioned = { coordinates -> boundsMap[doc.id] = coordinates },
                                         onDragStart = { offset -> globalDragPos = boundsMap[doc.id]!!.topLeft + offset; draggingDocId = doc.id; showFabMenu = false },
                                         onDrag = { dragAmount -> globalDragPos += dragAmount; targetDocId = boundsMap.entries.find { it.key != doc.id && it.value.contains(globalDragPos) }?.key; targetFolderId = folderBoundsMap.entries.find { it.value.contains(globalDragPos) }?.key },
@@ -524,7 +525,7 @@ fun FolderCard(folder: FolderEntity, isTarget: Boolean, onClick: () -> Unit, onR
 @Composable
 private fun DocumentCoverCard(
     doc: DocumentSummary, isDragging: Boolean, isTarget: Boolean, inFolder: Boolean, currentFilter: String, context: android.content.Context,
-    onCardClick: () -> Unit, onRename: () -> Unit, onEditTags: () -> Unit, onDelete: () -> Unit, onRemoveFromFolder: () -> Unit, onMoveToTrash: () -> Unit, onRestore: () -> Unit, onToggleFavorite: () -> Unit,
+    onCardClick: () -> Unit, onRename: () -> Unit, onEditTags: () -> Unit, onDelete: () -> Unit, onRemoveFromFolder: () -> Unit, onMoveToTrash: () -> Unit, onRestore: () -> Unit, onToggleFavorite: () -> Unit, onUpdateReadingStatus: (String) -> Unit,
     onGloballyPositioned: (Rect) -> Unit, onDragStart: (Offset) -> Unit, onDrag: (Offset) -> Unit, onDragEnd: () -> Unit
 ) {
     val dateFormat = remember { SimpleDateFormat("dd/MM/yy", Locale.getDefault()) }
@@ -582,8 +583,21 @@ private fun DocumentCoverCard(
                     Box(modifier = Modifier.align(Alignment.TopEnd).padding(4.dp)) {
                         IconButton(onClick = { expanded = true }, modifier = Modifier.size(32.dp).background(Color.White.copy(alpha = 0.85f), RoundedCornerShape(50))) { Icon(Icons.Default.MoreVert, contentDescription = stringResource(R.string.common_options), tint = Color.Black, modifier = Modifier.size(20.dp)) }
                         DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
-                            if (currentFilter == "Lixo") { DropdownMenuItem(text = { Text(stringResource(R.string.menu_restore)) }, onClick = { expanded = false; onRestore() }); DropdownMenuItem(text = { Text(stringResource(R.string.menu_delete_permanently), color = Color.Red) }, onClick = { expanded = false; onDelete() }) }
-                            else { DropdownMenuItem(text = { Text(stringResource(R.string.common_rename)) }, onClick = { expanded = false; onRename() }); DropdownMenuItem(text = { Text(stringResource(R.string.dlg_edit_labels)) }, onClick = { expanded = false; onEditTags() }); if (inFolder) { DropdownMenuItem(text = { Text(stringResource(R.string.menu_remove_from_folder)) }, onClick = { expanded = false; onRemoveFromFolder() }) }; DropdownMenuItem(text = { Text(stringResource(R.string.menu_move_to_trash)) }, onClick = { expanded = false; onMoveToTrash() }) }
+                            if (currentFilter == "Lixo") {
+                                DropdownMenuItem(text = { Text(stringResource(R.string.menu_restore)) }, onClick = { expanded = false; onRestore() })
+                                DropdownMenuItem(text = { Text(stringResource(R.string.menu_delete_permanently), color = Color.Red) }, onClick = { expanded = false; onDelete() })
+                            }
+                            else {
+                                DropdownMenuItem(text = { Text(stringResource(R.string.common_rename)) }, onClick = { expanded = false; onRename() })
+                                DropdownMenuItem(text = { Text(stringResource(R.string.dlg_edit_labels)) }, onClick = { expanded = false; onEditTags() })
+                                Divider()
+                                DropdownMenuItem(text = { Text("Para ler", fontWeight = if (doc.readingStatus == "TO_READ") FontWeight.Bold else FontWeight.Normal) }, onClick = { expanded = false; onUpdateReadingStatus("TO_READ") })
+                                DropdownMenuItem(text = { Text("Lendo", fontWeight = if (doc.readingStatus == "READING") FontWeight.Bold else FontWeight.Normal) }, onClick = { expanded = false; onUpdateReadingStatus("READING") })
+                                DropdownMenuItem(text = { Text("Lido", fontWeight = if (doc.readingStatus == "READ") FontWeight.Bold else FontWeight.Normal) }, onClick = { expanded = false; onUpdateReadingStatus("READ") })
+                                Divider()
+                                if (inFolder) { DropdownMenuItem(text = { Text(stringResource(R.string.menu_remove_from_folder)) }, onClick = { expanded = false; onRemoveFromFolder() }) }
+                                DropdownMenuItem(text = { Text(stringResource(R.string.menu_move_to_trash)) }, onClick = { expanded = false; onMoveToTrash() })
+                            }
                         }
                     }
                 }

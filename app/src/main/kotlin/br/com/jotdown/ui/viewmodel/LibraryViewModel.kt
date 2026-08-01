@@ -447,8 +447,12 @@ class LibraryViewModel(private val repository: DocumentRepository, private val a
     fun importBackup(context: Context, uri: Uri) = viewModelScope.launch { br.com.jotdown.util.BackupUtil.importBackup(context, uri) }
     
     suspend fun getBackupFile(context: Context): File? = br.com.jotdown.util.BackupUtil.getBackupFileForSaving(context)
-    fun saveBackupToUri(context: Context, sourceFile: File, uri: Uri) = viewModelScope.launch { 
-        br.com.jotdown.util.BackupUtil.saveBackupToUri(context, sourceFile, uri) 
+    fun saveBackupToUri(context: Context, sourceFile: File, uri: Uri) = viewModelScope.launch {
+        br.com.jotdown.util.BackupUtil.saveBackupToUri(context, sourceFile, uri)
+    }
+
+    fun updateReadingStatus(id: String, status: String) = viewModelScope.launch {
+        repository.updateReadingStatus(id, status)
     }
 }
 

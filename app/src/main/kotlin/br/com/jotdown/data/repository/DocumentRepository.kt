@@ -64,6 +64,7 @@ class DocumentRepository(
     suspend fun updateFavoriteStatus(id: String, isFavorite: Boolean) { documentDao.updateFavoriteStatus(id, isFavorite); triggerSync() }
     suspend fun updateTrashStatus(id: String, isTrashed: Boolean) { documentDao.updateTrashStatus(id, isTrashed); triggerSync() }
     suspend fun updateAccessDate(id: String, accessDate: String) { documentDao.updateAccessDate(id, accessDate); triggerSync() }
+    suspend fun updateReadingStatus(id: String, status: String) { documentDao.updateReadingStatus(id, status); triggerSync() }
     suspend fun saveDocument(doc: DocumentEntity) = upsertDocument(doc)
     suspend fun getDocumentByDriveFileId(driveFileId: String) = documentDao.getDocumentByDriveFileId(driveFileId)
     suspend fun getDocumentsByDriveFileIds(driveFileIds: List<String>) = documentDao.getDocumentsByDriveFileIds(driveFileIds)
