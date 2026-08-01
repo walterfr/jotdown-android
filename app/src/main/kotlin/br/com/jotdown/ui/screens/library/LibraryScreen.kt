@@ -123,6 +123,10 @@ fun LibraryScreen(viewModel: LibraryViewModel, onOpenDocument: (String) -> Unit,
         drawerState = drawerState,
         drawerContent = {
             ModalDrawerSheet(drawerContainerColor = MaterialTheme.colorScheme.surface) {
+                // Corpo rolável: sem isto, os itens abaixo da dobra ficam
+                // inalcançáveis — foi o que engoliu o "Sobre" quando as seções
+                // de status e metas entraram.
+                Column(modifier = Modifier.weight(1f).verticalScroll(rememberScrollState())) {
                 // ── Cabeçalho com avatar ───────────────────────────────────
                 Box(
                     modifier = Modifier
@@ -197,8 +201,10 @@ fun LibraryScreen(viewModel: LibraryViewModel, onOpenDocument: (String) -> Unit,
                     }
                 }
 
-                // ── Rodapé com versão ────────────────────────────────────
-                Spacer(Modifier.weight(1f))
+                }
+
+                // ── Rodapé fixo: fica fora do scroll, sempre visível ──────
+                HorizontalDivider()
                 NavigationDrawerItem(
                     icon = { Icon(Icons.Default.Settings, contentDescription = null) },
                     label = { Text(stringResource(R.string.drawer_settings_cloud)) },
