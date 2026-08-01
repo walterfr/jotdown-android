@@ -18,7 +18,7 @@ import br.com.jotdown.data.entity.*
         FolderEntity::class,
         DictionaryCache::class
     ],
-    version = 11,
+    version = 12,
     exportSchema = false
 )
 abstract class JotdownDatabase : RoomDatabase() {
@@ -41,6 +41,13 @@ abstract class JotdownDatabase : RoomDatabase() {
             }
         }
 
+        /** Adds readingStatus column for tracking reading progress. */
+        private val MIGRATION_11_12 = object : Migration(11, 12) {
+            override fun migrate(database: SupportSQLiteDatabase) {
+                database.execSQL("ALTER TABLE documents ADD COLUMN readingStatus TEXT DEFAULT 'TO_READ'")
+            }
+        }
+
         fun getInstance(context: Context): JotdownDatabase {
             return INSTANCE ?: synchronized(this) {
                 Room.databaseBuilder(
@@ -48,7 +55,7 @@ abstract class JotdownDatabase : RoomDatabase() {
                     JotdownDatabase::class.java,
                     "jotdown_stable.db"
                 )
-                .addMigrations(MIGRATION_10_11)
+                .addMigrations(MIGRATION_10_11, MIGRATION_11_12)
                 .fallbackToDestructiveMigration()
                 .build()
                 .also { INSTANCE = it }
