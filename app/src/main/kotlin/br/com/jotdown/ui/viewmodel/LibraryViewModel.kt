@@ -76,6 +76,10 @@ class LibraryViewModel(private val repository: DocumentRepository, private val a
                 val tag = filter.removePrefix("Tag:")
                 repository.getAllDocumentSummaries().map { list -> list.filter { it.labels.split(",").map { l -> l.trim() }.contains(tag) } }
             }
+            filter.startsWith("Status:") -> {
+                val status = filter.removePrefix("Status:")
+                repository.getAllDocumentSummaries().map { list -> list.filter { it.readingStatus == status } }
+            }
             else -> repository.getDocumentSummariesByFolder(folder?.id)
         }
         

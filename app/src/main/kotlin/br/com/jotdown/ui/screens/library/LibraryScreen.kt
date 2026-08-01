@@ -164,6 +164,12 @@ fun LibraryScreen(viewModel: LibraryViewModel, onOpenDocument: (String) -> Unit,
                 NavigationDrawerItem(icon = { Icon(Icons.Default.Favorite, contentDescription = null) }, label = { Text(stringResource(R.string.drawer_favorites)) }, selected = currentFilter == "Favoritos", onClick = { viewModel.setFilter("Favoritos"); scope.launch { drawerState.close() } })
                 NavigationDrawerItem(icon = { Icon(Icons.Default.DeleteOutline, contentDescription = null) }, label = { Text(stringResource(R.string.drawer_trash)) }, selected = currentFilter == "Lixo", onClick = { viewModel.setFilter("Lixo"); scope.launch { drawerState.close() } })
 
+                HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
+                Text(stringResource(R.string.drawer_reading), modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp), fontWeight = FontWeight.Bold, fontSize = 13.sp, color = MaterialTheme.colorScheme.outline)
+                NavigationDrawerItem(icon = { Icon(Icons.Default.Bookmark, contentDescription = null) }, label = { Text(stringResource(R.string.status_to_read)) }, selected = currentFilter == "Status:TO_READ", onClick = { viewModel.setFilter("Status:TO_READ"); scope.launch { drawerState.close() } })
+                NavigationDrawerItem(icon = { Icon(Icons.Default.AutoStories, contentDescription = null) }, label = { Text(stringResource(R.string.status_reading)) }, selected = currentFilter == "Status:READING", onClick = { viewModel.setFilter("Status:READING"); scope.launch { drawerState.close() } })
+                NavigationDrawerItem(icon = { Icon(Icons.Default.CheckCircle, contentDescription = null) }, label = { Text(stringResource(R.string.status_read)) }, selected = currentFilter == "Status:READ", onClick = { viewModel.setFilter("Status:READ"); scope.launch { drawerState.close() } })
+
                 if (availableTags.isNotEmpty()) {
                     HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
                     Text(stringResource(R.string.drawer_my_labels), modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp), fontWeight = FontWeight.Bold, fontSize = 13.sp, color = MaterialTheme.colorScheme.outline)
@@ -580,6 +586,32 @@ private fun DocumentCoverCard(
                     )
                     
                     IconButton(onClick = onToggleFavorite, modifier = Modifier.align(Alignment.TopStart).padding(4.dp)) { Icon(if (doc.isFavorite) Icons.Default.Favorite else Icons.Default.FavoriteBorder, contentDescription = stringResource(R.string.lib_favorite), tint = if (doc.isFavorite) Color.Red else Color.DarkGray) }
+
+                    // Status indicator (only if not TO_READ)
+                    if (doc.readingStatus != "TO_READ") {
+                        Box(
+                            modifier = Modifier.align(Alignment.BottomEnd).padding(8.dp).background(
+                                when (doc.readingStatus) {
+                                    "READING" -> Color(0xFFF59E0B)
+                                    "READ" -> Color(0xFF059669)
+                                    else -> Color.Transparent
+                                },
+                                RoundedCornerShape(4.dp)
+                            ).padding(horizontal = 6.dp, vertical = 3.dp)
+                        ) {
+                            Text(
+                                when (doc.readingStatus) {
+                                    "READING" -> stringResource(R.string.status_reading)
+                                    "READ" -> stringResource(R.string.status_read)
+                                    else -> ""
+                                },
+                                fontSize = 10.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = Color.White
+                            )
+                        }
+                    }
+
                     Box(modifier = Modifier.align(Alignment.TopEnd).padding(4.dp)) {
                         IconButton(onClick = { expanded = true }, modifier = Modifier.size(32.dp).background(Color.White.copy(alpha = 0.85f), RoundedCornerShape(50))) { Icon(Icons.Default.MoreVert, contentDescription = stringResource(R.string.common_options), tint = Color.Black, modifier = Modifier.size(20.dp)) }
                         DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
@@ -591,9 +623,9 @@ private fun DocumentCoverCard(
                                 DropdownMenuItem(text = { Text(stringResource(R.string.common_rename)) }, onClick = { expanded = false; onRename() })
                                 DropdownMenuItem(text = { Text(stringResource(R.string.dlg_edit_labels)) }, onClick = { expanded = false; onEditTags() })
                                 Divider()
-                                DropdownMenuItem(text = { Text("Para ler", fontWeight = if (doc.readingStatus == "TO_READ") FontWeight.Bold else FontWeight.Normal) }, onClick = { expanded = false; onUpdateReadingStatus("TO_READ") })
-                                DropdownMenuItem(text = { Text("Lendo", fontWeight = if (doc.readingStatus == "READING") FontWeight.Bold else FontWeight.Normal) }, onClick = { expanded = false; onUpdateReadingStatus("READING") })
-                                DropdownMenuItem(text = { Text("Lido", fontWeight = if (doc.readingStatus == "READ") FontWeight.Bold else FontWeight.Normal) }, onClick = { expanded = false; onUpdateReadingStatus("READ") })
+                                DropdownMenuItem(text = { Text(stringResource(R.string.status_to_read), fontWeight = if (doc.readingStatus == "TO_READ") FontWeight.Bold else FontWeight.Normal) }, onClick = { expanded = false; onUpdateReadingStatus("TO_READ") })
+                                DropdownMenuItem(text = { Text(stringResource(R.string.status_reading), fontWeight = if (doc.readingStatus == "READING") FontWeight.Bold else FontWeight.Normal) }, onClick = { expanded = false; onUpdateReadingStatus("READING") })
+                                DropdownMenuItem(text = { Text(stringResource(R.string.status_read), fontWeight = if (doc.readingStatus == "READ") FontWeight.Bold else FontWeight.Normal) }, onClick = { expanded = false; onUpdateReadingStatus("READ") })
                                 Divider()
                                 if (inFolder) { DropdownMenuItem(text = { Text(stringResource(R.string.menu_remove_from_folder)) }, onClick = { expanded = false; onRemoveFromFolder() }) }
                                 DropdownMenuItem(text = { Text(stringResource(R.string.menu_move_to_trash)) }, onClick = { expanded = false; onMoveToTrash() })

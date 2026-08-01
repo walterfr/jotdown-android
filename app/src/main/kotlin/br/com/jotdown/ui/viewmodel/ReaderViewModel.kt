@@ -75,6 +75,10 @@ class ReaderViewModel(
             val doc = repository.getDocumentById(documentId)
             _document.value = doc
             doc?.pdfFilePath?.let { _pdfFile.value = File(it) }
+            // Auto-transition TO_READ → READING on open
+            if (doc?.readingStatus == "TO_READ") {
+                repository.updateReadingStatus(documentId, "READING")
+            }
         }
     }
 

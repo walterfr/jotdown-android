@@ -22,6 +22,7 @@
     <string name="drawer_favorites">Favoritos</string>
     <string name="drawer_trash">Lixo</string>
     <string name="drawer_my_labels">Meus Rótulos</string>
+    <string name="drawer_reading">Leitura</string>
     <string name="drawer_settings_cloud">Configurações e Nuvem</string>
     <string name="drawer_about">Sobre</string>
 
@@ -32,6 +33,9 @@
     <string name="lib_syncing">Sincronizando…</string>
     <string name="lib_synced">Sincronizado</string>
     <string name="lib_sort">Ordenar</string>
+    <string name="status_to_read">Para ler</string>
+    <string name="status_reading">Lendo</string>
+    <string name="status_read">Lido</string>
     <string name="sort_recent">Recentes</string>
     <string name="sort_az">A-Z</string>
     <string name="sort_za">Z-A</string>
