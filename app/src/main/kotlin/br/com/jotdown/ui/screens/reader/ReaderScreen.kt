@@ -403,14 +403,17 @@ fun ReaderScreen(
     }
 
     if (showSidebar) {
+        val doiImportStatus by viewModel.doiImportStatus.collectAsState()
         MetadataSheet(
-            document = document, 
+            document = document,
             highlights = highlights,
             pageOffset = pageOffset,
             onSave = { p -> viewModel.saveMetadata(p.docType, p.authorLastName, p.authorFirstName, p.title, p.subtitle, p.edition, p.city, p.publisher, p.year, p.journal, p.volume, p.pages, p.url, p.accessDate) },
             onUpdateHighlight = { _, _ -> },
             onDeleteHighlight = { id -> viewModel.deleteHighlight(id) },
-            onDismiss = { showSidebar = false }
+            onDismiss = { showSidebar = false },
+            onImportDOI = { doi -> viewModel.importDOI(doi) },
+            doiImportStatus = doiImportStatus
         )
     }
     

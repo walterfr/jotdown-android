@@ -19,7 +19,7 @@ import br.com.jotdown.data.entity.*
         DictionaryCache::class,
         NoteEntity::class
     ],
-    version = 14,
+    version = 15,
     exportSchema = false
 )
 abstract class JotdownDatabase : RoomDatabase() {
@@ -78,6 +78,13 @@ abstract class JotdownDatabase : RoomDatabase() {
             }
         }
 
+        /** Adds DOI field to documents for CrossRef metadata import. */
+        private val MIGRATION_14_15 = object : Migration(14, 15) {
+            override fun migrate(database: SupportSQLiteDatabase) {
+                database.execSQL("ALTER TABLE documents ADD COLUMN doi TEXT NOT NULL DEFAULT ''")
+            }
+        }
+
         fun getInstance(context: Context): JotdownDatabase {
             return INSTANCE ?: synchronized(this) {
                 Room.databaseBuilder(
@@ -85,7 +92,7 @@ abstract class JotdownDatabase : RoomDatabase() {
                     JotdownDatabase::class.java,
                     "jotdown_stable.db"
                 )
-                .addMigrations(MIGRATION_10_11, MIGRATION_11_12, MIGRATION_12_13, MIGRATION_13_14)
+                .addMigrations(MIGRATION_10_11, MIGRATION_11_12, MIGRATION_12_13, MIGRATION_13_14, MIGRATION_14_15)
                 .fallbackToDestructiveMigration()
                 .build()
                 .also { INSTANCE = it }

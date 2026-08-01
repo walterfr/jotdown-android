@@ -34,7 +34,8 @@ data class MetadataParams(val docType: String, val authorLastName: String, val a
 @Composable
 fun MetadataSheet(
     document: DocumentEntity?, highlights: List<HighlightEntity>, pageOffset: Int,
-    onSave: (MetadataParams) -> Unit, onUpdateHighlight: (Long, String) -> Unit, onDeleteHighlight: (Long) -> Unit, onDismiss: () -> Unit
+    onSave: (MetadataParams) -> Unit, onUpdateHighlight: (Long, String) -> Unit, onDeleteHighlight: (Long) -> Unit, onDismiss: () -> Unit,
+    onImportDOI: (String) -> Unit = {}, doiImportStatus: String? = null
 ) {
     val context = LocalContext.current
     var docType by remember { mutableStateOf(document?.docType?.takeIf { it.isNotBlank() } ?: "Livro / Monografia") }
@@ -51,6 +52,7 @@ fun MetadataSheet(
     var pages by remember { mutableStateOf(document?.pages ?: "") }
     var url by remember { mutableStateOf(document?.url ?: "") }
     var accessDate by remember { mutableStateOf(document?.accessDate ?: "") }
+    var doiInput by remember { mutableStateOf(document?.doi ?: "") }
 
     var expandedType by remember { mutableStateOf(false) }
     val typeOptions = listOf("Livro / Monografia", "Cap\u00edtulo de Livro", "Artigo de Peri\u00f3dico", "Trabalho Acad\u00eamico", "Documento Jur\u00eddico")
@@ -139,6 +141,17 @@ fun MetadataSheet(
                     Spacer(Modifier.height(16.dp))
                     Text(stringResource(R.string.meta_online_access), color = Color.Gray, fontSize = 12.sp, fontWeight = FontWeight.Bold); Spacer(Modifier.height(8.dp))
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) { OutlinedTextField(value = url, onValueChange = { url = it }, label = { Text(stringResource(R.string.meta_available_at)) }, modifier = Modifier.weight(1.5f)); OutlinedTextField(value = accessDate, onValueChange = { accessDate = it }, label = { Text(stringResource(R.string.meta_accessed_on)) }, modifier = Modifier.weight(1f)) }
+
+                    Spacer(Modifier.height(16.dp))
+                    Text("DOI (Digital Object Identifier)", color = Color.Gray, fontSize = 12.sp, fontWeight = FontWeight.Bold); Spacer(Modifier.height(8.dp))
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
+                        OutlinedTextField(value = doiInput, onValueChange = { doiInput = it }, label = { Text("e.g. 10.1038/nature12373") }, modifier = Modifier.weight(1f), singleLine = true)
+                        Button(onClick = { if (doiInput.isNotBlank()) onImportDOI(doiInput) }, modifier = Modifier.height(56.dp)) { Text("Buscar") }
+                    }
+                    if (doiImportStatus != null) {
+                        Spacer(Modifier.height(8.dp))
+                        Text(doiImportStatus, color = if (doiImportStatus.contains("sucesso")) Color.Green else Color.Yellow, fontSize = 12.sp)
+                    }
 
                     Spacer(Modifier.height(24.dp))
                     if (highlights.isNotEmpty()) {

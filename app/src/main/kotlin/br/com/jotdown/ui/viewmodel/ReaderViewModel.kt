@@ -206,6 +206,18 @@ class ReaderViewModel(
         _noteCreatedEvent.emit(noteId)
     }
 
+    private val _doiImportStatus = MutableStateFlow<String?>(null)
+    val doiImportStatus: StateFlow<String?> = _doiImportStatus
+
+    fun importDOI(doi: String) = viewModelScope.launch(Dispatchers.IO) {
+        _doiImportStatus.value = "Buscando..."
+        val result = repository.importDOI(documentId, doi)
+        _doiImportStatus.value = if (result != null) "Importado com sucesso" else "DOI não encontrado"
+        _document.value = repository.getDocumentById(documentId)
+        kotlinx.coroutines.delay(2000)
+        _doiImportStatus.value = null
+    }
+
     fun saveMetadata(docType: String, authorLastName: String, authorFirstName: String, title: String, subtitle: String, edition: String, city: String, publisher: String, year: String, journal: String, volume: String, pages: String, url: String, accessDate: String) = viewModelScope.launch(Dispatchers.IO) {
         repository.updateMetadata(documentId, docType, authorLastName, authorFirstName, title, subtitle, edition, city, publisher, year, journal, volume, pages, url, accessDate)
         _document.value = repository.getDocumentById(documentId)

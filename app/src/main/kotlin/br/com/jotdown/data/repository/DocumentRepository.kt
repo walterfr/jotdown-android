@@ -2,6 +2,7 @@ package br.com.jotdown.data.repository
 
 import br.com.jotdown.data.dao.*
 import br.com.jotdown.data.entity.*
+import br.com.jotdown.data.service.MetadataService
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.withContext
@@ -13,7 +14,8 @@ class DocumentRepository(
     private val drawingDao: DrawingDao,
     private val highlightDao: HighlightDao,
     private val noteDao: br.com.jotdown.data.dao.NoteDao? = null,
-    private val syncManager: br.com.jotdown.data.sync.SyncManager? = null
+    private val syncManager: br.com.jotdown.data.sync.SyncManager? = null,
+    private val metadataService: MetadataService = MetadataService()
 ) {
     private fun triggerSync() {
         syncManager?.triggerImmediateSync()
@@ -94,4 +96,24 @@ class DocumentRepository(
     suspend fun saveDocument(doc: DocumentEntity) = upsertDocument(doc)
     suspend fun getDocumentByDriveFileId(driveFileId: String) = documentDao.getDocumentByDriveFileId(driveFileId)
     suspend fun getDocumentsByDriveFileIds(driveFileIds: List<String>) = documentDao.getDocumentsByDriveFileIds(driveFileIds)
+
+    suspend fun importDOI(docId: String, doi: String) = withContext(Dispatchers.IO) {
+        val metadata = metadataService.searchDOI(doi)
+        if (metadata != null) {
+            getDocumentById(docId)?.let {
+                upsertDocument(it.copy(
+                    doi = doi,
+                    title = metadata.title.takeIf { t -> t.isNotBlank() } ?: it.title,
+                    authorFirstName = metadata.authorFirstName.takeIf { a -> a.isNotBlank() } ?: it.authorFirstName,
+                    authorLastName = metadata.authorLastName.takeIf { a -> a.isNotBlank() } ?: it.authorLastName,
+                    publisher = metadata.publisher.takeIf { p -> p.isNotBlank() } ?: it.publisher,
+                    year = metadata.year.takeIf { y -> y.isNotBlank() } ?: it.year,
+                    journal = metadata.journal.takeIf { j -> j.isNotBlank() } ?: it.journal,
+                    volume = metadata.volume.takeIf { v -> v.isNotBlank() } ?: it.volume,
+                    pages = metadata.pages.takeIf { p -> p.isNotBlank() } ?: it.pages
+                ))
+            }
+        }
+        metadata
+    }
 }

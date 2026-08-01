@@ -29,5 +29,6 @@ data class DocumentEntity(
     val labels: String = "",
     /** Google Drive file ID — null for locally-imported documents. */
     val driveFileId: String? = null,
-    val readingStatus: String = ReadingStatus.TO_READ.name
+    val readingStatus: String = ReadingStatus.TO_READ.name,
+    val doi: String = ""
 )
