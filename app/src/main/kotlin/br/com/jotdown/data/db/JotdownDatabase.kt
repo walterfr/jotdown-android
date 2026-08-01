@@ -18,7 +18,7 @@ import br.com.jotdown.data.entity.*
         FolderEntity::class,
         DictionaryCache::class
     ],
-    version = 12,
+    version = 13,
     exportSchema = false
 )
 abstract class JotdownDatabase : RoomDatabase() {
@@ -48,6 +48,15 @@ abstract class JotdownDatabase : RoomDatabase() {
             }
         }
 
+        /** Adds goal fields to folders: description, deadline, isGoal. */
+        private val MIGRATION_12_13 = object : Migration(12, 13) {
+            override fun migrate(database: SupportSQLiteDatabase) {
+                database.execSQL("ALTER TABLE folders ADD COLUMN description TEXT NOT NULL DEFAULT ''")
+                database.execSQL("ALTER TABLE folders ADD COLUMN deadline INTEGER DEFAULT NULL")
+                database.execSQL("ALTER TABLE folders ADD COLUMN isGoal INTEGER NOT NULL DEFAULT 0")
+            }
+        }
+
         fun getInstance(context: Context): JotdownDatabase {
             return INSTANCE ?: synchronized(this) {
                 Room.databaseBuilder(
@@ -55,7 +64,7 @@ abstract class JotdownDatabase : RoomDatabase() {
                     JotdownDatabase::class.java,
                     "jotdown_stable.db"
                 )
-                .addMigrations(MIGRATION_10_11, MIGRATION_11_12)
+                .addMigrations(MIGRATION_10_11, MIGRATION_11_12, MIGRATION_12_13)
                 .fallbackToDestructiveMigration()
                 .build()
                 .also { INSTANCE = it }

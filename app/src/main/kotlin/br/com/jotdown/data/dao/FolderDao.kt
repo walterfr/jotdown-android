@@ -17,4 +17,7 @@ interface FolderDao {
 
     @Query("SELECT * FROM folders WHERE id = :id")
     fun getFolderById(id: Long): FolderEntity?
+
+    @Query("SELECT folderId, CAST(SUM(CASE WHEN readingStatus = 'READ' THEN 1 ELSE 0 END) AS INTEGER) AS done, COUNT(*) AS total FROM documents WHERE isTrashed = 0 AND folderId IS NOT NULL GROUP BY folderId")
+    fun getFolderProgress(): Flow<List<FolderProgress>>
 }

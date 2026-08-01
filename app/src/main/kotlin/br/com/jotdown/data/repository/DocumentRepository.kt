@@ -51,6 +51,8 @@ class DocumentRepository(
     fun getTrashedDocumentSummaries() = documentDao.getTrashedDocumentSummaries()
     fun getDocumentSummariesByFolder(folderId: Long?) = documentDao.getDocumentSummariesByFolder(folderId)
 
+    fun getFolderProgress() = folderDao.getFolderProgress()
+
     suspend fun updateMetadata(id: String, type: String, last: String, first: String, title: String, subtitle: String, edition: String, city: String, publisher: String, year: String, journal: String, volume: String, pages: String, url: String, accessDate: String) { 
         getDocumentById(id)?.let { 
             upsertDocument(it.copy(docType = type, authorLastName = last, authorFirstName = first, title = title, subtitle = subtitle, edition = edition, city = city, publisher = publisher, year = year, journal = journal, volume = volume, pages = pages, url = url, accessDate = accessDate)) 

@@ -23,6 +23,7 @@
     <string name="drawer_trash">Trash</string>
     <string name="drawer_my_labels">My Labels</string>
     <string name="drawer_reading">Reading</string>
+    <string name="drawer_goals">Goals</string>
     <string name="drawer_settings_cloud">Settings &amp; Cloud</string>
     <string name="drawer_about">About</string>
 
@@ -36,6 +37,11 @@
     <string name="status_to_read">To read</string>
     <string name="status_reading">Reading</string>
     <string name="status_read">Read</string>
+    <string name="fab_new_goal">New Goal</string>
+    <string name="dlg_new_goal_title">Create Goal</string>
+    <string name="dlg_goal_name">Goal Name</string>
+    <string name="dlg_goal_description">Description (optional)</string>
+    <string name="dlg_goal_deadline">Deadline (optional)</string>
     <string name="sort_recent">Recent</string>
     <string name="sort_az">A-Z</string>
     <string name="sort_za">Z-A</string>

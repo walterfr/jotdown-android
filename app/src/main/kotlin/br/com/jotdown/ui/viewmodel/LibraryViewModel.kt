@@ -55,8 +55,21 @@ class LibraryViewModel(private val repository: DocumentRepository, private val a
     fun setSearchQuery(query: String) { _searchQuery.value = query }
     fun setSortOrder(order: String) { _sortOrder.value = order }
 
+    fun setFilter(filter: String) {
+        _currentFilter.value = filter
+        if (filter != "Tudo" && filter != "Metas") _currentFolder.value = null
+    }
+
     val folders: StateFlow<List<FolderEntity>> = repository.getAllFolders()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    val goalFolders: StateFlow<List<FolderEntity>> = repository.getAllFolders()
+        .map { it.filter { f -> f.isGoal } }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    val folderProgress: StateFlow<Map<Long, Pair<Int, Int>>> = repository.getFolderProgress()
+        .map { list -> list.associate { it.folderId to (it.done to it.total) } }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyMap())
 
     val availableTags: StateFlow<List<String>> = repository.getAllDocumentSummaries()
         .map { docs -> docs.flatMap { it.labels.split(",").map { t -> t.trim() }.filter { t -> t.isNotEmpty() } }.distinct().sorted() }
@@ -117,7 +130,6 @@ class LibraryViewModel(private val repository: DocumentRepository, private val a
     private data class Tuple5<A, B, C, D, E>(val a: A, val b: B, val c: C, val d: D, val e: E)
 
     fun enterFolder(folder: FolderEntity?) { _currentFolder.value = folder }
-    fun setFilter(filter: String) { _currentFilter.value = filter; if (filter != "Tudo") _currentFolder.value = null }
     fun setTab(tab: String) { _currentTab.value = tab }
 
     fun renameFolder(id: Long, newName: String) = viewModelScope.launch { repository.renameFolder(id, newName) }
@@ -457,6 +469,10 @@ class LibraryViewModel(private val repository: DocumentRepository, private val a
 
     fun updateReadingStatus(id: String, status: String) = viewModelScope.launch {
         repository.updateReadingStatus(id, status)
+    }
+
+    fun createGoal(name: String, description: String, deadline: Long?) = viewModelScope.launch {
+        repository.insertFolder(FolderEntity(name = name, description = description, deadline = deadline, isGoal = true))
     }
 }
 
