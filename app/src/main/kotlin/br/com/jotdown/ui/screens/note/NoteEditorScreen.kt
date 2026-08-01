@@ -44,6 +44,12 @@ fun NoteEditorScreen(noteId: String, repository: DocumentRepository, onBack: () 
         viewModel.saveNote()
     }
 
+    LaunchedEffect(note) {
+        if (showDeleteDialog && note == null) {
+            onBack()
+        }
+    }
+
     Scaffold(
         topBar = {
             TopAppBar(
@@ -127,7 +133,7 @@ fun NoteEditorScreen(noteId: String, repository: DocumentRepository, onBack: () 
             title = { Text(stringResource(R.string.common_delete)) },
             text = { Text(stringResource(R.string.note_delete_confirm)) },
             confirmButton = {
-                TextButton(onClick = { viewModel.deleteNote(); onBack() }) {
+                TextButton(onClick = { viewModel.deleteNote() }) {
                     Text(stringResource(R.string.common_delete), color = MaterialTheme.colorScheme.error)
                 }
             },
