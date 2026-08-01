@@ -49,7 +49,6 @@ class ReaderViewModel(
     val annotations = repository.getAnnotationsForDocument(documentId).stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
     val highlights = repository.getHighlightsForDocument(documentId).stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
     val drawings = repository.getDrawingsForDocument(documentId).stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
-    val notes = repository.getNotesForDocument(documentId).stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
     val allDocuments = repository.getAllDocuments().stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     private val _dictionaryState = MutableStateFlow<DictionaryLookupState>(DictionaryLookupState.Idle)
@@ -199,19 +198,6 @@ class ReaderViewModel(
     fun addHighlight(page: Int, text: String) = viewModelScope.launch(Dispatchers.IO) {
         repository.insertHighlight(HighlightEntity(id = 0L, documentId = documentId, page = page, text = text))
     }
-
-    private val _noteCreatedEvent = MutableSharedFlow<String>()
-    val noteCreatedEvent: SharedFlow<String> = _noteCreatedEvent
-
-    fun createNote(page: Int? = null, sourceHighlightId: Long? = null) = viewModelScope.launch(Dispatchers.IO) {
-        val noteId = repository.createNoteForDocument(documentId, page, "", "", sourceHighlightId)
-        _noteCreatedEvent.emit(noteId)
-    }
-
-    fun promoteAnnotation(annotation: AnnotationEntity) = viewModelScope.launch(Dispatchers.IO) {
-        _noteCreatedEvent.emit(repository.promoteAnnotationToNote(annotation))
-    }
-
     private val _doiImportStatus = MutableStateFlow<String?>(null)
     val doiImportStatus: StateFlow<String?> = _doiImportStatus
 

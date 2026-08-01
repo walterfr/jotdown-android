@@ -16,10 +16,9 @@ import br.com.jotdown.data.entity.*
         HighlightEntity::class,
         DrawingEntity::class,
         FolderEntity::class,
-        DictionaryCache::class,
-        NoteEntity::class
+        DictionaryCache::class
     ],
-    version = 17,
+    version = 18,
     exportSchema = false
 )
 abstract class JotdownDatabase : RoomDatabase() {
@@ -30,7 +29,6 @@ abstract class JotdownDatabase : RoomDatabase() {
     abstract fun drawingDao(): DrawingDao
     abstract fun folderDao(): FolderDao
     abstract fun dictionaryCacheDao(): DictionaryCacheDao
-    abstract fun noteDao(): br.com.jotdown.data.dao.NoteDao
 
     companion object {
         @Volatile
@@ -99,6 +97,21 @@ abstract class JotdownDatabase : RoomDatabase() {
             }
         }
 
+        /**
+         * Remove fichas e metas. A tabela notes some inteira; folders precisa ser
+         * reconstruída porque o SQLite do minSdk 26 não tem DROP COLUMN, e deixar
+         * colunas órfãs faria o Room acusar schema divergente.
+         */
+        private val MIGRATION_17_18 = object : Migration(17, 18) {
+            override fun migrate(database: SupportSQLiteDatabase) {
+                database.execSQL("DROP TABLE IF EXISTS notes")
+                database.execSQL("CREATE TABLE IF NOT EXISTS folders_new (id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, name TEXT NOT NULL)")
+                database.execSQL("INSERT INTO folders_new (id, name) SELECT id, name FROM folders")
+                database.execSQL("DROP TABLE folders")
+                database.execSQL("ALTER TABLE folders_new RENAME TO folders")
+            }
+        }
+
         fun getInstance(context: Context): JotdownDatabase {
             return INSTANCE ?: synchronized(this) {
                 Room.databaseBuilder(
@@ -106,7 +119,7 @@ abstract class JotdownDatabase : RoomDatabase() {
                     JotdownDatabase::class.java,
                     "jotdown_stable.db"
                 )
-                .addMigrations(MIGRATION_10_11, MIGRATION_11_12, MIGRATION_12_13, MIGRATION_13_14, MIGRATION_14_15, MIGRATION_15_16, MIGRATION_16_17)
+                .addMigrations(MIGRATION_10_11, MIGRATION_11_12, MIGRATION_12_13, MIGRATION_13_14, MIGRATION_14_15, MIGRATION_15_16, MIGRATION_16_17, MIGRATION_17_18)
                 .fallbackToDestructiveMigration()
                 .build()
                 .also { INSTANCE = it }

@@ -37,8 +37,7 @@ data class MetadataParams(val docType: String, val authorLastName: String, val a
 fun MetadataSheet(
     document: DocumentEntity?, highlights: List<HighlightEntity>, pageOffset: Int,
     onSave: (MetadataParams) -> Unit, onUpdateHighlight: (Long, String) -> Unit, onDeleteHighlight: (Long) -> Unit, onDismiss: () -> Unit,
-    onImportDOI: (String) -> Unit = {}, doiImportStatus: String? = null, onLinkHighlight: (Long) -> Unit = {},
-    notes: List<br.com.jotdown.data.entity.NoteEntity> = emptyList()
+    onImportDOI: (String) -> Unit = {}, doiImportStatus: String? = null, onLinkHighlight: (Long) -> Unit = {}
 ) {
     val context = LocalContext.current
     var docType by remember { mutableStateOf(document?.docType?.takeIf { it.isNotBlank() } ?: "Livro / Monografia") }
@@ -83,25 +82,6 @@ fun MetadataSheet(
             append("[${index + 1}] > $text ($citationName, $citationYear, p. ${h.page + pageOffset})\n\n")
         }
 
-        // Fichas do documento. Sem esta seção o fichamento exportado ignora
-        // tudo que o usuário escreveu como ficha — que era o caso até aqui.
-        if (notes.isNotEmpty()) {
-            append("\n## Fichas\n\n")
-            notes.forEach { n ->
-                val heading = n.title.ifBlank { "Sem título" }
-                append("### $heading\n\n")
-                // A citação vem do destaque vinculado, não de uma cópia:
-                // corrigir o trecho no destaque corrige aqui também.
-                n.sourceHighlightId?.let { hid ->
-                    highlights.find { it.id == hid }?.let { h ->
-                        val quoted = editableHighlights[h.id] ?: h.text
-                        append("> $quoted ($citationName, $citationYear, p. ${h.page + pageOffset})\n\n")
-                    }
-                }
-                if (n.content.isNotBlank()) append("${n.content}\n\n")
-                if (n.labels.isNotBlank()) append("*${n.labels}*\n\n")
-            }
-        }
     }
 
     Dialog(onDismissRequest = onDismiss, properties = DialogProperties(usePlatformDefaultWidth = false)) {

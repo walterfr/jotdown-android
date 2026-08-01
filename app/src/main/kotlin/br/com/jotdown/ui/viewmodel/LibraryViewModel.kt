@@ -57,19 +57,11 @@ class LibraryViewModel(private val repository: DocumentRepository, private val a
 
     fun setFilter(filter: String) {
         _currentFilter.value = filter
-        if (filter != "Tudo" && filter != "Metas") _currentFolder.value = null
+        if (filter != "Tudo") _currentFolder.value = null
     }
 
     val folders: StateFlow<List<FolderEntity>> = repository.getAllFolders()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
-
-    val goalFolders: StateFlow<List<FolderEntity>> = repository.getAllFolders()
-        .map { it.filter { f -> f.isGoal } }
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
-
-    val folderProgress: StateFlow<Map<Long, Pair<Int, Int>>> = repository.getFolderProgress()
-        .map { list -> list.associate { it.folderId to (it.done to it.total) } }
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyMap())
 
     val availableTags: StateFlow<List<String>> = repository.getAllDocumentSummaries()
         .map { docs -> docs.flatMap { it.labels.split(",").map { t -> t.trim() }.filter { t -> t.isNotEmpty() } }.distinct().sorted() }
@@ -471,24 +463,6 @@ class LibraryViewModel(private val repository: DocumentRepository, private val a
         repository.updateReadingStatus(id, status)
     }
 
-    fun createGoal(name: String, description: String, deadline: Long?) = viewModelScope.launch {
-        repository.insertFolder(FolderEntity(name = name, description = description, deadline = deadline, isGoal = true))
-    }
-
-    val allNotes: StateFlow<List<br.com.jotdown.data.entity.NoteEntity>> = repository.getAllNotes()
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
-
-    fun createNote(title: String) = viewModelScope.launch {
-        val noteId = java.util.UUID.randomUUID().toString()
-        val note = br.com.jotdown.data.entity.NoteEntity(
-            id = noteId,
-            title = title,
-            content = "",
-            createdAt = System.currentTimeMillis(),
-            updatedAt = System.currentTimeMillis()
-        )
-        repository.upsertNote(note)
-    }
 }
 
 class LibraryViewModelFactory(

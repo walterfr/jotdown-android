@@ -63,12 +63,6 @@ abstract class DocumentDao {
 
 }
 
-data class FolderProgress(
-    val folderId: Long,
-    val done: Int = 0,
-    val total: Int = 0
-)
-
 data class DocumentSummary(
     val id: String, val fileName: String, val title: String, val dateAdded: Long, val accessDate: String,
     val docType: String, val authorLastName: String, val authorFirstName: String,

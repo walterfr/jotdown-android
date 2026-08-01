@@ -43,8 +43,6 @@ fun ReaderTopBar(
     onToggleDarkMode: () -> Unit,
     onSharePdf: () -> Unit,
     onOutlineClick: () -> Unit,
-    onCreateNote: () -> Unit,
-    notesCount: Int = 0,
 ) {
     var showOverflow by remember { mutableStateOf(false) }
 
@@ -109,14 +107,6 @@ fun ReaderTopBar(
                         badge = { if (annotationCount > 0) Badge { Text(annotationCount.toString()) } }
                     ) {
                         Icon(Icons.AutoMirrored.Filled.Message, contentDescription = stringResource(R.string.readerbar_annotations))
-                    }
-                }
-                // Fichas
-                IconButton(onClick = onCreateNote) {
-                    BadgedBox(
-                        badge = { if (notesCount > 0) Badge { Text(notesCount.toString()) } }
-                    ) {
-                        Icon(Icons.Filled.StickyNote2, contentDescription = stringResource(R.string.readerbar_notes))
                     }
                 }
                 // Overflow menu

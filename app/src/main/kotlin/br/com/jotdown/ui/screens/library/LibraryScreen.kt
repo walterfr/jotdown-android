@@ -57,7 +57,7 @@ import kotlin.math.roundToInt
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun LibraryScreen(viewModel: LibraryViewModel, onOpenDocument: (String) -> Unit, onOpenNote: (String) -> Unit = {}, onOpenSettings: () -> Unit = {}) {
+fun LibraryScreen(viewModel: LibraryViewModel, onOpenDocument: (String) -> Unit, onOpenSettings: () -> Unit = {}) {
     val context = LocalContext.current
     val displayDocuments by viewModel.displayDocuments.collectAsState()
     val folders by viewModel.folders.collectAsState()
@@ -83,12 +83,6 @@ fun LibraryScreen(viewModel: LibraryViewModel, onOpenDocument: (String) -> Unit,
     var noteTitle by remember { mutableStateOf("") }
     var noteTemplate by remember { mutableStateOf("Pautado") }
     var tagToRename by remember { mutableStateOf<String?>(null) }
-    var showCreateGoalDialog by remember { mutableStateOf(false) }
-    var goalName by remember { mutableStateOf("") }
-    var goalDescription by remember { mutableStateOf("") }
-    var goalDeadline by remember { mutableStateOf<Long?>(null) }
-    var showCreateNoteSheetDialog by remember { mutableStateOf(false) }
-    var noteSheetTitle by remember { mutableStateOf("") }
 
     val pdfPicker = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri -> uri ?: return@rememberLauncherForActivityResult; viewModel.importPdf(context, uri) }
     val backupPicker = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri -> uri ?: return@rememberLauncherForActivityResult; viewModel.importBackup(context, uri) }
@@ -133,7 +127,7 @@ fun LibraryScreen(viewModel: LibraryViewModel, onOpenDocument: (String) -> Unit,
                     modifier = Modifier
                         .weight(1f)
                         // Trilho fino no canto direito: sem ele nada denuncia que
-                        // "Lido" e "Metas" continuam abaixo da dobra. Desenhado
+                        // "Lido" e as etiquetas continuam abaixo da dobra. Desenhado
                         // antes do verticalScroll para ficar no espaço do viewport,
                         // parado, em vez de rolar junto com o conteúdo.
                         .drawWithContent {
@@ -207,8 +201,6 @@ fun LibraryScreen(viewModel: LibraryViewModel, onOpenDocument: (String) -> Unit,
                 NavigationDrawerItem(icon = { Icon(Icons.Default.AutoStories, contentDescription = null) }, label = { Text(stringResource(R.string.status_reading)) }, selected = currentFilter == "Status:READING", onClick = { viewModel.setFilter("Status:READING"); scope.launch { drawerState.close() } })
                 NavigationDrawerItem(icon = { Icon(Icons.Default.CheckCircle, contentDescription = null) }, label = { Text(stringResource(R.string.status_read)) }, selected = currentFilter == "Status:READ", onClick = { viewModel.setFilter("Status:READ"); scope.launch { drawerState.close() } })
 
-                HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
-                NavigationDrawerItem(icon = { Icon(Icons.Default.Flag, contentDescription = null) }, label = { Text(stringResource(R.string.drawer_goals)) }, selected = currentFilter == "Metas", onClick = { viewModel.setFilter("Metas"); scope.launch { drawerState.close() } })
 
                 if (availableTags.isNotEmpty()) {
                     HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
@@ -245,14 +237,6 @@ fun LibraryScreen(viewModel: LibraryViewModel, onOpenDocument: (String) -> Unit,
                     selected = false,
                     onClick = { showAboutDialog = true; scope.launch { drawerState.close() } },
                     modifier = Modifier.padding(horizontal = 12.dp)
-                )
-                HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
-                val versionName = remember { runCatching { context.packageManager.getPackageInfo(context.packageName, 0).versionName }.getOrNull() ?: "" }
-                Text(
-                    "v$versionName",
-                    modifier = Modifier.padding(horizontal = 20.dp, vertical = 14.dp),
-                    fontSize = 11.sp,
-                    color = MaterialTheme.colorScheme.outline
                 )
             }
         }
@@ -365,22 +349,6 @@ fun LibraryScreen(viewModel: LibraryViewModel, onOpenDocument: (String) -> Unit,
                                 contentColor = MaterialTheme.colorScheme.onSurfaceVariant,
                                 modifier = Modifier.padding(bottom = 12.dp)
                             )
-                            ExtendedFloatingActionButton(
-                                onClick = { showFabMenu = false; showCreateGoalDialog = true; goalName = ""; goalDescription = ""; goalDeadline = null },
-                                icon = { Icon(Icons.Default.Flag, contentDescription = null) },
-                                text = { Text(stringResource(R.string.fab_new_goal), fontWeight = FontWeight.Bold) },
-                                containerColor = MaterialTheme.colorScheme.surfaceVariant,
-                                contentColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                                modifier = Modifier.padding(bottom = 12.dp)
-                            )
-                            ExtendedFloatingActionButton(
-                                onClick = { showFabMenu = false; showCreateNoteSheetDialog = true; noteSheetTitle = "" },
-                                icon = { Icon(Icons.AutoMirrored.Filled.StickyNote2, contentDescription = null) },
-                                text = { Text(stringResource(R.string.fab_new_note), fontWeight = FontWeight.Bold) },
-                                containerColor = MaterialTheme.colorScheme.surfaceVariant,
-                                contentColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                                modifier = Modifier.padding(bottom = 16.dp)
-                            )
                         }
                     }
                     FloatingActionButton(
@@ -415,7 +383,6 @@ fun LibraryScreen(viewModel: LibraryViewModel, onOpenDocument: (String) -> Unit,
                     "PDF" to stringResource(R.string.tab_pdf),
                     "Nota" to stringResource(R.string.tab_note),
                     "Pasta" to stringResource(R.string.tab_folder),
-                    "Fichas" to stringResource(R.string.tab_notes),
                     "Drive" to stringResource(R.string.tab_drive)
                 )
                 LazyRow(
@@ -446,9 +413,6 @@ fun LibraryScreen(viewModel: LibraryViewModel, onOpenDocument: (String) -> Unit,
                 
                 Spacer(Modifier.height(16.dp))
                 val showFolders = currentFolder == null && currentFilter == "Tudo" && (currentTab == "Tudo" || currentTab == "Pasta")
-                val goalsToShow by viewModel.goalFolders.collectAsState()
-                val folderProgress by viewModel.folderProgress.collectAsState()
-                val notesToShow by viewModel.allNotes.collectAsState()
 
                 if (currentTab == "Drive") {
                         DriveLibraryContent(
@@ -456,39 +420,6 @@ fun LibraryScreen(viewModel: LibraryViewModel, onOpenDocument: (String) -> Unit,
                             context = context,
                             onOpenDocument = onOpenDocument
                         )
-                    } else if (currentTab == "Fichas") {
-                        if (notesToShow.isEmpty()) {
-                            EmptyLibrary(currentFilter, currentTab)
-                        } else {
-                            LazyVerticalGrid(
-                                columns = GridCells.Adaptive(minSize = 140.dp),
-                                horizontalArrangement = Arrangement.spacedBy(20.dp),
-                                verticalArrangement = Arrangement.spacedBy(32.dp),
-                                contentPadding = PaddingValues(bottom = 120.dp, top = 8.dp),
-                                modifier = Modifier.fillMaxSize()
-                            ) {
-                                items(notesToShow, key = { it.id }) { note ->
-                                    NoteCard(note = note, onClick = { onOpenNote(note.id) })
-                                }
-                            }
-                        }
-                    } else if (currentFilter == "Metas") {
-                        if (goalsToShow.isEmpty()) {
-                            EmptyLibrary(currentFilter, currentTab)
-                        } else {
-                            LazyVerticalGrid(
-                                columns = GridCells.Adaptive(minSize = 140.dp),
-                                horizontalArrangement = Arrangement.spacedBy(20.dp),
-                                verticalArrangement = Arrangement.spacedBy(32.dp),
-                                contentPadding = PaddingValues(bottom = 120.dp, top = 8.dp),
-                                modifier = Modifier.fillMaxSize()
-                            ) {
-                                items(goalsToShow, key = { "goal_${it.id}" }) { goal ->
-                                    val (done, total) = folderProgress[goal.id] ?: (0 to 0)
-                                    GoalCard(goal = goal, done = done, total = total, isTarget = targetFolderId == goal.id, onClick = { viewModel.enterFolder(goal) }, onRename = { folderToRename = goal; renameText = goal.name }, onGloballyPositioned = { coordinates -> folderBoundsMap[goal.id] = coordinates })
-                                }
-                            }
-                        }
                     } else if (displayDocuments.isEmpty() && (!showFolders || folders.isEmpty())) {
                         EmptyLibrary(currentFilter, currentTab)
                     } else {
@@ -575,35 +506,6 @@ fun LibraryScreen(viewModel: LibraryViewModel, onOpenDocument: (String) -> Unit,
     docToDelete?.let { doc -> AlertDialog(onDismissRequest = { docToDelete = null }, title = { Text(stringResource(R.string.dlg_delete_permanently_title)) }, text = { Text(stringResource(R.string.dlg_delete_permanently_msg, doc.title)) }, confirmButton = { TextButton(onClick = { viewModel.deleteDocument(context, doc.id); docToDelete = null }) { Text(stringResource(R.string.common_delete), color = MaterialTheme.colorScheme.error) } }, dismissButton = { TextButton(onClick = { docToDelete = null }) { Text(stringResource(R.string.common_cancel)) } }) }
     docToTag?.let { doc -> AlertDialog(onDismissRequest = { docToTag = null }, title = { Text(stringResource(R.string.dlg_edit_labels)) }, text = { Column { Text(stringResource(R.string.dlg_labels_hint), fontSize = 12.sp, color = MaterialTheme.colorScheme.outline); Spacer(Modifier.height(8.dp)); OutlinedTextField(value = tagText, onValueChange = { tagText = it }, label = { Text(stringResource(R.string.dlg_labels)) }, modifier = Modifier.fillMaxWidth()) } }, confirmButton = { TextButton(onClick = { viewModel.updateLabels(doc.id, tagText); docToTag = null }) { Text(stringResource(R.string.common_save), color = Indigo600, fontWeight = FontWeight.Bold) } }, dismissButton = { TextButton(onClick = { docToTag = null }) { Text(stringResource(R.string.common_cancel)) } }) }
     if (showImportWarning) { AlertDialog(onDismissRequest = { showImportWarning = false }, title = { Text(stringResource(R.string.menu_import_backup)) }, text = { Text(stringResource(R.string.dlg_import_backup_warning)) }, confirmButton = { TextButton(onClick = { showImportWarning = false; backupPicker.launch("application/zip") }) { Text(stringResource(R.string.dlg_import_confirm), color = MaterialTheme.colorScheme.error, fontWeight = FontWeight.Bold) } }, dismissButton = { TextButton(onClick = { showImportWarning = false }) { Text(stringResource(R.string.common_cancel)) } }) }
-    if (showCreateNoteSheetDialog) {
-        AlertDialog(
-            onDismissRequest = { showCreateNoteSheetDialog = false },
-            title = { Text(stringResource(R.string.dlg_new_note_title)) },
-            text = {
-                OutlinedTextField(value = noteSheetTitle, onValueChange = { noteSheetTitle = it }, singleLine = true, label = { Text(stringResource(R.string.dlg_note_title)) }, modifier = Modifier.fillMaxWidth())
-            },
-            confirmButton = { TextButton(onClick = { if (noteSheetTitle.isNotBlank()) { viewModel.createNote(noteSheetTitle.trim()); showCreateNoteSheetDialog = false; } }) { Text(stringResource(R.string.common_create), color = Indigo600, fontWeight = FontWeight.Bold) } },
-            dismissButton = { TextButton(onClick = { showCreateNoteSheetDialog = false }) { Text(stringResource(R.string.common_cancel)) } }
-        )
-    }
-
-    if (showCreateGoalDialog) {
-        AlertDialog(
-            onDismissRequest = { showCreateGoalDialog = false },
-            title = { Text(stringResource(R.string.dlg_new_goal_title)) },
-            text = {
-                Column(modifier = Modifier.fillMaxWidth()) {
-                    OutlinedTextField(value = goalName, onValueChange = { goalName = it }, singleLine = true, label = { Text(stringResource(R.string.dlg_goal_name)) }, modifier = Modifier.fillMaxWidth())
-                    Spacer(Modifier.height(12.dp))
-                    OutlinedTextField(value = goalDescription, onValueChange = { goalDescription = it }, label = { Text(stringResource(R.string.dlg_goal_description)) }, modifier = Modifier.fillMaxWidth(), maxLines = 3)
-                }
-            },
-            confirmButton = { TextButton(onClick = { if (goalName.isNotBlank()) { viewModel.createGoal(goalName.trim(), goalDescription.trim(), goalDeadline) }; showCreateGoalDialog = false }) { Text(stringResource(R.string.common_create), color = Indigo600, fontWeight = FontWeight.Bold) } },
-            dismissButton = { TextButton(onClick = { showCreateGoalDialog = false }) { Text(stringResource(R.string.common_cancel)) } }
-        )
-    }
-
-    if (showDeleteFolder) { AlertDialog(onDismissRequest = { showDeleteFolder = false }, title = { Text(stringResource(R.string.dlg_delete_folder_title)) }, text = { Text(stringResource(R.string.dlg_delete_folder_msg)) }, confirmButton = { TextButton(onClick = { viewModel.deleteCurrentFolder(); showDeleteFolder = false }) { Text(stringResource(R.string.common_delete), color = MaterialTheme.colorScheme.error) } }, dismissButton = { TextButton(onClick = { showDeleteFolder = false }) { Text(stringResource(R.string.common_cancel)) } }) }
 
     if (showAboutDialog) {
         AlertDialog(
@@ -618,6 +520,9 @@ fun LibraryScreen(viewModel: LibraryViewModel, onOpenDocument: (String) -> Unit,
                     Text(stringResource(R.string.about_author_text))
                     Spacer(Modifier.height(16.dp))
                     Text(stringResource(R.string.about_footer), fontWeight = FontWeight.Bold, color = Indigo600)
+                    Spacer(Modifier.height(16.dp))
+                    val versionName = remember { runCatching { context.packageManager.getPackageInfo(context.packageName, 0).versionName }.getOrNull() ?: "" }
+                    Text("v$versionName", fontSize = 12.sp, color = MaterialTheme.colorScheme.outline)
                 }
             },
             confirmButton = {
@@ -642,38 +547,6 @@ fun FolderCard(folder: FolderEntity, isTarget: Boolean, onClick: () -> Unit, onR
                 Icon(Icons.Default.Folder, contentDescription = null, tint = Indigo400, modifier = Modifier.size(48.dp))
                 Spacer(Modifier.height(12.dp))
                 Text(folder.name, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 15.sp, maxLines = 2, overflow = TextOverflow.Ellipsis)
-            }
-            Box(modifier = Modifier.align(Alignment.TopEnd)) {
-                IconButton(onClick = { expanded = true }) { Icon(Icons.Default.MoreVert, contentDescription = stringResource(R.string.common_options), tint = Indigo400) }
-                DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) { DropdownMenuItem(text = { Text(stringResource(R.string.dlg_rename_folder)) }, onClick = { expanded = false; onRename() }) }
-            }
-        }
-    }
-}
-
-@Composable
-fun GoalCard(goal: FolderEntity, done: Int, total: Int, isTarget: Boolean, onClick: () -> Unit, onRename: () -> Unit, onGloballyPositioned: (Rect) -> Unit) {
-    var expanded by remember { mutableStateOf(false) }
-    val progress = if (total > 0) (done.toFloat() / total).coerceIn(0f, 1f) else 0f
-
-    Card(
-        modifier = Modifier.fillMaxWidth().aspectRatio(0.75f).border(if (isTarget) 2.dp else 0.dp, if (isTarget) Indigo600 else Color.Transparent, RoundedCornerShape(topStart = 24.dp, topEnd = 12.dp, bottomEnd = 12.dp, bottomStart = 12.dp)).onGloballyPositioned { coordinates -> onGloballyPositioned(coordinates.boundsInWindow()) }.clickable { onClick() },
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
-        elevation = CardDefaults.cardElevation(2.dp)
-    ) {
-        Box(modifier = Modifier.fillMaxSize()) {
-            Column(modifier = Modifier.fillMaxSize().padding(16.dp), verticalArrangement = Arrangement.Center, horizontalAlignment = Alignment.CenterHorizontally) {
-                Box(modifier = Modifier.size(56.dp), contentAlignment = Alignment.Center) {
-                    CircularProgressIndicator(progress = { progress }, modifier = Modifier.fillMaxSize(), color = Indigo400, trackColor = Indigo400.copy(alpha = 0.2f), strokeWidth = 3.dp)
-                    Text("$done/$total", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = Indigo600, textAlign = TextAlign.Center)
-                }
-                Spacer(Modifier.height(12.dp))
-                Text(goal.name, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 15.sp, maxLines = 2, overflow = TextOverflow.Ellipsis)
-                if (goal.deadline != null) {
-                    Spacer(Modifier.height(4.dp))
-                    val deadline = java.text.SimpleDateFormat("dd/MM/yy", java.util.Locale.getDefault()).format(java.util.Date(goal.deadline))
-                    Text(deadline, fontSize = 10.sp, color = if (goal.deadline < System.currentTimeMillis()) Color.Red else MaterialTheme.colorScheme.outline)
-                }
             }
             Box(modifier = Modifier.align(Alignment.TopEnd)) {
                 IconButton(onClick = { expanded = true }) { Icon(Icons.Default.MoreVert, contentDescription = stringResource(R.string.common_options), tint = Indigo400) }
@@ -1118,48 +991,3 @@ private fun formatDriveFileSize(bytes: Long): String {
     }
 }
 
-@Composable
-fun NoteCard(note: br.com.jotdown.data.entity.NoteEntity, onClick: () -> Unit) {
-    Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .aspectRatio(0.75f)
-            .clickable { onClick() },
-        colors = CardDefaults.cardColors(containerColor = Color(0xFFFFFBEB)),
-        elevation = CardDefaults.cardElevation(2.dp),
-        shape = RoundedCornerShape(12.dp)
-    ) {
-        Column(modifier = Modifier.fillMaxSize().padding(12.dp)) {
-            Text(
-                note.title,
-                fontWeight = FontWeight.Bold,
-                fontSize = 14.sp,
-                maxLines = 2,
-                overflow = TextOverflow.Ellipsis,
-                color = MaterialTheme.colorScheme.onBackground
-            )
-            Spacer(Modifier.height(8.dp))
-            Text(
-                note.content,
-                fontSize = 11.sp,
-                maxLines = 4,
-                overflow = TextOverflow.Ellipsis,
-                color = MaterialTheme.colorScheme.outline
-            )
-            Spacer(Modifier.weight(1f))
-            if (note.labels.isNotBlank()) {
-                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                    note.labels.split(",").map { it.trim() }.filter { it.isNotEmpty() }.take(2).forEach { tag ->
-                        Box(
-                            modifier = Modifier
-                                .background(Color(0xFFFEF3C7), RoundedCornerShape(2.dp))
-                                .padding(horizontal = 3.dp, vertical = 1.dp)
-                        ) {
-                            Text(tag, fontSize = 8.sp, fontWeight = FontWeight.Bold, color = Color(0xFFD97706))
-                        }
-                    }
-                }
-            }
-        }
-    }
-}

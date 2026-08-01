@@ -23,7 +23,6 @@
     <string name="drawer_trash">Lixo</string>
     <string name="drawer_my_labels">Meus Rótulos</string>
     <string name="drawer_reading">Leitura</string>
-    <string name="drawer_goals">Metas</string>
     <string name="drawer_settings_cloud">Configurações e Nuvem</string>
     <string name="drawer_about">Sobre</string>
 
@@ -37,14 +36,6 @@
     <string name="status_to_read">Para ler</string>
     <string name="status_reading">Lendo</string>
     <string name="status_read">Lido</string>
-    <string name="fab_new_goal">Nova Meta</string>
-    <string name="dlg_new_goal_title">Criar Meta</string>
-    <string name="dlg_goal_name">Nome da Meta</string>
-    <string name="dlg_goal_description">Descrição (opcional)</string>
-    <string name="dlg_goal_deadline">Prazo (opcional)</string>
-    <string name="fab_new_note">Nova Ficha</string>
-    <string name="dlg_new_note_title">Criar Ficha</string>
-    <string name="dlg_note_title">Título da Ficha</string>
     <string name="sort_recent">Recentes</string>
     <string name="sort_az">A-Z</string>
     <string name="sort_za">Z-A</string>
@@ -60,7 +51,6 @@
     <string name="tab_note">Nota</string>
     <string name="tab_folder">Pasta</string>
     <string name="tab_drive">Drive</string>
-    <string name="tab_notes">Fichas</string>
     <string name="lib_stats">%1$d Cit. • %2$d Notas</string>
     <string name="lib_read_prefix">Lido: %1$s</string>
     <string name="lib_cover_desc">Capa do PDF</string>
@@ -237,18 +227,12 @@
     <string name="readerbar_night_mode">Modo Noturno</string>
     <string name="readerbar_fullscreen">Tela Cheia</string>
     <string name="readerbar_annotations">Anotações</string>
-    <string name="readerbar_notes">Fichas (Atômicas)</string>
     <string name="readerbar_book_outline">Sumário do Livro</string>
     <string name="readerbar_share_original_pdf">Compartilhar PDF Original</string>
-    <string name="pick_highlight_title">Citação desta ficha</string>
-    <string name="pick_highlight_none">Sem citação</string>
-    <string name="annot_promote">Transformar em ficha</string>
-    <string name="annot_promote_confirm">O texto vira uma ficha e este post-it sai da página.</string>
     <string name="link_highlight_title">Vincular a Documento</string>
     <string name="link_highlight_search">Buscar documentos...</string>
     <string name="link_highlight_clear">Remover Vínculo</string>
     <string name="doi_label">DOI (Identificador de Objeto Digital)</string>
-    <string name="note_delete_confirm">Deletar esta ficha permanentemente?</string>
 
     <!-- Reader tools -->
     <string name="tool_pen">Caneta</string>

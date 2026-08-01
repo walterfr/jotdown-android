@@ -10,7 +10,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.StickyNote2
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material.icons.filled.NoteAdd
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -32,11 +31,8 @@ fun AnnotationSheet(
     pageOffset: Int,
     onDismiss: () -> Unit,
     onDelete: (Long) -> Unit,
-    onGoToPage: (Int) -> Unit,
-    onPromote: (AnnotationEntity) -> Unit = {}
+    onGoToPage: (Int) -> Unit
 ) {
-    // Promover apaga o post-it; sem confirmação, um toque errado leva o texto.
-    var pendingPromote by remember { mutableStateOf<AnnotationEntity?>(null) }
     Dialog(onDismissRequest = onDismiss, properties = DialogProperties(usePlatformDefaultWidth = false)) {
         Surface(
             modifier = Modifier.fillMaxWidth(0.85f).fillMaxHeight(0.8f),
@@ -78,14 +74,8 @@ fun AnnotationSheet(
                                 Column(modifier = Modifier.padding(12.dp)) {
                                     Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.Top) {
                                         Text(stringResource(R.string.reader_page_n, annot.page + pageOffset), fontWeight = FontWeight.Bold, color = Color(0xFFB45309), fontSize = 12.sp)
-                                        Row(verticalAlignment = Alignment.CenterVertically) {
-                                            IconButton(onClick = { pendingPromote = annot }, modifier = Modifier.size(20.dp)) {
-                                                Icon(Icons.Default.NoteAdd, contentDescription = stringResource(R.string.annot_promote), tint = Color(0xFFB45309))
-                                            }
-                                            Spacer(Modifier.width(8.dp))
-                                            IconButton(onClick = { onDelete(annot.id) }, modifier = Modifier.size(20.dp)) {
-                                                Icon(Icons.Default.Delete, contentDescription = stringResource(R.string.common_delete), tint = Color.Red.copy(alpha = 0.7f))
-                                            }
+                                        IconButton(onClick = { onDelete(annot.id) }, modifier = Modifier.size(20.dp)) {
+                                            Icon(Icons.Default.Delete, contentDescription = stringResource(R.string.common_delete), tint = Color.Red.copy(alpha = 0.7f))
                                         }
                                     }
                                     Spacer(Modifier.height(4.dp))
@@ -99,19 +89,4 @@ fun AnnotationSheet(
         }
     }
 
-    pendingPromote?.let { annot ->
-        AlertDialog(
-            onDismissRequest = { pendingPromote = null },
-            title = { Text(stringResource(R.string.annot_promote)) },
-            text = { Text(stringResource(R.string.annot_promote_confirm)) },
-            confirmButton = {
-                TextButton(onClick = { onPromote(annot); pendingPromote = null; onDismiss() }) {
-                    Text(stringResource(R.string.annot_promote))
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = { pendingPromote = null }) { Text(stringResource(R.string.common_cancel)) }
-            }
-        )
-    }
 }

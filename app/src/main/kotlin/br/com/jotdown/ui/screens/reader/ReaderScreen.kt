@@ -56,8 +56,7 @@ enum class Tool { NONE, SELECT, PEN, PENCIL, HIGHLIGHTER, ERASER, ANNOTATION, DI
 @Composable
 fun ReaderScreen(
     viewModel: ReaderViewModel,
-    onBack: () -> Unit,
-    onOpenNote: (String) -> Unit = {}
+    onBack: () -> Unit
 ) {
     val pdfFile         by viewModel.pdfFile.collectAsState()
     val currentPage     by viewModel.currentPage.collectAsState()
@@ -68,7 +67,6 @@ fun ReaderScreen(
     val drawings        by viewModel.drawings.collectAsState()
     val document        by viewModel.document.collectAsState()
     val strokeWidthMultiplier by viewModel.strokeWidthMultiplier.collectAsState()
-    val notes           by viewModel.notes.collectAsState()
 
     val context = LocalContext.current
     val prefs = remember { context.getSharedPreferences("pdf_prefs", android.content.Context.MODE_PRIVATE) }
@@ -84,7 +82,6 @@ fun ReaderScreen(
     var showAnnotations by remember { mutableStateOf(false) }
     var showLinkHighlight by remember { mutableStateOf(false) }
     var selectedHighlightId by remember { mutableStateOf<Long?>(null) }
-    var showPickHighlight by remember { mutableStateOf(false) }
 
     var ocrResult        by remember { mutableStateOf<Pair<Int, String>?>(null) }
     var textToEdit       by remember { mutableStateOf("") }
@@ -162,12 +159,6 @@ fun ReaderScreen(
         }
     }
 
-    LaunchedEffect(Unit) {
-        viewModel.noteCreatedEvent.collect { noteId ->
-            onOpenNote(noteId)
-        }
-    }
-
     if (isTextFormat && pdfFile != null) {
         TextReader(
             filePath = pdfFile!!.absolutePath,
@@ -211,14 +202,7 @@ fun ReaderScreen(
                         }
                         context.startActivity(android.content.Intent.createChooser(intent, context.getString(R.string.reader_share_pdf_chooser)))
                     },
-                    onOutlineClick = { showOutline = true },
-                    onCreateNote = {
-                        // Com destaques na página, deixa escolher qual vira citação
-                        // da ficha. Sem nenhum, cria direto — nada a perguntar.
-                        if (highlights.any { it.page == currentPage }) showPickHighlight = true
-                        else viewModel.createNote(currentPage)
-                    },
-                    notesCount = notes.size
+                    onOutlineClick = { showOutline = true }
                 )
             }
         },
@@ -423,8 +407,7 @@ fun ReaderScreen(
             onDismiss = { showSidebar = false },
             onImportDOI = { doi -> viewModel.importDOI(doi) },
             doiImportStatus = doiImportStatus,
-            onLinkHighlight = { id -> selectedHighlightId = id; showLinkHighlight = true },
-            notes = notes
+            onLinkHighlight = { id -> selectedHighlightId = id; showLinkHighlight = true }
         )
     }
     
@@ -435,36 +418,7 @@ fun ReaderScreen(
             pageOffset = pageOffset,
             onDismiss = { showAnnotations = false },
             onDelete = { id -> viewModel.deleteAnnotation(id) },
-            onGoToPage = { page -> viewModel.setCurrentPage(page); scrollToPage = page },
-            onPromote = { annot -> viewModel.promoteAnnotation(annot) }
-        )
-    }
-
-    if (showPickHighlight) {
-        val pageHighlights = highlights.filter { it.page == currentPage }
-        AlertDialog(
-            onDismissRequest = { showPickHighlight = false },
-            title = { Text(stringResource(R.string.pick_highlight_title)) },
-            text = {
-                Column(modifier = Modifier.fillMaxWidth().heightIn(max = 320.dp)) {
-                    pageHighlights.forEach { h ->
-                        TextButton(
-                            onClick = { viewModel.createNote(currentPage, h.id); showPickHighlight = false },
-                            modifier = Modifier.fillMaxWidth()
-                        ) {
-                            Text(h.text, modifier = Modifier.fillMaxWidth(), textAlign = TextAlign.Start, maxLines = 3, fontSize = 13.sp)
-                        }
-                    }
-                }
-            },
-            confirmButton = {
-                TextButton(onClick = { viewModel.createNote(currentPage); showPickHighlight = false }) {
-                    Text(stringResource(R.string.pick_highlight_none))
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = { showPickHighlight = false }) { Text(stringResource(R.string.common_cancel)) }
-            }
+            onGoToPage = { page -> viewModel.setCurrentPage(page); scrollToPage = page }
         )
     }
 

@@ -13,7 +13,6 @@ class DocumentRepository(
     private val annotationDao: AnnotationDao,
     private val drawingDao: DrawingDao,
     private val highlightDao: HighlightDao,
-    private val noteDao: br.com.jotdown.data.dao.NoteDao? = null,
     private val syncManager: br.com.jotdown.data.sync.SyncManager? = null,
     private val metadataService: MetadataService = MetadataService()
 ) {
@@ -55,49 +54,6 @@ class DocumentRepository(
     fun getTrashedDocumentSummaries() = documentDao.getTrashedDocumentSummaries()
     fun getDocumentSummariesByFolder(folderId: Long?) = documentDao.getDocumentSummariesByFolder(folderId)
 
-    fun getFolderProgress() = folderDao.getFolderProgress()
-
-    fun getAllNotes() = noteDao?.getAllNotes() ?: kotlinx.coroutines.flow.emptyFlow()
-    suspend fun getNoteById(id: String) = noteDao?.getNoteById(id)
-    fun getNotesForDocument(docId: String) = noteDao?.getNotesForDocument(docId) ?: kotlinx.coroutines.flow.emptyFlow()
-    suspend fun upsertNote(note: br.com.jotdown.data.entity.NoteEntity) { noteDao?.upsertNote(note); triggerSync() }
-    suspend fun deleteNote(id: String) { noteDao?.deleteNote(id); triggerSync() }
-    suspend fun updateNote(id: String, title: String, content: String) { noteDao?.updateNote(id, title, content, System.currentTimeMillis()); triggerSync() }
-
-    suspend fun createNoteForDocument(
-        docId: String, page: Int?, title: String = "", content: String = "",
-        sourceHighlightId: Long? = null
-    ): String {
-        val noteId = java.util.UUID.randomUUID().toString()
-        upsertNote(NoteEntity(
-            id = noteId,
-            title = title,
-            content = content,
-            createdAt = System.currentTimeMillis(),
-            updatedAt = System.currentTimeMillis(),
-            labels = "",
-            sourceDocId = docId,
-            sourcePage = page,
-            sourceHighlightId = sourceHighlightId
-        ))
-        return noteId
-    }
-
-    /**
-     * Move o post-it para ficha: cria a ficha com o texto do post-it e remove o
-     * post-it. Ordem importa — só apaga depois que a ficha existe, senão uma
-     * falha no meio perde o texto do usuário.
-     */
-    suspend fun promoteAnnotationToNote(annotation: AnnotationEntity): String {
-        val noteId = createNoteForDocument(
-            docId = annotation.documentId,
-            page = annotation.page,
-            title = "",
-            content = annotation.text
-        )
-        deleteAnnotation(annotation.id)
-        return noteId
-    }
 
     suspend fun updateMetadata(id: String, type: String, last: String, first: String, title: String, subtitle: String, edition: String, city: String, publisher: String, year: String, journal: String, volume: String, pages: String, url: String, accessDate: String) { 
         getDocumentById(id)?.let { 

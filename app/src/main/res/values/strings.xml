@@ -23,7 +23,6 @@
     <string name="drawer_trash">Trash</string>
     <string name="drawer_my_labels">My Labels</string>
     <string name="drawer_reading">Reading</string>
-    <string name="drawer_goals">Goals</string>
     <string name="drawer_settings_cloud">Settings &amp; Cloud</string>
     <string name="drawer_about">About</string>
 
@@ -37,14 +36,6 @@
     <string name="status_to_read">To read</string>
     <string name="status_reading">Reading</string>
     <string name="status_read">Read</string>
-    <string name="fab_new_goal">New Goal</string>
-    <string name="dlg_new_goal_title">Create Goal</string>
-    <string name="dlg_goal_name">Goal Name</string>
-    <string name="dlg_goal_description">Description (optional)</string>
-    <string name="dlg_goal_deadline">Deadline (optional)</string>
-    <string name="fab_new_note">New Note</string>
-    <string name="dlg_new_note_title">Create Note</string>
-    <string name="dlg_note_title">Note Title</string>
     <string name="sort_recent">Recent</string>
     <string name="sort_az">A-Z</string>
     <string name="sort_za">Z-A</string>
@@ -60,7 +51,6 @@
     <string name="tab_note">Note</string>
     <string name="tab_folder">Folder</string>
     <string name="tab_drive">Drive</string>
-    <string name="tab_notes">Notes</string>
     <string name="lib_stats">%1$d Quotes • %2$d Notes</string>
     <string name="lib_read_prefix">Read: %1$s</string>
     <string name="lib_cover_desc">PDF cover</string>
@@ -237,18 +227,12 @@
     <string name="readerbar_night_mode">Night Mode</string>
     <string name="readerbar_fullscreen">Fullscreen</string>
     <string name="readerbar_annotations">Notes</string>
-    <string name="readerbar_notes">Notes (Atomic)</string>
     <string name="readerbar_book_outline">Book Outline</string>
     <string name="readerbar_share_original_pdf">Share Original PDF</string>
-    <string name="pick_highlight_title">Quote for this note</string>
-    <string name="pick_highlight_none">No quote</string>
-    <string name="annot_promote">Turn into note</string>
-    <string name="annot_promote_confirm">The text becomes a note and this post-it is removed from the page.</string>
     <string name="link_highlight_title">Link to Document</string>
     <string name="link_highlight_search">Search documents...</string>
     <string name="link_highlight_clear">Clear Link</string>
     <string name="doi_label">DOI (Digital Object Identifier)</string>
-    <string name="note_delete_confirm">Delete this note permanently?</string>
 
     <!-- Reader tools -->
     <string name="tool_pen">Pen</string>
