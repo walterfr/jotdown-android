@@ -1,1 +1,1 @@
-﻿Offline PDF reader with OCR and academic annotations.
+Offline PDF reader with OCR and academic annotations.

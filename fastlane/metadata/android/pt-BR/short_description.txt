@@ -1,1 +1,1 @@
-﻿Leitor de PDF offline com OCR e fichamento automático.
+Leitor de PDF offline com OCR e fichamento automático.

@@ -1,4 +1,4 @@
-﻿Jotdown is an open-source document manager and PDF reader built for researchers, students and academics. It works 100% offline and is focused on privacy — no account required, no data leaves the device.
+Jotdown is an open-source document manager and PDF reader built for researchers, students and academics. It works 100% offline and is focused on privacy — no account required, no data leaves the device.
 
 Features:
 * PDF reader with text-layer extraction
