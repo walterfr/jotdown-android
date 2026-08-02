@@ -71,6 +71,8 @@ fun LibraryScreen(viewModel: LibraryViewModel, onOpenDocument: (String) -> Unit,
 
     var docToDelete by remember { mutableStateOf<DocumentSummary?>(null) }
     var showDeleteFolder by remember { mutableStateOf(false) }
+    // Exclusão pela capa: guarda qual pasta, já que aqui não há pasta "atual".
+    var folderToDelete by remember { mutableStateOf<FolderEntity?>(null) }
 
     var folderToRename by remember { mutableStateOf<FolderEntity?>(null) }
     var docToRename by remember { mutableStateOf<DocumentSummary?>(null) }
@@ -432,7 +434,7 @@ fun LibraryScreen(viewModel: LibraryViewModel, onOpenDocument: (String) -> Unit,
                         ) {
                             if (showFolders) {
                                 items(folders, key = { "folder_${it.id}" }) { folder ->
-                                    FolderCard(folder = folder, isTarget = targetFolderId == folder.id, onClick = { viewModel.enterFolder(folder) }, onRename = { folderToRename = folder; renameText = folder.name }, onGloballyPositioned = { coordinates -> folderBoundsMap[folder.id] = coordinates })
+                                    FolderCard(folder = folder, isTarget = targetFolderId == folder.id, onClick = { viewModel.enterFolder(folder) }, onRename = { folderToRename = folder; renameText = folder.name }, onDelete = { folderToDelete = folder }, onGloballyPositioned = { coordinates -> folderBoundsMap[folder.id] = coordinates })
                                 }
                             }
                             if (currentTab != "Pasta") {
@@ -507,6 +509,28 @@ fun LibraryScreen(viewModel: LibraryViewModel, onOpenDocument: (String) -> Unit,
     docToTag?.let { doc -> AlertDialog(onDismissRequest = { docToTag = null }, title = { Text(stringResource(R.string.dlg_edit_labels)) }, text = { Column { Text(stringResource(R.string.dlg_labels_hint), fontSize = 12.sp, color = MaterialTheme.colorScheme.outline); Spacer(Modifier.height(8.dp)); OutlinedTextField(value = tagText, onValueChange = { tagText = it }, label = { Text(stringResource(R.string.dlg_labels)) }, modifier = Modifier.fillMaxWidth()) } }, confirmButton = { TextButton(onClick = { viewModel.updateLabels(doc.id, tagText); docToTag = null }) { Text(stringResource(R.string.common_save), color = Indigo600, fontWeight = FontWeight.Bold) } }, dismissButton = { TextButton(onClick = { docToTag = null }) { Text(stringResource(R.string.common_cancel)) } }) }
     if (showImportWarning) { AlertDialog(onDismissRequest = { showImportWarning = false }, title = { Text(stringResource(R.string.menu_import_backup)) }, text = { Text(stringResource(R.string.dlg_import_backup_warning)) }, confirmButton = { TextButton(onClick = { showImportWarning = false; backupPicker.launch("application/zip") }) { Text(stringResource(R.string.dlg_import_confirm), color = MaterialTheme.colorScheme.error, fontWeight = FontWeight.Bold) } }, dismissButton = { TextButton(onClick = { showImportWarning = false }) { Text(stringResource(R.string.common_cancel)) } }) }
 
+    // Excluir a pasta aberta, pelo ícone de lixeira da barra superior.
+    if (showDeleteFolder) {
+        AlertDialog(
+            onDismissRequest = { showDeleteFolder = false },
+            title = { Text(stringResource(R.string.dlg_delete_folder_title)) },
+            text = { Text(stringResource(R.string.dlg_delete_folder_msg)) },
+            confirmButton = { TextButton(onClick = { viewModel.deleteCurrentFolder(); showDeleteFolder = false }) { Text(stringResource(R.string.common_delete), color = MaterialTheme.colorScheme.error, fontWeight = FontWeight.Bold) } },
+            dismissButton = { TextButton(onClick = { showDeleteFolder = false }) { Text(stringResource(R.string.common_cancel)) } }
+        )
+    }
+
+    // Excluir pela capa, sem entrar na pasta.
+    folderToDelete?.let { alvo ->
+        AlertDialog(
+            onDismissRequest = { folderToDelete = null },
+            title = { Text(stringResource(R.string.dlg_delete_folder_title)) },
+            text = { Text(stringResource(R.string.dlg_delete_folder_msg)) },
+            confirmButton = { TextButton(onClick = { viewModel.deleteFolder(alvo.id); folderToDelete = null }) { Text(stringResource(R.string.common_delete), color = MaterialTheme.colorScheme.error, fontWeight = FontWeight.Bold) } },
+            dismissButton = { TextButton(onClick = { folderToDelete = null }) { Text(stringResource(R.string.common_cancel)) } }
+        )
+    }
+
     if (showAboutDialog) {
         AlertDialog(
             onDismissRequest = { showAboutDialog = false },
@@ -535,7 +559,7 @@ fun LibraryScreen(viewModel: LibraryViewModel, onOpenDocument: (String) -> Unit,
 }
 
 @Composable
-fun FolderCard(folder: FolderEntity, isTarget: Boolean, onClick: () -> Unit, onRename: () -> Unit, onGloballyPositioned: (Rect) -> Unit) {
+fun FolderCard(folder: FolderEntity, isTarget: Boolean, onClick: () -> Unit, onRename: () -> Unit, onDelete: () -> Unit, onGloballyPositioned: (Rect) -> Unit) {
     var expanded by remember { mutableStateOf(false) }
     Card(
         modifier = Modifier.fillMaxWidth().aspectRatio(0.75f).border(if (isTarget) 2.dp else 0.dp, if (isTarget) Indigo600 else Color.Transparent, RoundedCornerShape(topStart = 24.dp, topEnd = 12.dp, bottomEnd = 12.dp, bottomStart = 12.dp)).onGloballyPositioned { coordinates -> onGloballyPositioned(coordinates.boundsInWindow()) }.clickable { onClick() }, 
@@ -550,7 +574,14 @@ fun FolderCard(folder: FolderEntity, isTarget: Boolean, onClick: () -> Unit, onR
             }
             Box(modifier = Modifier.align(Alignment.TopEnd)) {
                 IconButton(onClick = { expanded = true }) { Icon(Icons.Default.MoreVert, contentDescription = stringResource(R.string.common_options), tint = Indigo400) }
-                DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) { DropdownMenuItem(text = { Text(stringResource(R.string.dlg_rename_folder)) }, onClick = { expanded = false; onRename() }) }
+                DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
+                    DropdownMenuItem(text = { Text(stringResource(R.string.dlg_rename_folder)) }, onClick = { expanded = false; onRename() })
+                    DropdownMenuItem(
+                        text = { Text(stringResource(R.string.common_delete), color = MaterialTheme.colorScheme.error) },
+                        leadingIcon = { Icon(Icons.Default.DeleteOutline, contentDescription = null, tint = MaterialTheme.colorScheme.error) },
+                        onClick = { expanded = false; onDelete() }
+                    )
+                }
             }
         }
     }

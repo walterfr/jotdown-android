@@ -163,9 +163,23 @@ class LibraryViewModel(private val repository: DocumentRepository, private val a
 
     fun deleteCurrentFolder() = viewModelScope.launch {
         val folder = _currentFolder.value ?: return@launch
-        repository.clearFolder(folder.id)
-        repository.deleteFolder(folder.id)
+        deleteFolderKeepingContents(folder.id)
         _currentFolder.value = null
+    }
+
+    /**
+     * Apaga a pasta sem apagar o conteúdo: primeiro solta os documentos
+     * (folderId = NULL) e só então remove a pasta. Invertida, a ordem deixaria
+     * documentos apontando para uma pasta inexistente — sumiriam da biblioteca.
+     */
+    fun deleteFolder(folderId: Long) = viewModelScope.launch {
+        deleteFolderKeepingContents(folderId)
+        if (_currentFolder.value?.id == folderId) _currentFolder.value = null
+    }
+
+    private suspend fun deleteFolderKeepingContents(folderId: Long) {
+        repository.clearFolder(folderId)
+        repository.deleteFolder(folderId)
     }
 
     fun toggleFavorite(id: String, isFavorite: Boolean) = viewModelScope.launch { repository.updateFavoriteStatus(id, isFavorite) }
