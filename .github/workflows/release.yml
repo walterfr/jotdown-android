@@ -58,13 +58,16 @@ jobs:
 
       # O Gradle assina e faz zipalign sozinho.
       # apksigner nao funciona em AAB, por isso a assinatura e feita aqui.
-      - name: Build signed APK (chave GitHub/F-Droid)
+      # Os dois sabores saem com a chave historica, para que quem instalou por
+      # fora da Play consiga atualizar. Diferenca real entre eles: foss troca
+      # Drive e OCR do ML Kit por implementacoes sem Google Play Services.
+      - name: Build signed APKs, full e foss (chave GitHub/F-Droid)
         env:
           KEYSTORE_FILE:     ${{ runner.temp }}/github.keystore
           KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
           KEY_ALIAS:         ${{ secrets.KEY_ALIAS }}
           KEY_PASSWORD:      ${{ secrets.KEY_PASSWORD }}
-        run: ./gradlew assembleFullRelease --no-daemon
+        run: ./gradlew assembleFullRelease assembleFossRelease --no-daemon
 
       - name: Build signed AAB (chave de upload do Play)
         env:
@@ -77,7 +80,8 @@ jobs:
       - name: Locate artifacts
         id: artifacts
         run: |
-          echo "apk=$(find app/build/outputs/apk/full/release -name '*.apk' | head -1)" >> "$GITHUB_OUTPUT"
+          echo "apk=$(find app/build/outputs/apk/full/release -name '*.apk' ! -name '*unsigned*' | head -1)" >> "$GITHUB_OUTPUT"
+          echo "apk_foss=$(find app/build/outputs/apk/foss/release -name '*.apk' ! -name '*unsigned*' | head -1)" >> "$GITHUB_OUTPUT"
           echo "aab=$(find app/build/outputs/bundle/fullRelease -name '*.aab' | head -1)" >> "$GITHUB_OUTPUT"
 
       # Sobe o AAB para a faixa INTERNA como RASCUNHO.
@@ -93,9 +97,11 @@ jobs:
           mappingFile: app/build/outputs/mapping/fullRelease/mapping.txt
 
       # So cria Release no GitHub quando disparado por tag.
-      - name: Create GitHub Release and Upload APK
+      - name: Create GitHub Release and Upload APKs
         if: startsWith(github.ref, 'refs/tags/')
         uses: softprops/action-gh-release@v1
         with:
-          files: ${{ steps.artifacts.outputs.apk }}
+          files: |
+            ${{ steps.artifacts.outputs.apk }}
+            ${{ steps.artifacts.outputs.apk_foss }}
           generate_release_notes: true
