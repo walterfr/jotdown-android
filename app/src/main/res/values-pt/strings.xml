@@ -298,6 +298,7 @@
     <!-- Sumário / anotações do leitor -->
     <string name="reader_outline_title">Sumário do Livro</string>
     <string name="reader_outline_empty">Nenhum sumário encontrado neste PDF.</string>
+    <string name="reader_outline_loading">Lendo o sumário…</string>
     <string name="reader_outline_untitled">Sem Título</string>
     <string name="reader_open_annotation">Abrir anotação</string>
     <string name="dict_download_failed">Falha ao baixar o dicionário (%1$s)</string>

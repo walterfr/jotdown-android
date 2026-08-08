@@ -298,6 +298,7 @@
     <!-- Reader outline / annotations -->
     <string name="reader_outline_title">Book Outline</string>
     <string name="reader_outline_empty">No outline found in this PDF.</string>
+    <string name="reader_outline_loading">Reading table of contents…</string>
     <string name="reader_outline_untitled">Untitled</string>
     <string name="reader_open_annotation">Open annotation</string>
     <string name="dict_download_failed">Failed to download dictionary (%1$s)</string>

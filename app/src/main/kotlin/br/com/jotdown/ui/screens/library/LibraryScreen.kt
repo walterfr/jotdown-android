@@ -587,6 +587,27 @@ fun FolderCard(folder: FolderEntity, isTarget: Boolean, onClick: () -> Unit, onR
     }
 }
 
+/**
+ * Decodifica a capa no tamanho em que ela será desenhada, e não no tamanho do
+ * arquivo. O peso em memória vem das dimensões, não dos bytes em disco: um JPEG
+ * de 50 KB pode virar vários MB descomprimidos, e cada capa dessas sobe para a
+ * GPU como textura. Duas passadas — mede, depois decodifica amostrado.
+ */
+private fun decodeCoverScaled(file: File, targetWidth: Int = 600): android.graphics.Bitmap? {
+    val bounds = android.graphics.BitmapFactory.Options().apply { inJustDecodeBounds = true }
+    android.graphics.BitmapFactory.decodeFile(file.absolutePath, bounds)
+    if (bounds.outWidth <= 0) return null
+
+    var sample = 1
+    while (bounds.outWidth / (sample * 2) >= targetWidth) sample *= 2
+
+    val opts = android.graphics.BitmapFactory.Options().apply {
+        inSampleSize = sample
+        inPreferredConfig = android.graphics.Bitmap.Config.RGB_565
+    }
+    return android.graphics.BitmapFactory.decodeFile(file.absolutePath, opts)
+}
+
 @Composable
 private fun DocumentCoverCard(
     doc: DocumentSummary, isDragging: Boolean, isTarget: Boolean, inFolder: Boolean, currentFilter: String, context: android.content.Context,
@@ -603,7 +624,7 @@ private fun DocumentCoverCard(
     var coverBitmap by remember { mutableStateOf<ImageBitmap?>(null) }
     
     LaunchedEffect(doc.id) {
-        withContext(Dispatchers.IO) { if (coverFile.exists()) { try { coverBitmap = android.graphics.BitmapFactory.decodeFile(coverFile.absolutePath)?.asImageBitmap() } catch (e: Exception) {} } }
+        withContext(Dispatchers.IO) { if (coverFile.exists()) { try { coverBitmap = decodeCoverScaled(coverFile)?.asImageBitmap() } catch (e: Exception) {} } }
     }
 
     Column(

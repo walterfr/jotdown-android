@@ -131,10 +131,21 @@ fun ReaderScreen(
                 fileDescriptor = fd
                 pdfRenderer = renderer
                 numPages = renderer.pageCount
-
-                // I2 - Carrega sumário (Bookmarks) pelo PDFBox
-                pdfBookmarks = br.com.jotdown.util.PdfOutlineUtil.getBookmarks(file)
             } catch (e: Exception) { e.printStackTrace() }
+        }
+    }
+
+    // Sumário só quando pedido. Carregá-lo na abertura fazia o PDFBox percorrer
+    // o arquivo inteiro: num PDF de 198 MB isso queima dezenas de segundos de CPU
+    // e enche o heap de lixo, competindo com a renderização das páginas — era o
+    // travamento que aparecia "depois de pouco tempo de leitura".
+    var bookmarksLoading by remember { mutableStateOf(false) }
+    LaunchedEffect(showOutline) {
+        val file = pdfFile
+        if (showOutline && pdfBookmarks.isEmpty() && file != null && !isTextFormat) {
+            bookmarksLoading = true
+            pdfBookmarks = br.com.jotdown.util.PdfOutlineUtil.getBookmarks(file)
+            bookmarksLoading = false
         }
     }
 
@@ -780,7 +791,12 @@ fun ReaderScreen(
             Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp).padding(bottom = 32.dp)) {
                 Text(stringResource(R.string.reader_outline_title), fontSize = 20.sp, fontWeight = FontWeight.Black, color = Indigo600)
                 Spacer(Modifier.height(16.dp))
-                if (pdfBookmarks.isEmpty()) {
+                if (bookmarksLoading) {
+                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                        CircularProgressIndicator(modifier = Modifier.size(20.dp), strokeWidth = 2.dp, color = Indigo600)
+                        Text(stringResource(R.string.reader_outline_loading), color = MaterialTheme.colorScheme.outline)
+                    }
+                } else if (pdfBookmarks.isEmpty()) {
                     Text(stringResource(R.string.reader_outline_empty), color = MaterialTheme.colorScheme.outline)
                 } else {
                     androidx.compose.foundation.lazy.LazyColumn {
@@ -944,6 +960,9 @@ fun PdfPage(
                             val page = pdfRenderer.openPage(pageNumber - 1)
                             val scale = widthPx.toFloat() / page.width.coerceAtLeast(1)
                             val bmpH = (page.height * scale).toInt().coerceAtLeast(1)
+                            // ARGB_8888 é obrigatório: PdfRenderer.Page.render() recusa
+                            // qualquer outra configuração. Custa 4 bytes por pixel e não
+                            // há como baratear por aqui — só reduzindo as dimensões.
                             val bmp = Bitmap.createBitmap(widthPx, bmpH, Bitmap.Config.ARGB_8888)
                             bmp.eraseColor(android.graphics.Color.WHITE)
                             page.render(bmp, null, null, PdfRenderer.Page.RENDER_MODE_FOR_DISPLAY)
