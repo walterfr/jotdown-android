@@ -939,7 +939,17 @@ fun PdfPage(
     onAddAnnotation: (Float, Float) -> Unit, onOpenAnnotation: (AnnotationEntity) -> Unit, onSaveDrawing: (String) -> Unit
 ) {
     var bitmap by remember { mutableStateOf<Bitmap?>(null) }
-    
+
+    // Página que sai de tela devolve os ~14 MB na hora. Sem isto eles ficam
+    // aguardando o coletor, e uma dúzia de páginas já soma centenas de MB de
+    // heap nativo e textura de GPU.
+    DisposableEffect(Unit) {
+        onDispose {
+            bitmap?.recycle()
+            bitmap = null
+        }
+    }
+
     var selectionRect by remember { mutableStateOf<Rect?>(null) }
     var startOffset by remember { mutableStateOf<Offset?>(null) }
     var dragAction by remember { mutableStateOf("NEW") }
@@ -967,9 +977,19 @@ fun PdfPage(
                             bmp.eraseColor(android.graphics.Color.WHITE)
                             page.render(bmp, null, null, PdfRenderer.Page.RENDER_MODE_FOR_DISPLAY)
                             page.close()
+                            // Troca de zoom re-renderiza a página: o bitmap anterior
+                            // vira lixo de 14 MB. Libera depois que o novo já está
+                            // publicado, para nunca reciclar o que ainda é desenhado.
+                            val anterior = bitmap
                             bitmap = bmp
+                            anterior?.recycle()
                         }
-                    } catch (e: Exception) { }
+                    } catch (e: Exception) {
+                        // Sem isto, um render que falha deixa a página em branco e
+                        // silenciosa — foi assim que uma troca de Bitmap.Config passou
+                        // despercebida por várias medições.
+                        android.util.Log.w("PdfPage", "falha ao renderizar página $pageNumber", e)
+                    }
                 }
             }
         }
