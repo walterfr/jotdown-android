@@ -84,6 +84,7 @@ fun ReaderToolsBar(
         modifier = Modifier
             .fillMaxWidth()
             .padding(horizontal = 20.dp)
+            .windowInsetsPadding(WindowInsets.navigationBars)
             .padding(bottom = 16.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(8.dp),

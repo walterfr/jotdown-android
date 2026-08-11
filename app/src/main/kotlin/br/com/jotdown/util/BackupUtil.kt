@@ -6,6 +6,7 @@ import android.net.Uri
 import android.util.Log
 import android.widget.Toast
 import androidx.core.content.FileProvider
+import br.com.jotdown.R
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.io.File
@@ -150,13 +151,19 @@ object BackupUtil {
                 zis.close()
 
                 withContext(Dispatchers.Main) {
-                    Toast.makeText(context, "Backup restaurado! Reiniciando aplicativo...", Toast.LENGTH_LONG).show()
+                    Toast.makeText(context, context.getString(R.string.msg_restore_done), Toast.LENGTH_LONG).show()
                 }
-                Thread.sleep(1500)
-                android.os.Process.killProcess(android.os.Process.myPid())
+                
+                val intent = context.packageManager.getLaunchIntentForPackage(context.packageName)
+                if (intent != null) {
+                    intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_CLEAR_TASK or Intent.FLAG_ACTIVITY_NEW_TASK)
+                    context.startActivity(intent)
+                }
+                Runtime.getRuntime().exit(0)
             } catch (e: Exception) { 
                 withContext(Dispatchers.Main) {
-                    Toast.makeText(context, "Erro ao restaurar: ${e.message}", Toast.LENGTH_LONG).show()
+                    val msg = context.getString(R.string.msg_restore_error, e.message ?: "")
+                    Toast.makeText(context, msg, Toast.LENGTH_LONG).show()
                 }
             }
         }
