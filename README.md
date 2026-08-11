@@ -2,7 +2,7 @@
 
 > Leitor de PDF com anotações, fichamentos e exportação ABNT — 100% offline, sem conta, sem rastreamento.
 
-[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+[![License: GPL v3+](https://img.shields.io/badge/License-GPLv3+-blue.svg)](LICENSE)
 [![Android](https://img.shields.io/badge/Android-8.0%2B-green.svg)](https://developer.android.com)
 [![F-Droid](https://img.shields.io/badge/F--Droid-pending-lightgrey.svg)](https://gitlab.com/fdroid/rfp/-/work_items/3833)
 
@@ -97,4 +97,10 @@ br.com.jotdown/
 
 ## Licença
 
-[MIT](LICENSE) © Walter Rebouças
+Este programa é um software livre: você pode redistribuí-lo e/ou modificá-lo sob os termos da Licença Pública Geral GNU (GPL) conforme publicada pela Free Software Foundation, tanto a versão 3 da Licença, ou (a seu critério) qualquer versão posterior.
+
+Este programa é distribuído na esperança de que seja útil, mas SEM QUALQUER GARANTIA; sem mesmo a garantia implícita de COMERCIALIZAÇÃO ou ADEQUAÇÃO A UM DETERMINADO FIM. Consulte a Licença Pública Geral GNU para obter mais detalhes.
+
+Você deve ter recebido uma cópia da Licença Pública Geral GNU junto com este programa. Se não, veja <https://www.gnu.org/licenses/>.
+
+[GPL-3.0-or-later](LICENSE) © Walter Rebouças
