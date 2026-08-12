@@ -28,9 +28,15 @@ class SyncManager(private val context: Context) {
             .setRequiredNetworkType(NetworkType.CONNECTED)
             .build()
             
+        // backupNow() re-zips and re-uploads the whole DB + all PDFs every time it
+        // runs — not incremental. At 15s, a normal editing burst (a few highlights
+        // a minute apart) could trigger several full re-uploads instead of one.
+        // 5 minutes collapses that into a single sync per active session without
+        // hurting durability: local DB is already the source of truth, and
+        // schedulePeriodicBackup() is the real safety net if a session never idles.
         val request = OneTimeWorkRequestBuilder<BackupWorker>()
             .setConstraints(constraints)
-            .setInitialDelay(15, TimeUnit.SECONDS) // Debounce
+            .setInitialDelay(5, TimeUnit.MINUTES) // Debounce
             .build()
             
         WorkManager.getInstance(context).enqueueUniqueWork(
