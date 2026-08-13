@@ -107,6 +107,12 @@
     <string name="drive_download">Download from Drive</string>
     <string name="drive_my_drive">My Drive</string>
 
+    <!-- Pro unlock -->
+    <string name="pro_unlock_title">Pro</string>
+    <string name="pro_unlock_desc">Google Drive backup and library sync. OneDrive and multi-tab reading arrive in future updates — the same purchase unlocks them, no extra charge.</string>
+    <string name="pro_unlock_button">Unlock for %1$s</string>
+    <string name="pro_unlock_button_loading">Unlock</string>
+
     <!-- Settings -->
     <string name="settings_login_prompt">Sign in to sync your data.</string>
     <string name="settings_connect_google">Sign in with Google</string>

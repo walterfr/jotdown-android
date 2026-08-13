@@ -39,4 +39,6 @@ class JotdownApplication : Application() {
 
     val syncProvider by lazy { br.com.jotdown.data.sync.SyncProviderImpl() }
     val syncManager by lazy { br.com.jotdown.data.sync.SyncManager(this) }
+
+    val billingProvider by lazy { br.com.jotdown.data.billing.BillingProviderImpl(this) }
 }

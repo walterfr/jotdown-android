@@ -28,7 +28,10 @@ fun SettingsScreen(
     val signedInEmail by viewModel.signedInEmail.collectAsState()
     val isSyncing by viewModel.isSyncing.collectAsState()
     val syncMessage by viewModel.syncMessage.collectAsState()
+    val isPro by viewModel.isPro.collectAsState()
+    val proPrice by viewModel.proPrice.collectAsState()
     val context = LocalContext.current
+    val activity = context as? android.app.Activity
 
     val driveFolderName by viewModel.driveFolderName.collectAsState()
     val driveFolderConnecting by viewModel.driveFolderConnecting.collectAsState()
@@ -72,6 +75,26 @@ fun SettingsScreen(
                 .verticalScroll(rememberScrollState()),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
+            if (!isPro) {
+                Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.secondaryContainer)) {
+                    Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            Icon(Icons.Default.WorkspacePremium, contentDescription = null)
+                            Text(stringResource(R.string.pro_unlock_title), style = MaterialTheme.typography.titleLarge)
+                        }
+                        Text(stringResource(R.string.pro_unlock_desc), style = MaterialTheme.typography.bodyMedium)
+                        Button(
+                            onClick = { activity?.let { viewModel.launchPurchase(it) } },
+                            enabled = activity != null
+                        ) {
+                            Text(
+                                if (proPrice != null) stringResource(R.string.pro_unlock_button, proPrice!!)
+                                else stringResource(R.string.pro_unlock_button_loading)
+                            )
+                        }
+                    }
+                }
+            } else {
             Text("Google Drive", style = MaterialTheme.typography.titleLarge)
 
             if (signedInEmail == null) {
@@ -231,6 +254,7 @@ fun SettingsScreen(
                     Text(stringResource(R.string.settings_browse_folder))
                 }
             }
+            } // isPro
 
             HorizontalDivider()
 

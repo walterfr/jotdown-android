@@ -107,6 +107,12 @@
     <string name="drive_download">Baixar do Drive</string>
     <string name="drive_my_drive">Meu Drive</string>
 
+    <!-- Pro unlock -->
+    <string name="pro_unlock_title">Pro</string>
+    <string name="pro_unlock_desc">Backup e biblioteca no Google Drive. OneDrive e leitura em várias abas chegam em atualizações futuras — a mesma compra libera, sem cobrança extra.</string>
+    <string name="pro_unlock_button">Desbloquear por %1$s</string>
+    <string name="pro_unlock_button_loading">Desbloquear</string>
+
     <!-- Settings -->
     <string name="settings_login_prompt">Faça login para sincronizar seus dados.</string>
     <string name="settings_connect_google">Conectar com o Google</string>

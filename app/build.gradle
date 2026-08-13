@@ -144,6 +144,9 @@ dependencies {
         exclude group: 'org.apache.httpcomponents'
     }
 
+    // Play Billing — one-time Pro unlock. Proprietary, full flavor only.
+    fullImplementation 'com.android.billingclient:billing-ktx:7.1.1'
+
     // WorkManager
     implementation 'androidx.work:work-runtime-ktx:2.9.0'
 

@@ -15,6 +15,12 @@ import kotlinx.coroutines.launch
 
 class SettingsViewModel(private val application: JotdownApplication) : ViewModel() {
     private val syncProvider = application.syncProvider
+    private val billingProvider = application.billingProvider
+
+    val isPro: StateFlow<Boolean> = billingProvider.isPro
+    val proPrice: StateFlow<String?> = billingProvider.proPrice
+
+    fun launchPurchase(activity: android.app.Activity) = billingProvider.launchPurchase(activity)
 
     private val _signedInEmail = MutableStateFlow<String?>(null)
     val signedInEmail: StateFlow<String?> = _signedInEmail.asStateFlow()
