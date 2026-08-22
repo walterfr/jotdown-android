@@ -18,7 +18,7 @@ import br.com.jotdown.data.entity.*
         FolderEntity::class,
         DictionaryCache::class
     ],
-    version = 19,
+    version = 20,
     exportSchema = false
 )
 abstract class JotdownDatabase : RoomDatabase() {
@@ -136,6 +136,58 @@ abstract class JotdownDatabase : RoomDatabase() {
             }
         }
 
+        /**
+         * MIGRATION_11_12 criou readingStatus sem NOT NULL (`TEXT DEFAULT 'TO_READ'`),
+         * divergindo do schema que a entity sempre declarou (String não-nulo). Todo
+         * dispositivo que passou por aquela migration carrega essa divergência
+         * silenciosa até hoje — só estoura quando o Room valida o schema contra a
+         * versão atual. Reconstrói a tabela para fixar NOT NULL de vez, igual ao
+         * padrão já usado em MIGRATION_17_18/18_19.
+         */
+        private val MIGRATION_19_20 = object : Migration(19, 20) {
+            override fun migrate(database: SupportSQLiteDatabase) {
+                database.execSQL("""
+                    CREATE TABLE documents_new (
+                        id TEXT NOT NULL PRIMARY KEY,
+                        fileName TEXT NOT NULL,
+                        title TEXT NOT NULL,
+                        dateAdded INTEGER NOT NULL,
+                        folderId INTEGER,
+                        pdfFilePath TEXT NOT NULL,
+                        docType TEXT NOT NULL,
+                        authorLastName TEXT NOT NULL,
+                        authorFirstName TEXT NOT NULL,
+                        subtitle TEXT NOT NULL,
+                        edition TEXT NOT NULL,
+                        city TEXT NOT NULL,
+                        publisher TEXT NOT NULL,
+                        year TEXT NOT NULL,
+                        journal TEXT NOT NULL,
+                        volume TEXT NOT NULL,
+                        pages TEXT NOT NULL,
+                        url TEXT NOT NULL,
+                        accessDate TEXT NOT NULL,
+                        isFavorite INTEGER NOT NULL,
+                        isTrashed INTEGER NOT NULL,
+                        labels TEXT NOT NULL,
+                        driveFileId TEXT,
+                        readingStatus TEXT NOT NULL DEFAULT 'TO_READ',
+                        doi TEXT NOT NULL DEFAULT ''
+                    )
+                """)
+                database.execSQL("""
+                    INSERT INTO documents_new
+                    SELECT id, fileName, title, dateAdded, folderId, pdfFilePath, docType,
+                        authorLastName, authorFirstName, subtitle, edition, city, publisher,
+                        year, journal, volume, pages, url, accessDate, isFavorite, isTrashed,
+                        labels, driveFileId, COALESCE(readingStatus, 'TO_READ'), doi
+                    FROM documents
+                """)
+                database.execSQL("DROP TABLE documents")
+                database.execSQL("ALTER TABLE documents_new RENAME TO documents")
+            }
+        }
+
         fun getInstance(context: Context): JotdownDatabase {
             return INSTANCE ?: synchronized(this) {
                 Room.databaseBuilder(
@@ -143,7 +195,7 @@ abstract class JotdownDatabase : RoomDatabase() {
                     JotdownDatabase::class.java,
                     "jotdown_stable.db"
                 )
-                .addMigrations(MIGRATION_10_11, MIGRATION_11_12, MIGRATION_12_13, MIGRATION_13_14, MIGRATION_14_15, MIGRATION_15_16, MIGRATION_16_17, MIGRATION_17_18, MIGRATION_18_19)
+                .addMigrations(MIGRATION_10_11, MIGRATION_11_12, MIGRATION_12_13, MIGRATION_13_14, MIGRATION_14_15, MIGRATION_15_16, MIGRATION_16_17, MIGRATION_17_18, MIGRATION_18_19, MIGRATION_19_20)
                 .fallbackToDestructiveMigration()
                 .build()
                 .also { INSTANCE = it }

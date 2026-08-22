@@ -1,5 +1,6 @@
 package br.com.jotdown.data.entity
 
+import androidx.room.ColumnInfo
 import androidx.room.Entity
 import androidx.room.PrimaryKey
 
@@ -29,6 +30,8 @@ data class DocumentEntity(
     val labels: String = "",
     /** Google Drive file ID — null for locally-imported documents. */
     val driveFileId: String? = null,
+    @ColumnInfo(defaultValue = "TO_READ")
     val readingStatus: String = ReadingStatus.TO_READ.name,
+    @ColumnInfo(defaultValue = "")
     val doi: String = ""
 )
