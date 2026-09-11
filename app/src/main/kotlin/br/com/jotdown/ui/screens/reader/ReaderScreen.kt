@@ -26,6 +26,7 @@ import androidx.compose.ui.graphics.*
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.input.pointer.PointerType
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
@@ -854,7 +855,10 @@ fun PdfViewer(
     var scale by remember { mutableFloatStateOf(1f) }
     var offset by remember { mutableStateOf(androidx.compose.ui.geometry.Offset.Zero) }
 
-    val isScrollEnabled = (activeTool == Tool.NONE || activeTool == Tool.SELECT || activeTool == Tool.ANNOTATION) && scale == 1f
+    // Dedo nunca desenha (DrawingLayer exige stylus) — pode rolar com qualquer
+    // ferramenta de traço ativa. DICTIONARY é exceção: usa drag de dedo pra
+    // desenhar o retângulo de seleção.
+    val isScrollEnabled = activeTool != Tool.DICTIONARY && scale == 1f
     
     // Inicia o LazyList com a página e a exata altura da rolagem do último acesso
     val listState = rememberLazyListState(
@@ -1225,6 +1229,11 @@ fun DrawingLayer(
 
                 awaitEachGesture {
                     val down = awaitFirstDown()
+                    // Dedo nunca desenha — só rola/dá pan. Sem consumir aqui,
+                    // o gesto sobe pro scroll do LazyColumn.
+                    if (down.type != PointerType.Stylus && down.type != PointerType.Eraser) {
+                        return@awaitEachGesture
+                    }
                     down.consume()
                     redoStack.clear()
                     var pathInProgress = DrawnPath(activeTool, strokeColor, strokeWidthMultiplier, mutableListOf(PathPoint(down.position.x, down.position.y, down.pressure)))
