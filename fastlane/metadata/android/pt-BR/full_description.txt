@@ -1,3 +1,3 @@
-Jotdown é um gerenciador de documentos e leitor de PDF de código aberto, construído com foco em pesquisadores, estudantes e acadêmicos. Totalmente offline e focado na privacidade, o aplicativo permite a extração inteligente de textos de documentos e a geração de fichamentos automáticos.
+Jotdown é um gerenciador de documentos e leitor de PDF de código aberto, construído com foco em pesquisadores, estudantes e acadêmicos. A leitura, as anotações e a organização dos documentos funcionam totalmente offline; a rede só é usada para importação opcional por DOI e download do dicionário. Focado na privacidade — sem conta, sem dado saindo do aparelho além do que essas funções opcionais exigem.
 
 Possui suporte nativo para canetas Stylus (com rejeição de palma), sistema de pastas locais, anotações vetoriais e exportação de citações diretamente para formato Markdown (.md).
