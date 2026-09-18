@@ -96,7 +96,7 @@
 
     <!-- About -->
     <string name="about_title">About Jotdown</string>
-    <string name="about_description">Jotdown is an academic note-taker and PDF reader for Android built to give users full control and privacy. Focused on productivity, it lets you take handwritten notes, anchor notes to PDF pages and manage your document library 100% offline — no internet, no accounts, no telemetry.</string>
+    <string name="about_description">Jotdown is an academic note-taker and PDF reader for Android built to give users full control and privacy. Focused on productivity, it lets you take handwritten notes, anchor notes to PDF pages and manage your document library fully offline — no accounts, no telemetry. Network is only used for optional DOI citation import and dictionary downloads.</string>
     <string name="about_author_title">About the Author</string>
     <string name="about_author_text">I am Walter Rebouças, an open-source developer, history teacher in the state school system of Ceará (Brazil) and master\'s student at PPGHCE-UECE. I believe in technology that respects privacy and delivers real value to users.</string>
     <string name="about_footer">Made with ♥ in Fortaleza.</string>

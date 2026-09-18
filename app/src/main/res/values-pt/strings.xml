@@ -96,7 +96,7 @@
 
     <!-- About -->
     <string name="about_title">Sobre o Jotdown</string>
-    <string name="about_description">O Jotdown é um fichador acadêmico e leitor de PDF para Android criado para dar total controle e privacidade ao usuário. Focado em produtividade, permite fazer anotações à mão, ancorar notas em páginas de PDF e gerenciar a biblioteca de documentos de forma 100% offline — sem internet, sem contas e sem telemetria.</string>
+    <string name="about_description">O Jotdown é um fichador acadêmico e leitor de PDF para Android criado para dar total controle e privacidade ao usuário. Focado em produtividade, permite fazer anotações à mão, ancorar notas em páginas de PDF e gerenciar a biblioteca de documentos de forma totalmente offline — sem contas e sem telemetria. A rede só é usada para importação opcional por DOI e download de dicionário.</string>
     <string name="about_author_title">Sobre o Autor</string>
     <string name="about_author_text">Sou Walter Rebouças, desenvolvedor open-source, professor de história da rede estadual do Ceará e mestrando PPGHCE-UECE. Acredito na tecnologia que respeita a privacidade e entrega valor real aos usuários.</string>
     <string name="about_footer">Feito com ♥ em Fortaleza.</string>
