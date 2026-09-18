@@ -1,6 +1,6 @@
 # Jotdown — Fichador Acadêmico para Android
 
-> Leitor de PDF com anotações, fichamentos e exportação ABNT — 100% offline, sem conta, sem rastreamento.
+> Leitor de PDF com anotações, fichamentos e exportação ABNT — leitura e organização offline, sem conta, sem rastreamento.
 
 [![License: GPL v3+](https://img.shields.io/badge/License-GPLv3+-blue.svg)](LICENSE)
 [![Android](https://img.shields.io/badge/Android-8.0%2B-green.svg)](https://developer.android.com)
