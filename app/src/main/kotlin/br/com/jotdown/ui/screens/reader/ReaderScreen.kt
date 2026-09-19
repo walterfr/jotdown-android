@@ -3,6 +3,7 @@ package br.com.jotdown.ui.screens.reader
 import android.graphics.Bitmap
 import android.graphics.pdf.PdfRenderer
 import android.os.ParcelFileDescriptor
+import androidx.activity.compose.BackHandler
 import androidx.compose.animation.*
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.Canvas
@@ -107,6 +108,9 @@ fun ReaderScreen(
     val renderMutex = remember { Mutex() }
 
     var isFullscreen by remember { mutableStateOf(false) }
+    BackHandler(enabled = isFullscreen) {
+        isFullscreen = false
+    }
     var isSearchActive by remember { mutableStateOf(false) }
     var searchQuery by remember { mutableStateOf("") }
     var showAbntDialog by remember { mutableStateOf(false) }
@@ -280,7 +284,8 @@ fun ReaderScreen(
                         editingAnnotation = annot
                         annotationText = annot.text
                     },
-                    onSaveDrawing   = { page, json -> viewModel.saveDrawing(page, json) }
+                    onSaveDrawing   = { page, json -> viewModel.saveDrawing(page, json) },
+                    onToggleFullscreen = { isFullscreen = !isFullscreen }
                 )
             } else {
                 Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
@@ -355,10 +360,14 @@ fun ReaderScreen(
                 }
             }
 
-            if (numPages > 0) {
+            AnimatedVisibility(
+                visible = !isFullscreen && numPages > 0,
+                enter = fadeIn() + slideInVertically(initialOffsetY = { it }),
+                exit = fadeOut() + slideOutVertically(targetOffsetY = { it }),
+                modifier = Modifier.align(Alignment.BottomCenter)
+            ) {
                 Box(
                     modifier = Modifier
-                        .align(Alignment.BottomCenter)
                         .fillMaxWidth()
                         // A bottomBar do Scaffold já cria espaço suficiente;
                         // o padding aqui apenas afasta a pílula do limite do conteúdo.
@@ -393,6 +402,31 @@ fun ReaderScreen(
                             modifier = Modifier.width(130.dp).padding(horizontal = 12.dp)
                         )
                     }
+                }
+            }
+
+            // Botão flutuante para sair da tela cheia e restaurar as barras de ferramentas
+            AnimatedVisibility(
+                visible = isFullscreen,
+                enter = fadeIn(),
+                exit = fadeOut(),
+                modifier = Modifier
+                    .align(Alignment.TopEnd)
+                    .statusBarsPadding()
+                    .padding(16.dp)
+            ) {
+                FilledTonalIconButton(
+                    onClick = { isFullscreen = false },
+                    colors = IconButtonDefaults.filledTonalIconButtonColors(
+                        containerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.85f),
+                        contentColor = MaterialTheme.colorScheme.onSurface
+                    ),
+                    modifier = Modifier.size(44.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.FullscreenExit,
+                        contentDescription = stringResource(R.string.reader_exit_fullscreen)
+                    )
                 }
             }
         }
@@ -850,7 +884,8 @@ fun PdfViewer(
     pdfRenderer: PdfRenderer?, renderMutex: Mutex, isDarkMode: Boolean, initialScrollOffset: Int,
     onScrollDone: () -> Unit, onOcrSuccess: (Int, String) -> Unit, onDictionaryRequest: (Int, String) -> Unit,
     onScrollChange: (Int, Int) -> Unit,
-    onAddAnnotation: (Int, Float, Float) -> Unit, onOpenAnnotation: (AnnotationEntity) -> Unit, onSaveDrawing: (Int, String) -> Unit
+    onAddAnnotation: (Int, Float, Float) -> Unit, onOpenAnnotation: (AnnotationEntity) -> Unit, onSaveDrawing: (Int, String) -> Unit,
+    onToggleFullscreen: () -> Unit = {}
 ) {
     var scale by remember { mutableFloatStateOf(1f) }
     var offset by remember { mutableStateOf(androidx.compose.ui.geometry.Offset.Zero) }
@@ -925,7 +960,8 @@ fun PdfViewer(
                     onDictionaryRequest = { text -> onDictionaryRequest(pageNumber, text) },
                     onAddAnnotation = { x, y -> onAddAnnotation(pageNumber, x, y) },
                     onOpenAnnotation = onOpenAnnotation,
-                    onSaveDrawing = { json -> onSaveDrawing(pageNumber, json) }
+                    onSaveDrawing = { json -> onSaveDrawing(pageNumber, json) },
+                    onToggleFullscreen = onToggleFullscreen
                 )
             }
         }
@@ -940,7 +976,8 @@ fun PdfPage(
     pdfRenderer: PdfRenderer?, renderMutex: Mutex, isDarkMode: Boolean, initialScrollOffset: Int,
     onWordSelected: (String) -> Unit,
     onOcrSuccess: (String) -> Unit, onDictionaryRequest: (String) -> Unit,
-    onAddAnnotation: (Float, Float) -> Unit, onOpenAnnotation: (AnnotationEntity) -> Unit, onSaveDrawing: (String) -> Unit
+    onAddAnnotation: (Float, Float) -> Unit, onOpenAnnotation: (AnnotationEntity) -> Unit, onSaveDrawing: (String) -> Unit,
+    onToggleFullscreen: () -> Unit = {}
 ) {
     var bitmap by remember { mutableStateOf<Bitmap?>(null) }
 
@@ -1010,10 +1047,17 @@ fun PdfPage(
                     ))) else null
                     Image(bitmap = bmp.asImageBitmap(), contentDescription = null, modifier = Modifier
                         .fillMaxWidth()
-                        .pointerInput(Unit) {
-                            detectTapGestures(onDoubleTap = {
-                                onWordSelected("example")
-                            })
+                        .pointerInput(activeTool) {
+                            detectTapGestures(
+                                onDoubleTap = {
+                                    onWordSelected("example")
+                                },
+                                onTap = {
+                                    if (activeTool == Tool.NONE) {
+                                        onToggleFullscreen()
+                                    }
+                                }
+                            )
                         }, contentScale = ContentScale.FillWidth, colorFilter = filter)
                     
                     DrawingLayer(

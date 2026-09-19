@@ -308,4 +308,8 @@
     <string name="reader_outline_untitled">Sem Título</string>
     <string name="reader_open_annotation">Abrir anotação</string>
     <string name="dict_download_failed">Falha ao baixar o dicionário (%1$s)</string>
+    <string name="custom_color_title">Cor Personalizada</string>
+    <string name="custom_thickness_title">Espessura do Traço</string>
+    <string name="reader_exit_fullscreen">Sair da Tela Cheia</string>
+    <string name="custom_palette_more">Mais Cores</string>
 </resources>

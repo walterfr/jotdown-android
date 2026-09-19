@@ -308,4 +308,8 @@
     <string name="reader_outline_untitled">Untitled</string>
     <string name="reader_open_annotation">Open annotation</string>
     <string name="dict_download_failed">Failed to download dictionary (%1$s)</string>
+    <string name="custom_color_title">Custom Color</string>
+    <string name="custom_thickness_title">Stroke Thickness</string>
+    <string name="reader_exit_fullscreen">Exit Full Screen</string>
+    <string name="custom_palette_more">More Colors</string>
 </resources>

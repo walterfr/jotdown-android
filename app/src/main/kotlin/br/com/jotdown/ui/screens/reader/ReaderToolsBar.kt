@@ -6,6 +6,7 @@ import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkVertically
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -22,9 +23,14 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import br.com.jotdown.R
@@ -79,6 +85,8 @@ fun ReaderToolsBar(
 ) {
     val showColorPicker     = activeTool == Tool.PEN || activeTool == Tool.PENCIL || activeTool == Tool.HIGHLIGHTER
     val showThicknessPicker = showColorPicker || activeTool == Tool.ERASER
+    var showCustomColorDialog by remember { mutableStateOf(false) }
+    var showThicknessDialog by remember { mutableStateOf(false) }
 
     Column(
         modifier = Modifier
@@ -119,6 +127,31 @@ fun ReaderToolsBar(
                                     onClick    = { onColorSelect(color) },
                                 )
                             }
+                            // Botão para cor customizada
+                            val isCustomColor = strokeColor !in toolPalette
+                            Box(
+                                modifier = Modifier
+                                    .size(32.dp)
+                                    .clip(CircleShape)
+                                    .background(if (isCustomColor) Color(strokeColor) else MaterialTheme.colorScheme.surface)
+                                    .border(
+                                        width = if (isCustomColor) 2.5.dp else 1.dp,
+                                        color = if (isCustomColor) MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f) else MaterialTheme.colorScheme.outline.copy(alpha = 0.5f),
+                                        shape = CircleShape
+                                    )
+                                    .clickable { showCustomColorDialog = true },
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Palette,
+                                    contentDescription = stringResource(R.string.custom_color_title),
+                                    modifier = Modifier.size(16.dp),
+                                    tint = if (isCustomColor) {
+                                        val c = Color(strokeColor)
+                                        if (c.red * 0.299 + c.green * 0.587 + c.blue * 0.114 > 0.5) Color.Black else Color.White
+                                    } else MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
                         }
                     }
                 }
@@ -143,6 +176,28 @@ fun ReaderToolsBar(
                                                  MaterialTheme.colorScheme.onSurfaceVariant
                                              else Color(strokeColor),
                                 onClick    = { onWidthSelect(multiplier) },
+                            )
+                        }
+                        // Botão de ajuste fino de espessura
+                        val isCustomWidth = strokeWidths.none { kotlin.math.abs(it.first - strokeWidthMultiplier) < 0.01f }
+                        Box(
+                            modifier = Modifier
+                                .size(32.dp)
+                                .clip(CircleShape)
+                                .background(if (isCustomWidth) MaterialTheme.colorScheme.primary.copy(alpha = 0.15f) else Color.Transparent)
+                                .border(
+                                    width = if (isCustomWidth) 2.dp else 1.dp,
+                                    color = if (isCustomWidth) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline.copy(alpha = 0.5f),
+                                    shape = CircleShape
+                                )
+                                .clickable { showThicknessDialog = true },
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Tune,
+                                contentDescription = stringResource(R.string.custom_thickness_title),
+                                modifier = Modifier.size(16.dp),
+                                tint = if (isCustomWidth) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
                             )
                         }
                     }
@@ -194,6 +249,24 @@ fun ReaderToolsBar(
                     )
                 }
             }
+        }
+
+        if (showCustomColorDialog) {
+            CustomColorDialog(
+                initialColor = strokeColor,
+                onColorSelected = { onColorSelect(it); showCustomColorDialog = false },
+                onDismiss = { showCustomColorDialog = false }
+            )
+        }
+
+        if (showThicknessDialog) {
+            CustomThicknessDialog(
+                currentMultiplier = strokeWidthMultiplier,
+                strokeColor = strokeColor,
+                isEraser = activeTool == Tool.ERASER,
+                onWidthSelected = { onWidthSelect(it); showThicknessDialog = false },
+                onDismiss = { showThicknessDialog = false }
+            )
         }
     }
 }
@@ -289,4 +362,258 @@ fun ToolIconButton(
             )
         }
     }
+}
+
+/** Diálogo de seleção de cor personalizada com paleta estendida e sliders RGB. */
+@Composable
+fun CustomColorDialog(
+    initialColor: Int,
+    onColorSelected: (Int) -> Unit,
+    onDismiss: () -> Unit
+) {
+    val initialComposeColor = Color(initialColor)
+    var red by remember { mutableFloatStateOf(initialComposeColor.red * 255f) }
+    var green by remember { mutableFloatStateOf(initialComposeColor.green * 255f) }
+    var blue by remember { mutableFloatStateOf(initialComposeColor.blue * 255f) }
+
+    val currentColor = Color(red.toInt(), green.toInt(), blue.toInt())
+
+    val presetPalettes = remember {
+        listOf(
+            // Tons escuros / neutros
+            0xFF000000.toInt(), 0xFF1F2937.toInt(), 0xFF4B5563.toInt(), 0xFF9CA3AF.toInt(), 0xFF78350F.toInt(),
+            // Tons fortes
+            0xFFDC2626.toInt(), 0xFFEA580C.toInt(), 0xFFD97706.toInt(), 0xFF16A34A.toInt(), 0xFF059669.toInt(),
+            0xFF0891B2.toInt(), 0xFF2563EB.toInt(), 0xFF1E3A8A.toInt(), 0xFF7C3AED.toInt(), 0xFFDB2777.toInt(),
+            // Marca-texto & pastéis
+            0xFFFEF08A.toInt(), 0xFFFED7AA.toInt(), 0xFFBBF7D0.toInt(), 0xFFBAE6FD.toInt(), 0xFFFBCFE8.toInt(),
+        )
+    }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = {
+            Text(
+                stringResource(R.string.custom_color_title),
+                style = MaterialTheme.typography.titleLarge
+            )
+        },
+        text = {
+            Column(
+                modifier = Modifier.fillMaxWidth(),
+                verticalArrangement = Arrangement.spacedBy(14.dp)
+            ) {
+                // Pré-visualização da cor
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(48.dp)
+                            .clip(CircleShape)
+                            .background(currentColor)
+                            .border(2.dp, MaterialTheme.colorScheme.outlineVariant, CircleShape)
+                    )
+                    Column {
+                        val hex = String.format("#%02X%02X%02X", red.toInt(), green.toInt(), blue.toInt())
+                        Text(
+                            hex,
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Bold
+                        )
+                        Text(
+                            "R: ${red.toInt()}  G: ${green.toInt()}  B: ${blue.toInt()}",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
+
+                Text(
+                    stringResource(R.string.custom_palette_more),
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.primary,
+                    fontWeight = FontWeight.SemiBold
+                )
+
+                // Grid de cores rápidas
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    presetPalettes.chunked(5).forEach { rowColors ->
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            rowColors.forEach { c ->
+                                val isSelected = (currentColor.toArgb() and 0x00FFFFFF) == (c and 0x00FFFFFF)
+                                Box(
+                                    modifier = Modifier
+                                        .size(34.dp)
+                                        .clip(CircleShape)
+                                        .background(Color(c))
+                                        .then(
+                                            if (isSelected)
+                                                Modifier.border(2.5.dp, MaterialTheme.colorScheme.onSurface, CircleShape)
+                                            else Modifier.border(0.5.dp, Color.Black.copy(alpha = 0.2f), CircleShape)
+                                        )
+                                        .clickable {
+                                            val selected = Color(c)
+                                            red = selected.red * 255f
+                                            green = selected.green * 255f
+                                            blue = selected.blue * 255f
+                                        }
+                                )
+                            }
+                        }
+                    }
+                }
+
+                HorizontalDivider()
+
+                // Sliders RGB
+                Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text("R", color = Color.Red, fontWeight = FontWeight.Bold, modifier = Modifier.width(20.dp))
+                        Slider(
+                            value = red,
+                            onValueChange = { red = it },
+                            valueRange = 0f..255f,
+                            modifier = Modifier.weight(1f)
+                        )
+                        Text("${red.toInt()}", modifier = Modifier.width(32.dp), textAlign = TextAlign.End, style = MaterialTheme.typography.bodySmall)
+                    }
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text("G", color = Color(0xFF16A34A), fontWeight = FontWeight.Bold, modifier = Modifier.width(20.dp))
+                        Slider(
+                            value = green,
+                            onValueChange = { green = it },
+                            valueRange = 0f..255f,
+                            modifier = Modifier.weight(1f)
+                        )
+                        Text("${green.toInt()}", modifier = Modifier.width(32.dp), textAlign = TextAlign.End, style = MaterialTheme.typography.bodySmall)
+                    }
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text("B", color = Color.Blue, fontWeight = FontWeight.Bold, modifier = Modifier.width(20.dp))
+                        Slider(
+                            value = blue,
+                            onValueChange = { blue = it },
+                            valueRange = 0f..255f,
+                            modifier = Modifier.weight(1f)
+                        )
+                        Text("${blue.toInt()}", modifier = Modifier.width(32.dp), textAlign = TextAlign.End, style = MaterialTheme.typography.bodySmall)
+                    }
+                }
+            }
+        },
+        confirmButton = {
+            Button(onClick = { onColorSelected(currentColor.toArgb()) }) {
+                Text(stringResource(R.string.common_ok))
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text(stringResource(R.string.common_cancel))
+            }
+        }
+    )
+}
+
+/** Diálogo de seleção contínua de espessura de traço com pré-visualização. */
+@Composable
+fun CustomThicknessDialog(
+    currentMultiplier: Float,
+    strokeColor: Int,
+    isEraser: Boolean,
+    onWidthSelected: (Float) -> Unit,
+    onDismiss: () -> Unit
+) {
+    var multiplier by remember { mutableFloatStateOf(currentMultiplier.coerceIn(0.2f, 4.0f)) }
+    val presetMultipliers = listOf(0.5f, 1.0f, 1.5f, 2.0f, 3.0f)
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = {
+            Text(
+                stringResource(R.string.custom_thickness_title),
+                style = MaterialTheme.typography.titleLarge
+            )
+        },
+        text = {
+            Column(
+                modifier = Modifier.fillMaxWidth(),
+                verticalArrangement = Arrangement.spacedBy(16.dp),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                // Linha de pré-visualização
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(60.dp)
+                        .clip(RoundedCornerShape(12.dp))
+                        .background(MaterialTheme.colorScheme.surfaceVariant),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Canvas(modifier = Modifier.fillMaxWidth().height(40.dp)) {
+                        val baseWidth = 4.dp.toPx()
+                        val strokePx = baseWidth * multiplier
+                        val start = Offset(x = 30.dp.toPx(), y = size.height / 2)
+                        val end = Offset(x = size.width - 30.dp.toPx(), y = size.height / 2)
+                        drawLine(
+                            color = if (isEraser) Color.Gray else Color(strokeColor),
+                            start = start,
+                            end = end,
+                            strokeWidth = strokePx,
+                            cap = StrokeCap.Round
+                        )
+                    }
+                }
+
+                Text(
+                    String.format(java.util.Locale.US, "%.2fx", multiplier),
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold
+                )
+
+                Slider(
+                    value = multiplier,
+                    onValueChange = { multiplier = it },
+                    valueRange = 0.2f..4.0f,
+                    modifier = Modifier.fillMaxWidth()
+                )
+
+                // Presets rápidos
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    presetMultipliers.forEach { p ->
+                        OutlinedButton(
+                            onClick = { multiplier = p },
+                            modifier = Modifier.height(36.dp),
+                            contentPadding = PaddingValues(horizontal = 8.dp),
+                            colors = if (kotlin.math.abs(multiplier - p) < 0.05f) {
+                                ButtonDefaults.outlinedButtonColors(
+                                    containerColor = MaterialTheme.colorScheme.primaryContainer,
+                                    contentColor = MaterialTheme.colorScheme.onPrimaryContainer
+                                )
+                            } else ButtonDefaults.outlinedButtonColors()
+                        ) {
+                            Text("${p}x", style = MaterialTheme.typography.bodySmall)
+                        }
+                    }
+                }
+            }
+        },
+        confirmButton = {
+            Button(onClick = { onWidthSelected(multiplier) }) {
+                Text(stringResource(R.string.common_ok))
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text(stringResource(R.string.common_cancel))
+            }
+        }
+    )
 }
