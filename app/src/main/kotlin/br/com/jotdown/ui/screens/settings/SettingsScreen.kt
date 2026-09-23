@@ -76,33 +76,6 @@ fun SettingsScreen(
                 .verticalScroll(rememberScrollState()),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            Text(stringResource(R.string.settings_drawing), style = MaterialTheme.typography.titleLarge)
-            val drawWithFinger by viewModel.drawWithFinger.collectAsState()
-            val doubleTapToDeselect by viewModel.doubleTapToDeselect.collectAsState()
-            val twoFingerScroll by viewModel.twoFingerScroll.collectAsState()
-            DrawingToggleRow(
-                titleRes = R.string.settings_draw_with_finger,
-                descRes = R.string.settings_draw_with_finger_desc,
-                checked = drawWithFinger,
-                onCheckedChange = { viewModel.setDrawWithFinger(it) }
-            )
-            DrawingToggleRow(
-                titleRes = R.string.settings_double_tap_to_deselect,
-                descRes = R.string.settings_double_tap_to_deselect_desc,
-                checked = doubleTapToDeselect,
-                enabled = drawWithFinger,
-                onCheckedChange = { viewModel.setDoubleTapToDeselect(it) }
-            )
-            DrawingToggleRow(
-                titleRes = R.string.settings_two_finger_scroll,
-                descRes = R.string.settings_two_finger_scroll_desc,
-                checked = twoFingerScroll,
-                enabled = drawWithFinger,
-                onCheckedChange = { viewModel.setTwoFingerScroll(it) }
-            )
-
-            HorizontalDivider()
-
             if (!isPro) {
                 Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.secondaryContainer)) {
                     Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -284,6 +257,32 @@ fun SettingsScreen(
             }
             } // isPro
 
+            HorizontalDivider()
+
+            Text(stringResource(R.string.settings_drawing), style = MaterialTheme.typography.titleLarge)
+            val drawWithFinger by viewModel.drawWithFinger.collectAsState()
+            val doubleTapToDeselect by viewModel.doubleTapToDeselect.collectAsState()
+            val twoFingerScroll by viewModel.twoFingerScroll.collectAsState()
+            DrawingToggleRow(
+                titleRes = R.string.settings_draw_with_finger,
+                descRes = R.string.settings_draw_with_finger_desc,
+                checked = drawWithFinger,
+                onCheckedChange = { viewModel.setDrawWithFinger(it) }
+            )
+            DrawingToggleRow(
+                titleRes = R.string.settings_double_tap_to_deselect,
+                descRes = R.string.settings_double_tap_to_deselect_desc,
+                checked = doubleTapToDeselect,
+                enabled = drawWithFinger,
+                onCheckedChange = { viewModel.setDoubleTapToDeselect(it) }
+            )
+            DrawingToggleRow(
+                titleRes = R.string.settings_two_finger_scroll,
+                descRes = R.string.settings_two_finger_scroll_desc,
+                checked = twoFingerScroll,
+                enabled = drawWithFinger,
+                onCheckedChange = { viewModel.setTwoFingerScroll(it) }
+            )
             HorizontalDivider()
 
             Text(stringResource(R.string.settings_dictionaries), style = MaterialTheme.typography.titleMedium)
