@@ -136,6 +136,13 @@
     <string name="settings_browse_folder">Navegar e escolher pasta</string>
     <string name="settings_dictionaries">Gerenciar Dicionários Offline</string>
     <string name="settings_dictionaries_desc">Baixe ou remova dicionários para consulta rápida.</string>
+    <string name="settings_drawing">Desenho</string>
+    <string name="settings_draw_with_finger">Desenhar com o dedo</string>
+    <string name="settings_draw_with_finger_desc">Permite usar o dedo e canetas passivas na caneta, marca-texto e borracha. Quando desligado, só a caneta stylus ativa desenha.</string>
+    <string name="settings_double_tap_to_deselect">Toque duplo para voltar a rolar</string>
+    <string name="settings_double_tap_to_deselect_desc">Toque duas vezes com o dedo para desligar a caneta e rolar de novo.</string>
+    <string name="settings_two_finger_scroll">Rolar com dois dedos</string>
+    <string name="settings_two_finger_scroll_desc">Com a caneta ativa, um dedo desenha e dois dedos rolam.</string>
     <string name="lang_portuguese">Português</string>
     <string name="lang_english">Inglês</string>
     <string name="dict_not_downloaded">Não baixado</string>

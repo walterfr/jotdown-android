@@ -17,6 +17,34 @@ class SettingsViewModel(private val application: JotdownApplication) : ViewModel
     private val syncProvider = application.syncProvider
     private val billingProvider = application.billingProvider
 
+    // ── Drawing ─────────────────────────────────────────────────────────────
+    // Same file/keys read by ReaderScreen ("pdf_prefs" / "draw_with_finger", …).
+    private val readerPrefs = application.getSharedPreferences("pdf_prefs", Context.MODE_PRIVATE)
+
+    private val _drawWithFinger = MutableStateFlow(readerPrefs.getBoolean("draw_with_finger", false))
+    val drawWithFinger: StateFlow<Boolean> = _drawWithFinger.asStateFlow()
+
+    fun setDrawWithFinger(enabled: Boolean) {
+        readerPrefs.edit().putBoolean("draw_with_finger", enabled).apply()
+        _drawWithFinger.value = enabled
+    }
+
+    private val _doubleTapToDeselect = MutableStateFlow(readerPrefs.getBoolean("double_tap_to_deselect", false))
+    val doubleTapToDeselect: StateFlow<Boolean> = _doubleTapToDeselect.asStateFlow()
+
+    fun setDoubleTapToDeselect(enabled: Boolean) {
+        readerPrefs.edit().putBoolean("double_tap_to_deselect", enabled).apply()
+        _doubleTapToDeselect.value = enabled
+    }
+
+    private val _twoFingerScroll = MutableStateFlow(readerPrefs.getBoolean("two_finger_scroll", false))
+    val twoFingerScroll: StateFlow<Boolean> = _twoFingerScroll.asStateFlow()
+
+    fun setTwoFingerScroll(enabled: Boolean) {
+        readerPrefs.edit().putBoolean("two_finger_scroll", enabled).apply()
+        _twoFingerScroll.value = enabled
+    }
+
     val isPro: StateFlow<Boolean> = billingProvider.isPro
     val proPrice: StateFlow<String?> = billingProvider.proPrice
 

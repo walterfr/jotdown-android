@@ -10,6 +10,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -75,6 +76,33 @@ fun SettingsScreen(
                 .verticalScroll(rememberScrollState()),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
+            Text(stringResource(R.string.settings_drawing), style = MaterialTheme.typography.titleLarge)
+            val drawWithFinger by viewModel.drawWithFinger.collectAsState()
+            val doubleTapToDeselect by viewModel.doubleTapToDeselect.collectAsState()
+            val twoFingerScroll by viewModel.twoFingerScroll.collectAsState()
+            DrawingToggleRow(
+                titleRes = R.string.settings_draw_with_finger,
+                descRes = R.string.settings_draw_with_finger_desc,
+                checked = drawWithFinger,
+                onCheckedChange = { viewModel.setDrawWithFinger(it) }
+            )
+            DrawingToggleRow(
+                titleRes = R.string.settings_double_tap_to_deselect,
+                descRes = R.string.settings_double_tap_to_deselect_desc,
+                checked = doubleTapToDeselect,
+                enabled = drawWithFinger,
+                onCheckedChange = { viewModel.setDoubleTapToDeselect(it) }
+            )
+            DrawingToggleRow(
+                titleRes = R.string.settings_two_finger_scroll,
+                descRes = R.string.settings_two_finger_scroll_desc,
+                checked = twoFingerScroll,
+                enabled = drawWithFinger,
+                onCheckedChange = { viewModel.setTwoFingerScroll(it) }
+            )
+
+            HorizontalDivider()
+
             if (!isPro) {
                 Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.secondaryContainer)) {
                     Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -294,6 +322,34 @@ fun SettingsScreen(
             onNavigateInto = { folder -> viewModel.navigateIntoFolder(folder) },
             onBreadcrumbTap = { index -> viewModel.navigateToBreadcrumb(index) },
             onSelectCurrent = { viewModel.selectCurrentPickerFolder() }
+        )
+    }
+}
+
+@Composable
+fun DrawingToggleRow(
+    titleRes: Int,
+    descRes: Int,
+    checked: Boolean,
+    onCheckedChange: (Boolean) -> Unit,
+    enabled: Boolean = true
+) {
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        modifier = Modifier.fillMaxWidth().alpha(if (enabled) 1f else 0.45f)
+    ) {
+        Column(modifier = Modifier.weight(1f)) {
+            Text(stringResource(titleRes), style = MaterialTheme.typography.bodyLarge)
+            Text(
+                stringResource(descRes),
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.outline
+            )
+        }
+        Switch(
+            checked = checked,
+            onCheckedChange = onCheckedChange,
+            enabled = enabled
         )
     }
 }
