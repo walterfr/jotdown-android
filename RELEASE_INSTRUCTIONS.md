@@ -30,19 +30,20 @@ Play App Signing rejects it — do not upload one by hand.
 
 ### By workflow dispatch (no tag)
 ```bash
-gh workflow run "Android Release Build" -f track=internal -f status=draft
+gh workflow run "Android Release Build" -f track=internal -f status=completed
 ```
-`track`: internal | alpha | beta · `status`: draft | completed
+`track`: internal | alpha | beta · `status`: completed | draft (default: completed)
 
 ### By tag (also creates a GitHub Release with the APK)
 ```bash
 git tag v3.1.8 && git push --tags
 ```
 
-### Promotion is manual
-The service account can only upload to test tracks — it cannot release to
-production, by design. Promote in the Play Console:
-**Release → Testing → Internal testing → select the draft → Review → Start rollout**
+The workflow publishes to the internal testing track as `completed`, so the
+release is available to the configured internal testers automatically. The
+service account can only upload to test tracks — it cannot release to
+production, by design. Draft uploads remain available when explicitly selected
+with `status=draft`.
 
 Each upload needs a fresh `versionCode`; Play rejects a repeat.
 

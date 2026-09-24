@@ -23,8 +23,8 @@ android {
         applicationId 'br.com.jotdown'
         minSdk 26
         targetSdk 36
-        versionCode 40
-        versionName '3.1.20'
+        versionCode 41
+        versionName '3.1.21'
 
         testInstrumentationRunner 'androidx.test.runner.AndroidJUnitProcessor'
 
