@@ -7,6 +7,12 @@ on:
   # Permite disparar manualmente a partir de qualquer branch, sem criar tag.
   workflow_dispatch:
     inputs:
+      operation:
+        description: 'upload = build and upload; promote = release an existing draft'
+        required: true
+        default: upload
+        type: choice
+        options: [upload, promote]
       track:
         description: 'Faixa do Play Console'
         required: true
@@ -19,6 +25,10 @@ on:
         default: completed
         type: choice
         options: [completed, draft]
+      version_code:
+        description: 'Existing Play version code (required for promote)'
+        required: false
+        type: string
 
 jobs:
   build-and-release:
@@ -40,7 +50,18 @@ jobs:
           java-version: '17'
           cache: 'gradle'
 
+      - name: Promote existing Play release
+        if: github.event_name == 'workflow_dispatch' && github.event.inputs.operation == 'promote'
+        env:
+          PLAY_SERVICE_ACCOUNT_JSON: ${{ secrets.PLAY_SERVICE_ACCOUNT_JSON }}
+          PLAY_PACKAGE_NAME: br.com.jotdown
+          PLAY_VERSION_CODE: ${{ github.event.inputs.version_code }}
+        run: |
+          npm install --prefix "$RUNNER_TEMP/play-api" --no-save googleapis
+          NODE_PATH="$RUNNER_TEMP/play-api/node_modules" node scripts/promote_play_release.mjs
+
       - name: Grant execute permission for gradlew
+        if: github.event_name != 'workflow_dispatch' || github.event.inputs.operation != 'promote'
         run: chmod +x gradlew
 
       # Dois canais, duas chaves distintas — ambas legitimas:
@@ -49,6 +70,7 @@ jobs:
       #  - AAB (Play): chave de upload SHA1 E4:EE:B5:B3..., alias
       #    jotdown_upload, registrada no Play App Signing.
       - name: Decode keystores
+        if: github.event_name != 'workflow_dispatch' || github.event.inputs.operation != 'promote'
         env:
           KEYSTORE_BASE64:      ${{ secrets.KEYSTORE_BASE64 }}
           PLAY_KEYSTORE_BASE64: ${{ secrets.PLAY_KEYSTORE_BASE64 }}
@@ -62,6 +84,7 @@ jobs:
       # fora da Play consiga atualizar. Diferenca real entre eles: foss troca
       # Drive e OCR do ML Kit por implementacoes sem Google Play Services.
       - name: Build signed APKs, full e foss (chave GitHub/F-Droid)
+        if: github.event_name != 'workflow_dispatch' || github.event.inputs.operation != 'promote'
         env:
           KEYSTORE_FILE:     ${{ runner.temp }}/github.keystore
           KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
@@ -70,6 +93,7 @@ jobs:
         run: ./gradlew assembleFullRelease assembleFossRelease --no-daemon
 
       - name: Build signed AAB (chave de upload do Play)
+        if: github.event_name != 'workflow_dispatch' || github.event.inputs.operation != 'promote'
         env:
           KEYSTORE_FILE:     ${{ runner.temp }}/play-upload.p12
           KEYSTORE_PASSWORD: ${{ secrets.PLAY_KEYSTORE_PASSWORD }}
@@ -78,6 +102,7 @@ jobs:
         run: ./gradlew bundleFullRelease --no-daemon
 
       - name: Locate artifacts
+        if: github.event_name != 'workflow_dispatch' || github.event.inputs.operation != 'promote'
         id: artifacts
         run: |
           echo "apk=$(find app/build/outputs/apk/full/release -name '*.apk' ! -name '*unsigned*' | head -1)" >> "$GITHUB_OUTPUT"
@@ -87,6 +112,7 @@ jobs:
       # Sobe o AAB para a faixa INTERNA e libera aos testadores.
       # A promocao para producao continua sendo manual.
       - name: Publish AAB to Play Console (internal / completed)
+        if: github.event_name != 'workflow_dispatch' || github.event.inputs.operation != 'promote'
         uses: r0adkll/upload-google-play@v1
         with:
           serviceAccountJsonPlainText: ${{ secrets.PLAY_SERVICE_ACCOUNT_JSON }}
@@ -98,7 +124,7 @@ jobs:
 
       # So cria Release no GitHub quando disparado por tag.
       - name: Create GitHub Release and Upload APKs
-        if: startsWith(github.ref, 'refs/tags/')
+        if: startsWith(github.ref, 'refs/tags/') && (github.event_name != 'workflow_dispatch' || github.event.inputs.operation != 'promote')
         uses: softprops/action-gh-release@v1
         with:
           files: |
