@@ -20,19 +20,25 @@ if (!editId) {
   throw new Error("Google Play returned an edit without an ID.");
 }
 
-const current = await publisher.edits.tracks.get({
+const allTracks = await publisher.edits.tracks.list({
   packageName,
   editId,
-  track: "internal",
 });
-const releases = current.data.releases ?? [];
-const release = releases.find((item) =>
+const track = (allTracks.data.tracks ?? []).find((item) =>
+  (item.releases ?? []).some((release) =>
+    (release.versionCodes ?? []).some((code) => String(code) === versionCode),
+  ),
+);
+const release = track?.releases?.find((item) =>
   (item.versionCodes ?? []).some((code) => String(code) === versionCode),
 );
 
 if (!release) {
+  const available = (allTracks.data.tracks ?? [])
+    .map((item) => `${item.track}: ${JSON.stringify(item.releases ?? [])}`)
+    .join("\n");
   throw new Error(
-    `No internal-track release found for version code ${versionCode}.`,
+    `No release found for version code ${versionCode}. Available tracks:\n${available}`,
   );
 }
 
@@ -43,7 +49,12 @@ await publisher.edits.tracks.update({
   track: "internal",
   requestBody: {
     track: "internal",
-    releases,
+    releases: [
+      {
+        ...release,
+        status: "completed",
+      },
+    ],
   },
 });
 await publisher.edits.commit({ packageName, editId });
