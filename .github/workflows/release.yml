@@ -16,9 +16,9 @@ on:
       status:
         description: 'draft = aguarda promocao manual; completed = libera aos testadores'
         required: true
-        default: draft
+        default: completed
         type: choice
-        options: [draft, completed]
+        options: [completed, draft]
 
 jobs:
   build-and-release:
@@ -84,16 +84,16 @@ jobs:
           echo "apk_foss=$(find app/build/outputs/apk/foss/release -name '*.apk' ! -name '*unsigned*' | head -1)" >> "$GITHUB_OUTPUT"
           echo "aab=$(find app/build/outputs/bundle/fullRelease -name '*.aab' | head -1)" >> "$GITHUB_OUTPUT"
 
-      # Sobe o AAB para a faixa INTERNA como RASCUNHO.
-      # Nada chega a usuarios ate voce promover manualmente no Play Console.
-      - name: Publish AAB to Play Console (internal / draft)
+      # Sobe o AAB para a faixa INTERNA e libera aos testadores.
+      # A promocao para producao continua sendo manual.
+      - name: Publish AAB to Play Console (internal / completed)
         uses: r0adkll/upload-google-play@v1
         with:
           serviceAccountJsonPlainText: ${{ secrets.PLAY_SERVICE_ACCOUNT_JSON }}
           packageName: br.com.jotdown
           releaseFiles: ${{ steps.artifacts.outputs.aab }}
           tracks: ${{ github.event.inputs.track || 'internal' }}
-          status: ${{ github.event.inputs.status || 'draft' }}
+          status: ${{ github.event.inputs.status || 'completed' }}
           mappingFile: app/build/outputs/mapping/fullRelease/mapping.txt
 
       # So cria Release no GitHub quando disparado por tag.
