@@ -136,6 +136,13 @@
     <string name="settings_browse_folder">Browse and choose a folder</string>
     <string name="settings_dictionaries">Manage Offline Dictionaries</string>
     <string name="settings_dictionaries_desc">Download or remove dictionaries for quick lookup.</string>
+    <string name="settings_drawing">Drawing</string>
+    <string name="settings_draw_with_finger">Draw with finger</string>
+    <string name="settings_draw_with_finger_desc">Allow finger and passive pens for pen, highlighter and eraser. When off, only an active stylus draws.</string>
+    <string name="settings_double_tap_to_deselect">Double-tap to switch back to scroll</string>
+    <string name="settings_double_tap_to_deselect_desc">Double-tap with a finger to turn off the pen and scroll again.</string>
+    <string name="settings_two_finger_scroll">Scroll with two fingers</string>
+    <string name="settings_two_finger_scroll_desc">While a pen tool is active, one finger draws and two fingers scroll.</string>
     <string name="lang_portuguese">Portuguese</string>
     <string name="lang_english">English</string>
     <string name="dict_not_downloaded">Not downloaded</string>

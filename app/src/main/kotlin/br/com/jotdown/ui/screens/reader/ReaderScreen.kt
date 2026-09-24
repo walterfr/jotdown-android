@@ -74,6 +74,11 @@ fun ReaderScreen(
     val context = LocalContext.current
     val prefs = remember { context.getSharedPreferences("pdf_prefs", android.content.Context.MODE_PRIVATE) }
     val docId = document?.id ?: ""
+    // Global toggles from Settings: passive pens report as Touch, so they need this.
+    // Sub-options only take effect with drawWithFinger (same dependency as in Settings).
+    val drawWithFinger = prefs.getBoolean("draw_with_finger", false)
+    val doubleTapToDeselect = drawWithFinger && prefs.getBoolean("double_tap_to_deselect", false)
+    val twoFingerScroll = drawWithFinger && prefs.getBoolean("two_finger_scroll", false)
 
     val isDarkModePref = prefs.getBoolean("dark_mode_$docId", false)
     var isDarkMode by remember { mutableStateOf(isDarkModePref) }
@@ -261,6 +266,10 @@ fun ReaderScreen(
                     renderMutex     = renderMutex,
                     isDarkMode      = isDarkMode,
                     initialScrollOffset = initialScrollOffset,
+                    drawWithFinger  = drawWithFinger,
+                    doubleTapToDeselect = doubleTapToDeselect,
+                    twoFingerScroll = twoFingerScroll,
+                    onDoubleTapDeselect = { viewModel.setActiveTool(Tool.NONE) },
                     onScrollDone    = { scrollToPage = 0 },
                     onOcrSuccess    = { page, text ->
                         textToEdit = text
@@ -885,15 +894,23 @@ fun PdfViewer(
     onScrollDone: () -> Unit, onOcrSuccess: (Int, String) -> Unit, onDictionaryRequest: (Int, String) -> Unit,
     onScrollChange: (Int, Int) -> Unit,
     onAddAnnotation: (Int, Float, Float) -> Unit, onOpenAnnotation: (AnnotationEntity) -> Unit, onSaveDrawing: (Int, String) -> Unit,
-    onToggleFullscreen: () -> Unit = {}
+    onToggleFullscreen: () -> Unit = {},
+    drawWithFinger: Boolean = false,
+    doubleTapToDeselect: Boolean = false,
+    twoFingerScroll: Boolean = false,
+    onDoubleTapDeselect: () -> Unit = {},
 ) {
     var scale by remember { mutableFloatStateOf(1f) }
     var offset by remember { mutableStateOf(androidx.compose.ui.geometry.Offset.Zero) }
 
-    // Dedo nunca desenha (DrawingLayer exige stylus) — pode rolar com qualquer
-    // ferramenta de traço ativa. DICTIONARY é exceção: usa drag de dedo pra
-    // desenhar o retângulo de seleção.
-    val isScrollEnabled = activeTool != Tool.DICTIONARY && scale == 1f
+    // Stylus-only by default (palm rejection): finger scrolls. With drawWithFinger,
+    // finger/passive pen draws, so scroll must yield while a stroke tool is active —
+    // unless twoFingerScroll keeps scroll enabled (one finger draws, two scroll).
+    // DICTIONARY é exceção: usa drag de dedo pra desenhar o retângulo de seleção.
+    val isStrokeTool = activeTool == Tool.PEN || activeTool == Tool.PENCIL ||
+            activeTool == Tool.HIGHLIGHTER || activeTool == Tool.ERASER
+    val isScrollEnabled = activeTool != Tool.DICTIONARY && scale == 1f &&
+            !(drawWithFinger && isStrokeTool && !twoFingerScroll)
     
     // Inicia o LazyList com a página e a exata altura da rolagem do último acesso
     val listState = rememberLazyListState(
@@ -955,6 +972,10 @@ fun PdfViewer(
                     pageDrawingsJson = drawings.find { it.page == pageNumber }?.pathsJson,
                     undoTrigger = undoTrigger, redoTrigger = redoTrigger, strokeWidthMultiplier = strokeWidthMultiplier,
                     pdfRenderer = pdfRenderer, renderMutex = renderMutex, isDarkMode = isDarkMode, initialScrollOffset = 0,
+                    drawWithFinger = drawWithFinger,
+                    doubleTapToDeselect = doubleTapToDeselect,
+                    twoFingerScroll = twoFingerScroll,
+                    onDoubleTapDeselect = onDoubleTapDeselect,
                     onWordSelected = {},
                     onOcrSuccess = { text -> onOcrSuccess(pageNumber, text) },
                     onDictionaryRequest = { text -> onDictionaryRequest(pageNumber, text) },
@@ -977,7 +998,11 @@ fun PdfPage(
     onWordSelected: (String) -> Unit,
     onOcrSuccess: (String) -> Unit, onDictionaryRequest: (String) -> Unit,
     onAddAnnotation: (Float, Float) -> Unit, onOpenAnnotation: (AnnotationEntity) -> Unit, onSaveDrawing: (String) -> Unit,
-    onToggleFullscreen: () -> Unit = {}
+    onToggleFullscreen: () -> Unit = {},
+    drawWithFinger: Boolean = false,
+    doubleTapToDeselect: Boolean = false,
+    twoFingerScroll: Boolean = false,
+    onDoubleTapDeselect: () -> Unit = {},
 ) {
     var bitmap by remember { mutableStateOf<Bitmap?>(null) }
 
@@ -1066,6 +1091,10 @@ fun PdfPage(
                         strokeWidthMultiplier = strokeWidthMultiplier,
                         annotations = annotations,
                         pageDrawingsJson = pageDrawingsJson, undoTrigger = undoTrigger, redoTrigger = redoTrigger,
+                        drawWithFinger = drawWithFinger,
+                        doubleTapToDeselect = doubleTapToDeselect,
+                        twoFingerScroll = twoFingerScroll,
+                        onDoubleTapDeselect = onDoubleTapDeselect,
                         onAddAnnotation = onAddAnnotation, onOpenAnnotation = onOpenAnnotation, onSaveDrawing = onSaveDrawing
                     )
 
@@ -1234,13 +1263,20 @@ fun DrawingLayer(
     modifier: Modifier, activeTool: Tool, strokeColor: Color, strokeWidthMultiplier: Float,
     annotations: List<AnnotationEntity>,
     pageDrawingsJson: String?, undoTrigger: Long, redoTrigger: Long,
-    onAddAnnotation: (Float, Float) -> Unit, onOpenAnnotation: (AnnotationEntity) -> Unit, onSaveDrawing: (String) -> Unit
+    onAddAnnotation: (Float, Float) -> Unit, onOpenAnnotation: (AnnotationEntity) -> Unit, onSaveDrawing: (String) -> Unit,
+    drawWithFinger: Boolean = false,
+    doubleTapToDeselect: Boolean = false,
+    twoFingerScroll: Boolean = false,
+    onDoubleTapDeselect: () -> Unit = {},
 ) {
     val paths = remember { mutableStateListOf<DrawnPath>() }
     val redoStack = remember { mutableStateListOf<DrawnPath>() }
     var currentPath by remember { mutableStateOf<DrawnPath?>(null) }
     // Posição do cursor da borracha (null = não está apagando)
     var eraserCursorPos by remember { mutableStateOf<Offset?>(null) }
+    // Double-tap tracking: último toque de dedo (tempo + posição).
+    var lastTapTime by remember { mutableLongStateOf(0L) }
+    var lastTapPos by remember { mutableStateOf(Offset.Zero) }
     val annotationsRef = rememberUpdatedState(annotations)
 
     LaunchedEffect(pageDrawingsJson) {
@@ -1259,9 +1295,9 @@ fun DrawingLayer(
             modifier = Modifier
                 .matchParentSize()
                 .graphicsLayer(compositingStrategy = CompositingStrategy.Offscreen)
-                // Três chaves: o bloco relança quando qualquer uma delas muda,
+                // Chaves: o bloco relança quando qualquer uma delas muda,
                 // garantindo que strokeWidthMultiplier capturado nunca fique stale.
-                .pointerInput(activeTool, strokeColor, strokeWidthMultiplier) {
+                .pointerInput(activeTool, strokeColor, strokeWidthMultiplier, drawWithFinger, doubleTapToDeselect, twoFingerScroll) {
                 if (activeTool == Tool.NONE || activeTool == Tool.SELECT || activeTool == Tool.DICTIONARY) return@pointerInput
 
                 if (activeTool == Tool.ANNOTATION) {
@@ -1273,17 +1309,37 @@ fun DrawingLayer(
 
                 awaitEachGesture {
                     val down = awaitFirstDown()
-                    // Dedo nunca desenha — só rola/dá pan. Sem consumir aqui,
-                    // o gesto sobe pro scroll do LazyColumn.
-                    if (down.type != PointerType.Stylus && down.type != PointerType.Eraser) {
+                    // Double-tap com o dedo desliga a caneta e volta a rolar.
+                    // Só observa (não consome): o scroll não é afetado.
+                    if (doubleTapToDeselect && down.type == PointerType.Touch) {
+                        val now = System.currentTimeMillis()
+                        if (now - lastTapTime < 350 && (down.position - lastTapPos).getDistance() < 100f) {
+                            lastTapTime = 0L
+                            onDoubleTapDeselect()
+                            return@awaitEachGesture
+                        }
+                        lastTapTime = now
+                        lastTapPos = down.position
+                    }
+                    // Default: só stylus desenha, dedo rola (palm rejection). Com
+                    // drawWithFinger, Touch (dedo/caneta passiva) também desenha.
+                    // Sem consumir aqui, o gesto sobe pro scroll do LazyColumn.
+                    if (!drawWithFinger && down.type != PointerType.Stylus && down.type != PointerType.Eraser) {
                         return@awaitEachGesture
                     }
                     down.consume()
                     redoStack.clear()
                     var pathInProgress = DrawnPath(activeTool, strokeColor, strokeWidthMultiplier, mutableListOf(PathPoint(down.position.x, down.position.y, down.pressure)))
                     currentPath = pathInProgress
+                    var aborted = false
                     do {
                         val event = awaitPointerEvent()
+                        // Segundo dedo vira scroll: abandona o traço parcial e
+                        // deixa o gesto seguir para o LazyColumn.
+                        if (twoFingerScroll && event.changes.size > 1) {
+                            aborted = true
+                            break
+                        }
                         val drag = event.changes.firstOrNull { it.id == down.id }
                         if (drag != null && drag.pressed) {
                             drag.consume()
@@ -1292,7 +1348,9 @@ fun DrawingLayer(
                             if (activeTool == Tool.ERASER) eraserCursorPos = drag.position
                         }
                     } while (drag != null && drag.pressed)
-                    currentPath?.let { paths.add(it); onSaveDrawing(paths.toJson()) }
+                    if (!aborted) {
+                        currentPath?.let { paths.add(it); onSaveDrawing(paths.toJson()) }
+                    }
                     currentPath = null
                     eraserCursorPos = null
                 }
