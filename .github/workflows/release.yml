@@ -57,8 +57,8 @@ jobs:
           PLAY_PACKAGE_NAME: br.com.jotdown
           PLAY_VERSION_CODE: ${{ github.event.inputs.version_code }}
         run: |
-          npm install --prefix "$RUNNER_TEMP/play-api" --no-save googleapis
-          NODE_PATH="$RUNNER_TEMP/play-api/node_modules" node scripts/promote_play_release.mjs
+          npm install --no-save --no-package-lock googleapis
+          node scripts/promote_play_release.mjs
 
       - name: Grant execute permission for gradlew
         if: github.event_name != 'workflow_dispatch' || github.event.inputs.operation != 'promote'
