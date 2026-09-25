@@ -9,7 +9,6 @@
 > Bump `versionCode`/`versionName` in `app/build.gradle` before every upload.
 
 ## Features Included (F0-F5, since 3.1.8)
-## Features Included (F0-F5)
 - ✅ Reading status tracking (TO_READ/READING/READ)
 - ✅ Research goals (Metas) with progress tracking
 - ✅ Atomic notes (Fichas) — Zettelkasten-style
