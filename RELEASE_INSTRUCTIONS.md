@@ -1,14 +1,14 @@
-# Jotdown v3.1.8 — Release Instructions
+# Jotdown — Release Instructions
 
 ## Version Info
-- **Version:** 3.1.8
-- **Build Code:** 28
-
-> Build 27 (3.1.7) was uploaded to the internal track as a draft but should **not**
-> be promoted: tapping a ficha in the library did nothing there. Build 28 fixes it.
-- **Release Date:** August 2026
+- **Current version:** 3.1.21
+- **Build Code:** 41
+- **Last release:** September 2026 (internal track, published automatically as `completed`)
 - **AAB Path:** `app/build/outputs/bundle/fullRelease/app-full-release.aab`
 
+> Bump `versionCode`/`versionName` in `app/build.gradle` before every upload.
+
+## Features Included (F0-F5, since 3.1.8)
 ## Features Included (F0-F5)
 - ✅ Reading status tracking (TO_READ/READING/READ)
 - ✅ Research goals (Metas) with progress tracking
@@ -36,7 +36,7 @@ gh workflow run "Android Release Build" -f track=internal -f status=completed
 
 ### By tag (also creates a GitHub Release with the APK)
 ```bash
-git tag v3.1.8 && git push --tags
+git tag v3.1.21 && git push --tags
 ```
 
 The workflow publishes to the internal testing track as `completed`, so the
@@ -49,7 +49,7 @@ Each upload needs a fresh `versionCode`; Play rejects a repeat.
 
 ---
 
-## Release Notes
+## Release Notes (3.1.8 — F0-F5 roadmap, kept for reference)
 
 ### English (en-US)
 ```
