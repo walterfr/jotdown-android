@@ -18,7 +18,8 @@
 - **Exportação ABNT** — metadados acadêmicos com saída `.MD`, `.TXT` e `.PDF`
 - **Pastas e rótulos** — organização da biblioteca com drag-and-drop
 - **Backup/restauração** — exportação em `.zip` de toda a biblioteca
-- **Sem rede** — nenhuma permissão de internet, nenhuma conta, nenhuma telemetria
+- **Offline por padrão** — leitura, anotações e organização funcionam sem rede; a internet só é usada, sob demanda, na importação por DOI (API CrossRef) e no download de dicionários
+- **Privacidade** — nenhuma conta, nenhuma telemetria
 
 ---
 
@@ -78,8 +79,8 @@ br.com.jotdown/
 | Item | Valor |
 |---|---|
 | `minSdk` | 26 (Android 8.0 Oreo) |
-| `targetSdk` | 34 (Android 14) |
-| `compileSdk` | 34 |
+| `targetSdk` | 36 (Android 16) |
+| `compileSdk` | 36 |
 | JVM target | 17 |
 
 ---
@@ -89,7 +90,7 @@ br.com.jotdown/
 | Anti-feature | Flavor `foss` | Flavor `full` |
 |---|---|---|
 | Proprietary deps | ❌ | ✅ ML Kit OCR |
-| Network | ❌ | ❌ |
+| Network (opcional: DOI/CrossRef, dicionários) | ✅ | ✅ |
 | Ads / Tracking | ❌ | ❌ |
 | Account required | ❌ | ❌ |
 

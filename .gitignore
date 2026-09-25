@@ -49,3 +49,12 @@ upload_certificate.pem
 
 # Mac OS files
 .DS_Store
+
+# IDE / ferramentas locais
+.idea/
+.codegraph/
+__pycache__/
+*.pyc
+
+# Logs de build locais
+build_output.txt
