@@ -7,6 +7,7 @@ import kotlinx.coroutines.flow.StateFlow
 
 /** FOSS ships no Play Billing — proprietary, and there's nothing to unlock here anyway. */
 class BillingProviderImpl(context: Context) : BillingProvider {
+    override val isBillingSupported: Boolean = false
     override val isPro: StateFlow<Boolean> = MutableStateFlow(false)
     override val proPrice: StateFlow<String?> = MutableStateFlow(null)
     override fun launchPurchase(activity: Activity) { /* no-op */ }

@@ -109,7 +109,7 @@
 
     <!-- Pro unlock -->
     <string name="pro_unlock_title">Pro</string>
-    <string name="pro_unlock_desc">Google Drive backup and library sync. OneDrive and multi-tab reading arrive in future updates — the same purchase unlocks them, no extra charge.</string>
+    <string name="pro_unlock_desc">Google Drive backup and library sync, plus multi-tab reading. OneDrive support will be included in this purchase when available.</string>
     <string name="pro_unlock_button">Unlock for %1$s</string>
     <string name="pro_unlock_button_loading">Unlock</string>
 
@@ -319,4 +319,7 @@
     <string name="custom_thickness_title">Stroke Thickness</string>
     <string name="reader_exit_fullscreen">Exit Full Screen</string>
     <string name="custom_palette_more">More Colors</string>
+    <string name="reader_tabs_close">Close %1$s tab</string>
+    <string name="reader_tabs_add">Open another document</string>
+    <string name="reader_tabs_unlock">Unlock multi-tab reading</string>
 </resources>
