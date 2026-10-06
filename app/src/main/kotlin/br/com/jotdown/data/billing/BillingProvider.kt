@@ -7,6 +7,8 @@ import kotlinx.coroutines.flow.StateFlow
 const val PRO_PRODUCT_ID = "pro_unlock"
 
 interface BillingProvider {
+    /** False in builds that do not include Google Play Billing. */
+    val isBillingSupported: Boolean
     /** True once a completed, acknowledged purchase of [PRO_PRODUCT_ID] is on record. */
     val isPro: StateFlow<Boolean>
     /** Localized price (e.g. "R$ 24,90"), null until Play returns product details. */

@@ -109,7 +109,7 @@
 
     <!-- Pro unlock -->
     <string name="pro_unlock_title">Pro</string>
-    <string name="pro_unlock_desc">Backup e biblioteca no Google Drive. OneDrive e leitura em várias abas chegam em atualizações futuras — a mesma compra libera, sem cobrança extra.</string>
+    <string name="pro_unlock_desc">Backup e biblioteca no Google Drive, mais leitura em várias abas. O suporte ao OneDrive será incluído nesta compra quando estiver disponível.</string>
     <string name="pro_unlock_button">Desbloquear por %1$s</string>
     <string name="pro_unlock_button_loading">Desbloquear</string>
 
@@ -319,4 +319,7 @@
     <string name="custom_thickness_title">Espessura do Traço</string>
     <string name="reader_exit_fullscreen">Sair da Tela Cheia</string>
     <string name="custom_palette_more">Mais Cores</string>
+    <string name="reader_tabs_close">Fechar aba de %1$s</string>
+    <string name="reader_tabs_add">Abrir outro documento</string>
+    <string name="reader_tabs_unlock">Desbloquear leitura em abas</string>
 </resources>

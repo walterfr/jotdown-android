@@ -19,6 +19,8 @@ import kotlinx.coroutines.flow.StateFlow
 
 class BillingProviderImpl(context: Context) : BillingProvider {
 
+    override val isBillingSupported: Boolean = true
+
     private val appContext = context.applicationContext
 
     private val _isPro = MutableStateFlow(false)
