@@ -285,6 +285,18 @@ fun SettingsScreen(
             )
             HorizontalDivider()
 
+            if (viewModel.isBillingSupported) {
+                Text(stringResource(R.string.settings_reader_tabs), style = MaterialTheme.typography.titleLarge)
+                val tabsInFullscreen by viewModel.tabsInFullscreen.collectAsState()
+                DrawingToggleRow(
+                    titleRes = R.string.settings_tabs_in_fullscreen,
+                    descRes = R.string.settings_tabs_in_fullscreen_desc,
+                    checked = tabsInFullscreen,
+                    onCheckedChange = { viewModel.setTabsInFullscreen(it) }
+                )
+                HorizontalDivider()
+            }
+
             Text(stringResource(R.string.settings_dictionaries), style = MaterialTheme.typography.titleMedium)
             Text(stringResource(R.string.settings_dictionaries_desc), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.outline)
             

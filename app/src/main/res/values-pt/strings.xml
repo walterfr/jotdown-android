@@ -322,4 +322,7 @@
     <string name="reader_tabs_close">Fechar aba de %1$s</string>
     <string name="reader_tabs_add">Abrir outro documento</string>
     <string name="reader_tabs_unlock">Desbloquear leitura em abas</string>
+    <string name="settings_reader_tabs">Abas de Leitura</string>
+    <string name="settings_tabs_in_fullscreen">Manter abas em tela cheia</string>
+    <string name="settings_tabs_in_fullscreen_desc">Mantém a barra de abas de documentos visível mesmo durante o modo tela cheia.</string>
 </resources>

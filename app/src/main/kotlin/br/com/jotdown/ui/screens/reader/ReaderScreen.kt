@@ -59,7 +59,8 @@ enum class Tool { NONE, SELECT, PEN, PENCIL, HIGHLIGHTER, ERASER, ANNOTATION, DI
 @Composable
 fun ReaderScreen(
     viewModel: ReaderViewModel,
-    onBack: () -> Unit
+    onBack: () -> Unit,
+    onFullscreenChanged: (Boolean) -> Unit = {}
 ) {
     val pdfFile         by viewModel.pdfFile.collectAsState()
     val currentPage     by viewModel.currentPage.collectAsState()
@@ -115,6 +116,12 @@ fun ReaderScreen(
     var isFullscreen by remember { mutableStateOf(false) }
     BackHandler(enabled = isFullscreen) {
         isFullscreen = false
+    }
+    LaunchedEffect(isFullscreen) {
+        onFullscreenChanged(isFullscreen)
+    }
+    DisposableEffect(Unit) {
+        onDispose { onFullscreenChanged(false) }
     }
     var isSearchActive by remember { mutableStateOf(false) }
     var searchQuery by remember { mutableStateOf("") }

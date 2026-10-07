@@ -322,4 +322,7 @@
     <string name="reader_tabs_close">Close %1$s tab</string>
     <string name="reader_tabs_add">Open another document</string>
     <string name="reader_tabs_unlock">Unlock multi-tab reading</string>
+    <string name="settings_reader_tabs">Reader Tabs</string>
+    <string name="settings_tabs_in_fullscreen">Show tabs in full screen</string>
+    <string name="settings_tabs_in_fullscreen_desc">Keep the document tabs bar visible even when full screen mode is active.</string>
 </resources>

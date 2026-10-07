@@ -45,6 +45,17 @@ class SettingsViewModel(private val application: JotdownApplication) : ViewModel
         _twoFingerScroll.value = enabled
     }
 
+    // ── Reader Tabs ──────────────────────────────────────────────────────────
+    val isBillingSupported: Boolean = billingProvider.isBillingSupported
+
+    private val _tabsInFullscreen = MutableStateFlow(readerPrefs.getBoolean("tabs_in_fullscreen", false))
+    val tabsInFullscreen: StateFlow<Boolean> = _tabsInFullscreen.asStateFlow()
+
+    fun setTabsInFullscreen(enabled: Boolean) {
+        readerPrefs.edit().putBoolean("tabs_in_fullscreen", enabled).apply()
+        _tabsInFullscreen.value = enabled
+    }
+
     val isPro: StateFlow<Boolean> = billingProvider.isPro
     val proPrice: StateFlow<String?> = billingProvider.proPrice
 

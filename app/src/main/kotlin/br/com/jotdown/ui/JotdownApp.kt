@@ -11,7 +11,9 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.viewmodel.compose.LocalViewModelStoreOwner
@@ -85,6 +87,10 @@ fun JotdownApp() {
                 return@composable
             }
 
+            var isFullscreen by remember { mutableStateOf(false) }
+            val prefs = remember { context.getSharedPreferences("pdf_prefs", android.content.Context.MODE_PRIVATE) }
+            val showTabsInFullscreen = prefs.getBoolean("tabs_in_fullscreen", false)
+
             val tabOwner = remember(documentId) {
                 object : ViewModelStoreOwner {
                     override val viewModelStore = ViewModelStore()
@@ -100,25 +106,35 @@ fun JotdownApp() {
                     )
                     Column {
                         if (app.billingProvider.isBillingSupported) {
-                            ReaderTabsBar(
-                                tabs = tabs,
-                                activeDocumentId = documentId,
-                                isPro = isPro,
-                                onSelect = tabsViewModel::select,
-                                onClose = { id ->
-                                    if (tabsViewModel.close(id)) navController.popBackStack()
-                                },
-                                onAddTab = {
-                                    if (isPro) {
-                                        navController.popBackStack(Screen.Library.route, false)
-                                    } else {
-                                        navController.navigate(Screen.Settings.route)
+                            AnimatedVisibility(
+                                visible = !isFullscreen || showTabsInFullscreen,
+                                enter = fadeIn() + expandVertically(),
+                                exit = fadeOut() + shrinkVertically()
+                            ) {
+                                ReaderTabsBar(
+                                    tabs = tabs,
+                                    activeDocumentId = documentId,
+                                    isPro = isPro,
+                                    onSelect = tabsViewModel::select,
+                                    onClose = { id ->
+                                        if (tabsViewModel.close(id)) navController.popBackStack()
+                                    },
+                                    onAddTab = {
+                                        if (isPro) {
+                                            navController.popBackStack(Screen.Library.route, false)
+                                        } else {
+                                            navController.navigate(Screen.Settings.route)
+                                        }
                                     }
-                                }
-                            )
+                                )
+                            }
                         }
                         Box(Modifier.fillMaxWidth().weight(1f)) {
-                            ReaderScreen(viewModel = vm, onBack = { navController.popBackStack() })
+                            ReaderScreen(
+                                viewModel = vm,
+                                onBack = { navController.popBackStack() },
+                                onFullscreenChanged = { isFullscreen = it }
+                            )
                         }
                     }
                 }
