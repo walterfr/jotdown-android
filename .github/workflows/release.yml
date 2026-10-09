@@ -8,11 +8,11 @@ on:
   workflow_dispatch:
     inputs:
       operation:
-        description: 'upload = build and upload; promote = release an existing draft'
+        description: 'upload = build and upload; promote = release an existing draft; rebuild-apk = rebuild the APKs of an existing tag and replace them on its GitHub Release'
         required: true
         default: upload
         type: choice
-        options: [upload, promote]
+        options: [upload, promote, rebuild-apk]
       track:
         description: 'Faixa do Play Console'
         required: true
@@ -29,10 +29,15 @@ on:
         description: 'Existing Play version code (required for promote)'
         required: false
         type: string
+      tag:
+        description: 'Existing tag, e.g. v3.1.22 (required for rebuild-apk)'
+        required: false
+        type: string
 
 jobs:
   build-and-release:
     name: Build, Release APK & Publish AAB
+    if: github.event_name != 'workflow_dispatch' || github.event.inputs.operation != 'rebuild-apk'
     runs-on: ubuntu-latest
 
     # Permissão necessária para o GitHub Actions criar o Release
@@ -131,3 +136,60 @@ jobs:
             ${{ steps.artifacts.outputs.apk }}
             ${{ steps.artifacts.outputs.apk_foss }}
           generate_release_notes: true
+
+  # Refaz so os APKs de uma tag ja publicada, a partir de um checkout limpo,
+  # e substitui os arquivos do Release. Nao toca na Play.
+  # O F-Droid compara o app-foss-release.apk do Release com o que ele mesmo
+  # compila da tag: o APK precisa sair de um build limpo para bater.
+  rebuild-apks:
+    name: Rebuild release APKs for an existing tag
+    if: github.event_name == 'workflow_dispatch' && github.event.inputs.operation == 'rebuild-apk'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Validate tag
+        env:
+          TAG: ${{ github.event.inputs.tag }}
+        run: |
+          [[ "$TAG" =~ ^v[0-9]+(\.[0-9]+)*$ ]] || { echo "Invalid tag: '$TAG'"; exit 1; }
+
+      - name: Checkout tag
+        uses: actions/checkout@v4
+        with:
+          ref: refs/tags/${{ github.event.inputs.tag }}
+
+      # JDK pedido em gradle/gradle-daemon-jvm.properties (JetBrains 21):
+      # com ele instalado o Gradle nao precisa baixar nada do Foojay.
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'jetbrains'
+          java-version: '21'
+
+      - name: Decode keystore
+        env:
+          KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
+        run: echo "$KEYSTORE_BASE64" | base64 -d > "$RUNNER_TEMP/github.keystore"
+
+      - name: Build signed APKs, full e foss (chave GitHub/F-Droid)
+        env:
+          KEYSTORE_FILE:     ${{ runner.temp }}/github.keystore
+          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+          KEY_ALIAS:         ${{ secrets.KEY_ALIAS }}
+          KEY_PASSWORD:      ${{ secrets.KEY_PASSWORD }}
+        run: |
+          chmod +x gradlew
+          ./gradlew assembleFullRelease assembleFossRelease --no-daemon --no-build-cache
+
+      - name: Replace APKs on the GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ github.event.inputs.tag }}
+        run: |
+          mkdir -p out
+          cp "$(find app/build/outputs/apk/full/release -name '*.apk' ! -name '*unsigned*' | head -1)" out/app-full-release.apk
+          cp "$(find app/build/outputs/apk/foss/release -name '*.apk' ! -name '*unsigned*' | head -1)" out/app-foss-release.apk
+          sha256sum out/*.apk
+          gh release upload "$TAG" out/app-full-release.apk out/app-foss-release.apk --clobber
