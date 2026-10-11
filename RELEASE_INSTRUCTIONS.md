@@ -1,9 +1,9 @@
 # Jotdown — Release Instructions
 
 ## Version Info
-- **Current version:** 3.1.21
-- **Build Code:** 41
-- **Last release:** September 2026 (internal track, published automatically as `completed`)
+- **Current version:** 3.1.23
+- **Build Code:** 43
+- **Last release:** October 2026 (internal track, published automatically as `completed`)
 - **AAB Path:** `app/build/outputs/bundle/fullRelease/app-full-release.aab`
 
 > Bump `versionCode`/`versionName` in `app/build.gradle` before every upload.
@@ -35,7 +35,7 @@ gh workflow run "Android Release Build" -f track=internal -f status=completed
 
 ### By tag (also creates a GitHub Release with the APK)
 ```bash
-git tag v3.1.21 && git push --tags
+git tag v3.1.23 && git push --tags
 ```
 
 The workflow publishes to the internal testing track as `completed`, so the

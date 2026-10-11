@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
@@ -57,7 +58,6 @@ fun ReaderTabsBar(
         ) {
             items(tabs, key = { it.documentId }) { tab ->
                 Surface(
-                    onClick = { onSelect(tab.documentId) },
                     shape = RoundedCornerShape(20.dp),
                     color = if (tab.documentId == activeDocumentId) {
                         MaterialTheme.colorScheme.secondaryContainer
@@ -70,13 +70,21 @@ fun ReaderTabsBar(
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.spacedBy(2.dp)
                     ) {
-                        Text(
-                            text = tab.title,
-                            modifier = Modifier.padding(start = 12.dp).weight(1f),
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis,
-                            style = MaterialTheme.typography.labelLarge
-                        )
+                        Row(
+                            modifier = Modifier
+                                .weight(1f)
+                                .clickable { onSelect(tab.documentId) }
+                                .padding(start = 12.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(
+                                text = tab.title,
+                                modifier = Modifier.weight(1f),
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis,
+                                style = MaterialTheme.typography.labelLarge
+                            )
+                        }
                         IconButton(
                             onClick = { onClose(tab.documentId) },
                             modifier = Modifier.size(36.dp)

@@ -22,8 +22,9 @@ class BillingProviderImpl(context: Context) : BillingProvider {
     override val isBillingSupported: Boolean = true
 
     private val appContext = context.applicationContext
+    private val preferences = appContext.getSharedPreferences("billing", Context.MODE_PRIVATE)
 
-    private val _isPro = MutableStateFlow(false)
+    private val _isPro = MutableStateFlow(preferences.getBoolean("is_pro", false))
     override val isPro: StateFlow<Boolean> = _isPro
 
     private val _proPrice = MutableStateFlow<String?>(null)
@@ -87,6 +88,12 @@ class BillingProviderImpl(context: Context) : BillingProvider {
             .build()
         client.queryPurchasesAsync(params) { result, purchases ->
             if (result.responseCode == BillingClient.BillingResponseCode.OK) {
+                val hasProPurchase = purchases.any {
+                    it.products.contains(PRO_PRODUCT_ID) &&
+                        it.purchaseState == Purchase.PurchaseState.PURCHASED
+                }
+                _isPro.value = hasProPurchase
+                preferences.edit().putBoolean("is_pro", hasProPurchase).apply()
                 purchases.forEach { handlePurchase(it) }
             }
         }
@@ -97,6 +104,7 @@ class BillingProviderImpl(context: Context) : BillingProvider {
         if (purchase.purchaseState != Purchase.PurchaseState.PURCHASED) return
 
         _isPro.value = true
+        preferences.edit().putBoolean("is_pro", true).apply()
 
         // Unacknowledged purchase auto-refunds within 3 days — must ack every time,
         // including on restore, since a previous ack call may never have landed.

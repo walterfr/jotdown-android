@@ -7,7 +7,6 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
@@ -83,7 +82,6 @@ fun JotdownApp() {
         composable(Screen.Reader.route) {
             val documentId = activeDocumentId
             if (documentId == null) {
-                LaunchedEffect(Unit) { navController.popBackStack() }
                 return@composable
             }
 
