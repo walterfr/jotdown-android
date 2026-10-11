@@ -29,14 +29,18 @@ class ReaderTabsViewModel(
 
     init {
         viewModelScope.launch {
+            val savedTabs = _tabs.value
+            val savedDocumentIds = savedTabs.mapTo(mutableSetOf()) { it.documentId }
             val restored = withContext(Dispatchers.IO) {
-                _tabs.value.mapNotNull { tab ->
+                savedTabs.mapNotNull { tab ->
                     repository.getDocumentById(tab.documentId)?.let { document ->
                         ReaderTab(tab.documentId, document.title.takeIf(String::isNotBlank) ?: document.fileName)
                     }
                 }.associateBy { it.documentId }
             }
-            _tabs.value = _tabs.value.mapNotNull { restored[it.documentId] }
+            _tabs.value = _tabs.value.mapNotNull { tab ->
+                restored[tab.documentId] ?: tab.takeUnless { it.documentId in savedDocumentIds }
+            }
             if (_activeDocumentId.value !in _tabs.value.map { it.documentId }) {
                 _activeDocumentId.value = _tabs.value.firstOrNull()?.documentId
             }
@@ -52,8 +56,8 @@ class ReaderTabsViewModel(
             _tabs.value = if (allowMultiple) current + ReaderTab(documentId, documentId)
             else listOf(ReaderTab(documentId, documentId))
             _activeDocumentId.value = documentId
-            persist()
         }
+        persist()
 
         viewModelScope.launch {
             val title = withContext(Dispatchers.IO) {
