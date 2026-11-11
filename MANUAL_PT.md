@@ -1,4 +1,4 @@
-# Jotdown v3.1.6 — Manual de Utilização
+# Jotdown v3.2.0 — Manual de Utilização
 
 ## Visão Geral
 
@@ -49,10 +49,11 @@ Abra o **Menu Lateral** e selecione:
 2. PDF abre no leitor
 
 ### Recursos do Leitor
-- **🔍 Busca**: ícone lupa → buscar texto no PDF
+- **🔍 Busca**: ícone lupa → busca nas anotações e fichamentos e também no texto do próprio PDF (resultados em "Texto do documento")
 - **📖 Metadados**: ícone livro → ver/editar metadados (autor, título, publisher)
 - **🌙 Modo noturno**: ícone lua → alternar tema
 - **⛶ Tela cheia**: ícone → modo tela cheia
+- **Exportar PDF com Anotações**: gera uma cópia do PDF com os desenhos e marcações gravados nas páginas, para abrir em qualquer leitor
 - **📝 Anotações**: ícone message → ver anotações
 - **Fichas**: ícone sticky note com badge → criar ficha desta página
 
@@ -68,7 +69,7 @@ Abra o **Menu Lateral** e selecione:
 
 ---
 
-## 4. Importar Metadados via DOI
+## 4. Importar Metadados (DOI e ISBN)
 
 ### O que é DOI
 DOI (Identificador de Objeto Digital) é um código único que identifica artigos acadêmicos. Ex: `10.1038/nature12373`
@@ -89,6 +90,14 @@ DOI (Identificador de Objeto Digital) é um código único que identifica artigo
    - **Volume/Páginas**
 8. Clique **"Salvar"** na base do sheet
 
+### Importar Metadados via ISBN (livros)
+1. Em **Metadados**, vá até o campo **ISBN**
+2. Digite o ISBN (ex: `978-0-13-235088-4`) e clique **"Buscar"**
+3. Os dados vêm da **Open Library** (openlibrary.org) e preenchem os campos do livro
+4. Clique **"Salvar"**
+
+> DOI e ISBN são as únicas buscas de metadados que usam a internet.
+
 ---
 
 ## 5. Editar Metadados Manualmente
@@ -98,8 +107,8 @@ DOI (Identificador de Objeto Digital) é um código único que identifica artigo
 3. Preencha campos conforme tipo
 4. Adicione **URL** (link do artigo/publisher)
 5. Digite **data de acesso** (quando você consultou)
-6. Veja **preview ABNT** na base
-7. **Exportar** em PDF, TXT ou Markdown (botões coloridos na base)
+6. Veja o **preview** na base, com a referência em **ABNT** e em **APA (7ª ed.)**
+7. **Exportar** em `.PDF`, `.TXT` ou `.MD` (botões coloridos na base), ou em `.BIB` (BibTeX, para Zotero, JabRef e LaTeX)
 8. Clique **"Salvar"**
 
 ---
@@ -146,26 +155,48 @@ Quando um trecho destacado cita outra obra, você pode registrar esse vínculo.
 
 ---
 
-## 8. Atalhos e Dicas
+## 8. Desenho com Caneta
 
-- **Seleção de texto em PDF**: selecione e aparecerá opção de destacar ou criar anotação
-- **Modo offline**: tudo funciona 100% offline, nenhuma internet necessária
-- **Backup automático**: dados sincronizados com Google Drive (se conectado em Settings)
-- **Localização**: app em PT-BR e EN, mude em Settings → Idioma
+Em **Configurações → Desenho**:
+- **Desenhar com o dedo**: permite usar o dedo e canetas passivas na caneta, marca-texto e borracha. Desligado, só a caneta stylus ativa desenha e o dedo rola a página
+- **Toque duplo para voltar a rolar**: toque duas vezes com o dedo para desligar a caneta
+- **Rolar com dois dedos**: com a caneta ativa, um dedo desenha e dois dedos rolam
+
+No leitor, cada ferramenta aceita **cor personalizada** e **espessura do traço**.
 
 ---
 
-## 9. Troubleshooting
+## 9. Abas de Leitura (Pro, versão da Play Store)
+
+- Com o **Pro**, vários documentos ficam abertos em abas no topo do leitor
+- **Configurações → Abas de Leitura → Manter abas em tela cheia**: deixa a barra de abas visível também em tela cheia
+- A versão do F-Droid (FOSS) não tem compras nem abas
+
+---
+
+## 10. Atalhos e Dicas
+
+- **Seleção de texto em PDF**: selecione e aparecerá opção de destacar ou criar anotação
+- **Offline por padrão**: leitura, anotações e organização funcionam sem internet. A rede só é usada, sob demanda, para buscar metadados por DOI (CrossRef) ou ISBN (Open Library) e para baixar dicionários
+- **Dicionários offline**: em **Configurações → Gerenciar Dicionários Offline**, baixe ou remova os dicionários de Português e Inglês
+- **Backup local**: no menu da biblioteca, **Exportar Backup** gera um `.zip` com toda a biblioteca; **Importar Backup** restaura (substitui a biblioteca atual)
+- **Backup no Google Drive** (Pro, versão da Play Store): **Configurações → Backup Automático**, depois de conectar a conta Google. Não existe na versão do F-Droid
+- **Idioma**: o app fica em Português ou Inglês conforme o idioma do sistema
+
+---
+
+## 11. Troubleshooting
 
 | Problema | Solução |
 |----------|---------|
 | Fichas não aparecem no badge | Atualize: feche e reabra o leitor |
 | DOI não encontra resultado | Verifique formato (`10.xxxx/xxxxx`), conexão internet |
+| ISBN não encontra resultado | Confira os dígitos; nem todo livro está na Open Library |
 | Metadados não salvam | Clique **"Salvar"** (botão azul na base do sheet) |
 | PDF não abre | Arquivo corrompido ou formato não suportado |
 
 ---
 
 ## Versão
-**Jotdown v3.1.6** — Build 26  
-Última atualização: Agosto 2026
+**Jotdown v3.2.0** — Build 44  
+Última atualização: Novembro 2026

@@ -58,3 +58,8 @@ __pycache__/
 
 # Logs de build locais
 build_output.txt
+
+# Saidas de "Generate Signed Bundle/APK" do Android Studio
+app/full/
+app/release/
+app/foss/

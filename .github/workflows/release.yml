@@ -44,8 +44,12 @@ jobs:
       contents: write
 
     steps:
+      # No modo release, compila a partir da tag (nao do branch disparado):
+      # o F-Droid compara o APK publicado com o que ele compila da tag.
       - name: Checkout Code
         uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.operation == 'release' && format('refs/tags/{0}', github.event.inputs.release_tag) || '' }}
 
       - name: Setup Java
         uses: actions/setup-java@v4
