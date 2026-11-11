@@ -33,5 +33,7 @@ data class DocumentEntity(
     @ColumnInfo(defaultValue = "TO_READ")
     val readingStatus: String = ReadingStatus.TO_READ.name,
     @ColumnInfo(defaultValue = "")
-    val doi: String = ""
+    val doi: String = "",
+    @ColumnInfo(defaultValue = "")
+    val isbn: String = ""
 )

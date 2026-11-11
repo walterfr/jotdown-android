@@ -51,6 +51,15 @@ object ExportUtil {
             appendLine()
         }
 
+        // ── Citação APA (7ª ed.) ─────────────────────────────────────────────
+        val apa = CitationUtil.formatApa(doc)
+        if (apa.isNotBlank()) {
+            appendLine("## Referência APA (7ª ed.)")
+            appendLine()
+            appendLine("> $apa")
+            appendLine()
+        }
+
         // ── Fichamentos (highlights) ─────────────────────────────────────────
         val validHighlights = highlights.filter { it.text.isNotBlank() }.sortedBy { it.page }
         if (validHighlights.isNotEmpty()) {
@@ -94,6 +103,20 @@ object ExportUtil {
                 appendLine()
             }
         }
+    }
+
+    /** Formata citação em APA 7ª edição */
+    fun toApa(doc: DocumentEntity): String = CitationUtil.formatApa(doc)
+
+    /** Exporta entrada em BibTeX (.bib) */
+    fun toBibtex(doc: DocumentEntity): String = CitationUtil.toBibtex(doc)
+
+    /** Nome de arquivo sugerido para o export BibTeX */
+    fun suggestedBibFileName(doc: DocumentEntity): String {
+        val author = doc.authorLastName.take(20).replace(" ", "_").ifBlank { "Jotdown" }
+        val title  = doc.title.take(30).replace(Regex("[^A-Za-z0-9À-ÿ ]"), "").replace(" ", "_")
+        val year   = doc.year.ifBlank { "" }
+        return "${author}_${title}${if (year.isNotBlank()) "_$year" else ""}.bib"
     }
 
     /** Nome de arquivo sugerido para o export */

@@ -189,6 +189,8 @@
     <string name="common_share">Share</string>
     <string name="reader_share_pdf_chooser">Share PDF</string>
     <string name="reader_no_results">No results found.</string>
+    <string name="reader_pdf_text_results">Document text (%1$d)</string>
+    <string name="reader_pdf_searching">Searching inside document…</string>
     <string name="reader_annotations_postits">Annotations (Post-its)</string>
     <string name="reader_highlights">Highlights</string>
     <string name="reader_page_n">Page %1$d</string>
@@ -242,9 +244,15 @@
     <string name="readerbar_annotations">Notes</string>
     <string name="readerbar_book_outline">Book Outline</string>
     <string name="readerbar_share_original_pdf">Share Original PDF</string>
+    <string name="readerbar_share_annotated_pdf">Export PDF with Annotations</string>
+    <string name="reader_exporting_annotated_pdf">Exporting annotated PDF…</string>
     <string name="highlight_note_title">Note on this quote</string>
     <string name="highlight_note_hint">What this passage means for your research…</string>
     <string name="doi_label">DOI (Digital Object Identifier)</string>
+    <string name="isbn_label">ISBN (International Standard Book Number)</string>
+    <string name="isbn_hint">e.g. 978-0-13-235088-4</string>
+    <string name="meta_bibtex">BibTeX</string>
+    <string name="meta_apa_reference">APA Reference (7th ed.)</string>
 
     <!-- Reader tools -->
     <string name="tool_pen">Pen</string>

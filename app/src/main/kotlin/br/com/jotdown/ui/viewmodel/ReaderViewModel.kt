@@ -201,6 +201,9 @@ class ReaderViewModel(
     private val _doiImportStatus = MutableStateFlow<String?>(null)
     val doiImportStatus: StateFlow<String?> = _doiImportStatus
 
+    private val _isbnImportStatus = MutableStateFlow<String?>(null)
+    val isbnImportStatus: StateFlow<String?> = _isbnImportStatus
+
     fun importDOI(doi: String) = viewModelScope.launch(Dispatchers.IO) {
         _doiImportStatus.value = "Buscando..."
         val result = repository.importDOI(documentId, doi)
@@ -210,8 +213,22 @@ class ReaderViewModel(
         _doiImportStatus.value = null
     }
 
-    fun saveMetadata(docType: String, authorLastName: String, authorFirstName: String, title: String, subtitle: String, edition: String, city: String, publisher: String, year: String, journal: String, volume: String, pages: String, url: String, accessDate: String) = viewModelScope.launch(Dispatchers.IO) {
-        repository.updateMetadata(documentId, docType, authorLastName, authorFirstName, title, subtitle, edition, city, publisher, year, journal, volume, pages, url, accessDate)
+    fun importISBN(isbn: String) = viewModelScope.launch(Dispatchers.IO) {
+        _isbnImportStatus.value = "Buscando..."
+        val result = repository.importISBN(documentId, isbn)
+        _isbnImportStatus.value = if (result != null) "Importado com sucesso" else "ISBN não encontrado"
+        _document.value = repository.getDocumentById(documentId)
+        kotlinx.coroutines.delay(2000)
+        _isbnImportStatus.value = null
+    }
+
+    fun saveMetadata(
+        docType: String, authorLastName: String, authorFirstName: String,
+        title: String, subtitle: String, edition: String, city: String,
+        publisher: String, year: String, journal: String, volume: String,
+        pages: String, url: String, accessDate: String, doi: String = "", isbn: String = ""
+    ) = viewModelScope.launch(Dispatchers.IO) {
+        repository.updateMetadata(documentId, docType, authorLastName, authorFirstName, title, subtitle, edition, city, publisher, year, journal, volume, pages, url, accessDate, doi, isbn)
         _document.value = repository.getDocumentById(documentId)
     }
 }

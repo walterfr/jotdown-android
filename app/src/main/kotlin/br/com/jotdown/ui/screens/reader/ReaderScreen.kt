@@ -125,12 +125,29 @@ fun ReaderScreen(
     }
     var isSearchActive by remember { mutableStateOf(false) }
     var searchQuery by remember { mutableStateOf("") }
+    var pdfSearchResults by remember { mutableStateOf<List<br.com.jotdown.util.PdfSearchResult>>(emptyList()) }
+    var isPdfSearching by remember { mutableStateOf(false) }
+    var isExportingFlattenedPdf by remember { mutableStateOf(false) }
+    val coroutineScope = rememberCoroutineScope()
     var showAbntDialog by remember { mutableStateOf(false) }
     var showExportDialog by remember { mutableStateOf(false) }
     var showOutline by remember { mutableStateOf(false) }
     var pdfBookmarks by remember { mutableStateOf<List<br.com.jotdown.util.PdfBookmark>>(emptyList()) }
 
     val isTextFormat = pdfFile?.name?.endsWith(".txt", true) == true || pdfFile?.name?.endsWith(".md", true) == true
+
+    LaunchedEffect(isSearchActive, searchQuery, pdfFile) {
+        val file = pdfFile
+        if (!isSearchActive || searchQuery.trim().length < 3 || file == null || isTextFormat) {
+            pdfSearchResults = emptyList()
+            isPdfSearching = false
+            return@LaunchedEffect
+        }
+        isPdfSearching = true
+        kotlinx.coroutines.delay(350)
+        pdfSearchResults = br.com.jotdown.util.PdfSearchUtil.search(file, searchQuery)
+        isPdfSearching = false
+    }
 
     LaunchedEffect(pdfFile) {
         val file = pdfFile ?: return@LaunchedEffect
@@ -231,7 +248,32 @@ fun ReaderScreen(
                         }
                         context.startActivity(android.content.Intent.createChooser(intent, context.getString(R.string.reader_share_pdf_chooser)))
                     },
-                    onOutlineClick = { showOutline = true }
+                    onOutlineClick = { showOutline = true },
+                    onExportAnnotatedPdf = {
+                        val file = pdfFile
+                        if (file != null && !isExportingFlattenedPdf) {
+                            isExportingFlattenedPdf = true
+                            coroutineScope.launch {
+                                val flatFile = br.com.jotdown.util.PdfFlattenUtil.flattenPdf(
+                                    context = context,
+                                    pdfFile = file,
+                                    drawings = drawings,
+                                    annotations = annotations,
+                                    title = document?.title ?: file.nameWithoutExtension
+                                )
+                                isExportingFlattenedPdf = false
+                                if (flatFile != null) {
+                                    val uri = androidx.core.content.FileProvider.getUriForFile(context, "${context.packageName}.provider", flatFile)
+                                    val intent = android.content.Intent(android.content.Intent.ACTION_SEND).apply {
+                                        type = "application/pdf"
+                                        putExtra(android.content.Intent.EXTRA_STREAM, uri)
+                                        addFlags(android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                                    }
+                                    context.startActivity(android.content.Intent.createChooser(intent, context.getString(R.string.reader_share_pdf_chooser)))
+                                }
+                            }
+                        }
+                    }
                 )
             }
         },
@@ -319,8 +361,43 @@ fun ReaderScreen(
 
                 Surface(modifier = Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.surface) {
                     androidx.compose.foundation.lazy.LazyColumn(contentPadding = PaddingValues(16.dp)) {
-                        if (matchingAnns.isEmpty() && matchingHighs.isEmpty()) {
+                        if (isPdfSearching) {
+                            item {
+                                Row(
+                                    modifier = Modifier.fillMaxWidth().padding(16.dp),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                                ) {
+                                    CircularProgressIndicator(modifier = Modifier.size(20.dp), strokeWidth = 2.dp, color = MaterialTheme.colorScheme.primary)
+                                    Text(stringResource(R.string.reader_pdf_searching), color = MaterialTheme.colorScheme.outline)
+                                }
+                            }
+                        }
+                        if (matchingAnns.isEmpty() && matchingHighs.isEmpty() && pdfSearchResults.isEmpty() && !isPdfSearching) {
                             item { Text(stringResource(R.string.reader_no_results), modifier = Modifier.padding(16.dp)) }
+                        }
+                        if (pdfSearchResults.isNotEmpty()) {
+                            item {
+                                Text(
+                                    stringResource(R.string.reader_pdf_text_results, pdfSearchResults.size),
+                                    fontWeight = FontWeight.Bold,
+                                    color = MaterialTheme.colorScheme.primary,
+                                    modifier = Modifier.padding(vertical = 8.dp)
+                                )
+                            }
+                            items(pdfSearchResults.size) { i ->
+                                val res = pdfSearchResults[i]
+                                Card(
+                                    onClick = { scrollToPage = res.page; isSearchActive = false; searchQuery = "" },
+                                    modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
+                                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
+                                ) {
+                                    Column(Modifier.padding(16.dp)) {
+                                        Text(stringResource(R.string.reader_page_n, res.page), fontWeight = FontWeight.Bold, fontSize = 12.sp, color = MaterialTheme.colorScheme.primary)
+                                        Text(res.snippet, maxLines = 3, modifier = Modifier.padding(top = 4.dp))
+                                    }
+                                }
+                            }
                         }
                         if (matchingAnns.isNotEmpty()) {
                             item { Text(stringResource(R.string.reader_annotations_postits), fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary, modifier = Modifier.padding(vertical = 8.dp)) }
@@ -460,16 +537,19 @@ fun ReaderScreen(
 
     if (showSidebar) {
         val doiImportStatus by viewModel.doiImportStatus.collectAsState()
+        val isbnImportStatus by viewModel.isbnImportStatus.collectAsState()
         MetadataSheet(
             document = document,
             highlights = highlights,
             pageOffset = pageOffset,
-            onSave = { p -> viewModel.saveMetadata(p.docType, p.authorLastName, p.authorFirstName, p.title, p.subtitle, p.edition, p.city, p.publisher, p.year, p.journal, p.volume, p.pages, p.url, p.accessDate) },
+            onSave = { p -> viewModel.saveMetadata(p.docType, p.authorLastName, p.authorFirstName, p.title, p.subtitle, p.edition, p.city, p.publisher, p.year, p.journal, p.volume, p.pages, p.url, p.accessDate, p.doi, p.isbn) },
             onUpdateHighlight = { id, text -> viewModel.updateHighlight(id, text) },
             onDeleteHighlight = { id -> viewModel.deleteHighlight(id) },
             onDismiss = { showSidebar = false },
             onImportDOI = { doi -> viewModel.importDOI(doi) },
             doiImportStatus = doiImportStatus,
+            onImportISBN = { isbn -> viewModel.importISBN(isbn) },
+            isbnImportStatus = isbnImportStatus,
             onEditHighlightNote = { id -> selectedHighlightId = id; showHighlightNote = true }
         )
     }
@@ -787,6 +867,25 @@ fun ReaderScreen(
             }
         )
     }
+    if (isExportingFlattenedPdf) {
+        androidx.compose.ui.window.Dialog(onDismissRequest = {}) {
+            Surface(
+                shape = RoundedCornerShape(12.dp),
+                color = MaterialTheme.colorScheme.surface,
+                tonalElevation = 8.dp
+            ) {
+                Row(
+                    modifier = Modifier.padding(24.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(16.dp)
+                ) {
+                    CircularProgressIndicator(modifier = Modifier.size(24.dp), color = Indigo600)
+                    Text(stringResource(R.string.reader_exporting_annotated_pdf), fontSize = 14.sp)
+                }
+            }
+        }
+    }
+
     if (showAbntDialog && document != null) {
         AlertDialog(
             onDismissRequest = { showAbntDialog = false },

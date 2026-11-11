@@ -189,6 +189,8 @@
     <string name="common_share">Compartilhar</string>
     <string name="reader_share_pdf_chooser">Compartilhar PDF</string>
     <string name="reader_no_results">Nenhum resultado encontrado.</string>
+    <string name="reader_pdf_text_results">Texto do documento (%1$d)</string>
+    <string name="reader_pdf_searching">Pesquisando no documento…</string>
     <string name="reader_annotations_postits">Anotações (Post-its)</string>
     <string name="reader_highlights">Fichamentos</string>
     <string name="reader_page_n">Página %1$d</string>
@@ -242,9 +244,15 @@
     <string name="readerbar_annotations">Anotações</string>
     <string name="readerbar_book_outline">Sumário do Livro</string>
     <string name="readerbar_share_original_pdf">Compartilhar PDF Original</string>
+    <string name="readerbar_share_annotated_pdf">Exportar PDF com Anotações</string>
+    <string name="reader_exporting_annotated_pdf">Exportando PDF anotado…</string>
     <string name="highlight_note_title">Fichamento da citação</string>
     <string name="highlight_note_hint">O que este trecho significa para a sua pesquisa…</string>
     <string name="doi_label">DOI (Identificador de Objeto Digital)</string>
+    <string name="isbn_label">ISBN (Padrão Internacional de Numeração de Livro)</string>
+    <string name="isbn_hint">ex: 978-0-13-235088-4</string>
+    <string name="meta_bibtex">BibTeX</string>
+    <string name="meta_apa_reference">Referência APA (7ª ed.)</string>
 
     <!-- Reader tools -->
     <string name="tool_pen">Caneta</string>

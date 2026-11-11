@@ -30,14 +30,33 @@ import br.com.jotdown.data.entity.DocumentEntity
 import br.com.jotdown.data.entity.HighlightEntity
 import java.io.File
 
-data class MetadataParams(val docType: String, val authorLastName: String, val authorFirstName: String, val title: String, val subtitle: String, val edition: String, val city: String, val publisher: String, val year: String, val journal: String, val volume: String, val pages: String, val url: String, val accessDate: String)
+data class MetadataParams(
+    val docType: String,
+    val authorLastName: String,
+    val authorFirstName: String,
+    val title: String,
+    val subtitle: String,
+    val edition: String,
+    val city: String,
+    val publisher: String,
+    val year: String,
+    val journal: String,
+    val volume: String,
+    val pages: String,
+    val url: String,
+    val accessDate: String,
+    val doi: String = "",
+    val isbn: String = ""
+)
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MetadataSheet(
     document: DocumentEntity?, highlights: List<HighlightEntity>, pageOffset: Int,
     onSave: (MetadataParams) -> Unit, onUpdateHighlight: (Long, String) -> Unit, onDeleteHighlight: (Long) -> Unit, onDismiss: () -> Unit,
-    onImportDOI: (String) -> Unit = {}, doiImportStatus: String? = null, onEditHighlightNote: (Long) -> Unit = {}
+    onImportDOI: (String) -> Unit = {}, doiImportStatus: String? = null,
+    onImportISBN: (String) -> Unit = {}, isbnImportStatus: String? = null,
+    onEditHighlightNote: (Long) -> Unit = {}
 ) {
     val context = LocalContext.current
     var docType by remember { mutableStateOf(document?.docType?.takeIf { it.isNotBlank() } ?: "Livro / Monografia") }
@@ -55,12 +74,49 @@ fun MetadataSheet(
     var url by remember { mutableStateOf(document?.url ?: "") }
     var accessDate by remember { mutableStateOf(document?.accessDate ?: "") }
     var doiInput by remember { mutableStateOf(document?.doi ?: "") }
+    var isbnInput by remember { mutableStateOf(document?.isbn ?: "") }
+
+    LaunchedEffect(document) {
+        document?.let {
+            if (it.docType.isNotBlank()) docType = it.docType
+            authorLastName = it.authorLastName
+            authorFirstName = it.authorFirstName
+            title = it.title
+            subtitle = it.subtitle
+            edition = it.edition
+            city = it.city
+            publisher = it.publisher
+            year = it.year
+            journal = it.journal
+            volume = it.volume
+            pages = it.pages
+            url = it.url
+            accessDate = it.accessDate
+            if (it.doi.isNotBlank()) doiInput = it.doi
+            if (it.isbn.isNotBlank()) isbnInput = it.isbn
+        }
+    }
 
     var expandedType by remember { mutableStateOf(false) }
     val typeOptions = listOf("Livro / Monografia", "Cap\u00edtulo de Livro", "Artigo de Peri\u00f3dico", "Trabalho Acad\u00eamico", "Documento Jur\u00eddico")
     val editableHighlights = remember(highlights) { mutableStateMapOf<Long, String>().apply { highlights.forEach { put(it.id, it.text) } } }
 
-    // 🛡️ MOTOR ABNT: Gera a Referência Principal e aplica o Negrito no lugar certo
+    // 🛡️ MOTOR ABNT & APA 7
+    val currentDocEntity = remember(document, docType, authorLastName, authorFirstName, title, subtitle, edition, city, publisher, year, journal, volume, pages, url, accessDate, doiInput, isbnInput) {
+        document?.copy(
+            docType = docType, authorLastName = authorLastName, authorFirstName = authorFirstName,
+            title = title, subtitle = subtitle, edition = edition, city = city, publisher = publisher,
+            year = year, journal = journal, volume = volume, pages = pages, url = url, accessDate = accessDate,
+            doi = doiInput, isbn = isbnInput
+        ) ?: DocumentEntity(
+            id = "", fileName = "", title = title, dateAdded = 0L, pdfFilePath = "",
+            docType = docType, authorLastName = authorLastName, authorFirstName = authorFirstName,
+            subtitle = subtitle, edition = edition, city = city, publisher = publisher,
+            year = year, journal = journal, volume = volume, pages = pages, url = url, accessDate = accessDate,
+            doi = doiInput, isbn = isbnInput
+        )
+    }
+
     val markdownPreview = buildString {
         val ref = when (docType) {
             "Artigo de Peri\u00f3dico" -> "${authorLastName.uppercase()}, $authorFirstName. $title. **$journal**, $city, v. $volume, n. $edition, p. $pages, $year."
@@ -70,8 +126,9 @@ fun MetadataSheet(
             else -> "${authorLastName.uppercase()}, $authorFirstName. **$title**" + (if (subtitle.isNotBlank()) ": $subtitle" else "") + ". " + (if (edition.isNotBlank()) "$edition ed. " else "") + "$city: $publisher, $year."
         }
         val onlineAddon = if (url.isNotBlank()) " Dispon\u00edvel em: $url. Acesso em: $accessDate." else ""
-        
-        append("## Fichamento\n\n**Refer\u00eancia:** $ref$onlineAddon\n\n## Destaques\n")
+        val apaRef = br.com.jotdown.util.CitationUtil.formatApa(currentDocEntity)
+
+        append("## Fichamento\n\n**Referência (ABNT):** $ref$onlineAddon\n\n**Referência (APA 7ª ed.):** $apaRef\n\n## Destaques\n")
         
         val citationName = if (docType == "Documento Jur\u00eddico") authorLastName.uppercase() else authorLastName
         val citationYear = if (year.isNotBlank()) year else "S.d."
@@ -83,7 +140,6 @@ fun MetadataSheet(
             // Fichamento da citação, logo abaixo do trecho que o motivou.
             if (h.note.isNotBlank()) append("${h.note}\n\n")
         }
-
     }
 
     Dialog(onDismissRequest = onDismiss, properties = DialogProperties(usePlatformDefaultWidth = false)) {
@@ -158,6 +214,17 @@ fun MetadataSheet(
                         Text(doiImportStatus, color = if (doiImportStatus.contains("sucesso")) Color.Green else Color.Yellow, fontSize = 12.sp)
                     }
 
+                    Spacer(Modifier.height(16.dp))
+                    Text(stringResource(R.string.isbn_label), color = Color.Gray, fontSize = 12.sp, fontWeight = FontWeight.Bold); Spacer(Modifier.height(8.dp))
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
+                        OutlinedTextField(value = isbnInput, onValueChange = { isbnInput = it }, label = { Text(stringResource(R.string.isbn_hint)) }, modifier = Modifier.weight(1f), singleLine = true)
+                        Button(onClick = { if (isbnInput.isNotBlank()) onImportISBN(isbnInput) }, modifier = Modifier.height(56.dp)) { Text("Buscar") }
+                    }
+                    if (isbnImportStatus != null) {
+                        Spacer(Modifier.height(8.dp))
+                        Text(isbnImportStatus, color = if (isbnImportStatus.contains("sucesso")) Color.Green else Color.Yellow, fontSize = 12.sp)
+                    }
+
                     Spacer(Modifier.height(24.dp))
                     if (highlights.isNotEmpty()) {
                         Text(stringResource(R.string.meta_edit_quotes, highlights.size), color = Color.Gray, fontSize = 12.sp, fontWeight = FontWeight.Bold); Spacer(Modifier.height(8.dp))
@@ -174,9 +241,21 @@ fun MetadataSheet(
                 }
 
                 Column(modifier = Modifier.background(Color(0xFF1E1B4B)).padding(16.dp)) {
-                    Button(onClick = { highlights.forEach { h -> val newText = editableHighlights[h.id]; if (newText != null && newText != h.text) { onUpdateHighlight(h.id, newText) } }; onSave(MetadataParams(docType, authorLastName, authorFirstName, title, subtitle, edition, city, publisher, year, journal, volume, pages, url, accessDate)); onDismiss() }, modifier = Modifier.fillMaxWidth(), colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF4F46E5))) { Text(stringResource(R.string.meta_save)) }
+                    Button(onClick = {
+                        highlights.forEach { h -> val newText = editableHighlights[h.id]; if (newText != null && newText != h.text) { onUpdateHighlight(h.id, newText) } }
+                        onSave(MetadataParams(docType, authorLastName, authorFirstName, title, subtitle, edition, city, publisher, year, journal, volume, pages, url, accessDate, doiInput, isbnInput))
+                        onDismiss()
+                    }, modifier = Modifier.fillMaxWidth(), colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF4F46E5))) { Text(stringResource(R.string.meta_save)) }
                     Spacer(Modifier.height(8.dp))
-                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) { Button(onClick = { exportFile(context, title, markdownPreview, "pdf") }, modifier = Modifier.weight(1f), colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF450a0a))) { Text(".PDF") }; Button(onClick = { exportFile(context, title, markdownPreview, "txt") }, modifier = Modifier.weight(1f), colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF064E3B))) { Text(".TXT") }; Button(onClick = { exportFile(context, title, markdownPreview, "md") }, modifier = Modifier.weight(1f), colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF1E1B4B))) { Text(".MD") } }
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
+                        Button(onClick = { exportFile(context, title, markdownPreview, "pdf") }, modifier = Modifier.weight(1f), colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF450a0a))) { Text(".PDF") }
+                        Button(onClick = { exportFile(context, title, markdownPreview, "txt") }, modifier = Modifier.weight(1f), colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF064E3B))) { Text(".TXT") }
+                        Button(onClick = { exportFile(context, title, markdownPreview, "md") }, modifier = Modifier.weight(1f), colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF1E1B4B))) { Text(".MD") }
+                        Button(onClick = {
+                            val bib = br.com.jotdown.util.CitationUtil.toBibtex(currentDocEntity)
+                            exportFile(context, title, bib, "bib")
+                        }, modifier = Modifier.weight(1f), colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF312E81))) { Text(".BIB") }
+                    }
                 }
             }
         }
@@ -189,7 +268,11 @@ fun exportFile(context: Context, title: String, content: String, extension: Stri
         val file = File(context.cacheDir, fileName)
         file.writeText(content)
         val uri = androidx.core.content.FileProvider.getUriForFile(context, "${context.packageName}.provider", file)
-        val intent = Intent(Intent.ACTION_SEND).apply { type = if (extension == "md" || extension == "txt") "text/plain" else "application/pdf"; putExtra(Intent.EXTRA_STREAM, uri); addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION) }
+        val intent = Intent(Intent.ACTION_SEND).apply {
+            type = if (extension == "md" || extension == "txt" || extension == "bib") "text/plain" else "application/pdf"
+            putExtra(Intent.EXTRA_STREAM, uri)
+            addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+        }
         context.startActivity(Intent.createChooser(intent, context.getString(R.string.meta_export_chooser)))
     } catch (e: Exception) { e.printStackTrace() }
 }

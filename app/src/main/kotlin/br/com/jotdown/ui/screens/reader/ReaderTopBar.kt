@@ -43,6 +43,7 @@ fun ReaderTopBar(
     onToggleDarkMode: () -> Unit,
     onSharePdf: () -> Unit,
     onOutlineClick: () -> Unit,
+    onExportAnnotatedPdf: () -> Unit = {},
 ) {
     var showOverflow by remember { mutableStateOf(false) }
 
@@ -127,6 +128,10 @@ fun ReaderTopBar(
                     DropdownMenuItem(
                         text = { Text(stringResource(R.string.export_markdown_chooser)) },
                         onClick = { showOverflow = false; onExportClick() }
+                    )
+                    DropdownMenuItem(
+                        text = { Text(stringResource(R.string.readerbar_share_annotated_pdf)) },
+                        onClick = { showOverflow = false; onExportAnnotatedPdf() }
                     )
                     DropdownMenuItem(
                         text = { Text(stringResource(R.string.readerbar_share_original_pdf)) },

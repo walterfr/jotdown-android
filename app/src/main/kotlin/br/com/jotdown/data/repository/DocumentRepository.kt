@@ -55,9 +55,21 @@ class DocumentRepository(
     fun getDocumentSummariesByFolder(folderId: Long?) = documentDao.getDocumentSummariesByFolder(folderId)
 
 
-    suspend fun updateMetadata(id: String, type: String, last: String, first: String, title: String, subtitle: String, edition: String, city: String, publisher: String, year: String, journal: String, volume: String, pages: String, url: String, accessDate: String) { 
+    suspend fun updateMetadata(
+        id: String, type: String, last: String, first: String, title: String,
+        subtitle: String, edition: String, city: String, publisher: String,
+        year: String, journal: String, volume: String, pages: String,
+        url: String, accessDate: String, doi: String = "", isbn: String = ""
+    ) { 
         getDocumentById(id)?.let { 
-            upsertDocument(it.copy(docType = type, authorLastName = last, authorFirstName = first, title = title, subtitle = subtitle, edition = edition, city = city, publisher = publisher, year = year, journal = journal, volume = volume, pages = pages, url = url, accessDate = accessDate)) 
+            upsertDocument(it.copy(
+                docType = type, authorLastName = last, authorFirstName = first,
+                title = title, subtitle = subtitle, edition = edition, city = city,
+                publisher = publisher, year = year, journal = journal, volume = volume,
+                pages = pages, url = url, accessDate = accessDate,
+                doi = if (doi.isNotBlank()) doi else it.doi,
+                isbn = if (isbn.isNotBlank()) isbn else it.isbn
+            )) 
         } 
     }
 
@@ -86,6 +98,25 @@ class DocumentRepository(
                     year = metadata.year.takeIf { y -> y.isNotBlank() } ?: it.year,
                     journal = metadata.journal.takeIf { j -> j.isNotBlank() } ?: it.journal,
                     volume = metadata.volume.takeIf { v -> v.isNotBlank() } ?: it.volume,
+                    pages = metadata.pages.takeIf { p -> p.isNotBlank() } ?: it.pages
+                ))
+            }
+        }
+        metadata
+    }
+
+    suspend fun importISBN(docId: String, isbn: String) = withContext(Dispatchers.IO) {
+        val metadata = metadataService.searchISBN(isbn)
+        if (metadata != null) {
+            getDocumentById(docId)?.let {
+                upsertDocument(it.copy(
+                    isbn = isbn,
+                    title = metadata.title.takeIf { t -> t.isNotBlank() } ?: it.title,
+                    subtitle = metadata.subtitle.takeIf { s -> s.isNotBlank() } ?: it.subtitle,
+                    authorFirstName = metadata.authorFirstName.takeIf { a -> a.isNotBlank() } ?: it.authorFirstName,
+                    authorLastName = metadata.authorLastName.takeIf { a -> a.isNotBlank() } ?: it.authorLastName,
+                    publisher = metadata.publisher.takeIf { p -> p.isNotBlank() } ?: it.publisher,
+                    year = metadata.year.takeIf { y -> y.isNotBlank() } ?: it.year,
                     pages = metadata.pages.takeIf { p -> p.isNotBlank() } ?: it.pages
                 ))
             }
