@@ -19,7 +19,7 @@
 - **Exportação ABNT** — metadados acadêmicos com saída `.MD`, `.TXT` e `.PDF`
 - **Pastas e rótulos** — organização da biblioteca com drag-and-drop
 - **Backup/restauração** — exportação em `.zip` de toda a biblioteca
-- **Offline por padrão** — leitura, anotações e organização funcionam sem rede; a internet só é usada, sob demanda, na importação por DOI (API CrossRef) e no download de dicionários
+- **Offline por padrão** — leitura, anotações e organização funcionam sem rede; a internet só é usada, sob demanda, na importação de metadados por DOI (API CrossRef) ou ISBN (Open Library) e no download de dicionários
 - **Privacidade** — nenhuma conta, nenhuma telemetria
 
 ---
@@ -91,7 +91,7 @@ br.com.jotdown/
 | Anti-feature | Flavor `foss` | Flavor `full` |
 |---|---|---|
 | Proprietary deps | ❌ | ✅ ML Kit OCR |
-| Network (opcional: DOI/CrossRef, dicionários) | ✅ | ✅ |
+| Network (opcional: DOI/CrossRef, ISBN/Open Library, dicionários) | ✅ | ✅ |
 | Ads / Tracking | ❌ | ❌ |
 | Account required | ❌ | ❌ |
 
