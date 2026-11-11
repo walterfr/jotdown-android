@@ -1,9 +1,9 @@
 # Jotdown — Release Instructions
 
 ## Version Info
-- **Current version:** 3.1.23
-- **Build Code:** 43
-- **Last release:** October 2026 (GitHub Releases & Play Console internal track as `completed`)
+- **Current version:** 3.2.0
+- **Build Code:** 44
+- **Last release:** November 2026 (GitHub Releases & Play Console internal track as `completed`)
 - **AAB Path:** `app/build/outputs/bundle/fullRelease/app-full-release.aab`
 - **APKs Path:** `app/build/outputs/apk/{full,foss}/release/app-*.apk`
 
@@ -15,12 +15,12 @@ From v3.1.23 onwards, the project adopts [Pride Versioning](https://pridever.org
 - **DEFAULT (Minor):** Bump when making normal, expected, routine feature releases.
 - **SHAME (Patch):** Bump when making hotfixes, emergency bug fixes, or corrections too embarrassing to admit.
 
-## Recent Features (3.1.22 – 3.1.23)
-- ✅ Multi-document reader tabs (with option to hide/show in fullscreen)
-- ✅ Premium reader tabs integration
-- ✅ Finger-as-pen option for non-recognized stylus / finger drawing
-- ✅ Play Billing library update
-- ✅ FOSS release workflow and CI reproducible builds alignment
+## Recent Features (3.2.0)
+- ✅ Formatos de citação adicionais: APA 7ª Edição e BibTeX (`.bib` export)
+- ✅ Busca e importação de metadados por ISBN via Open Library Books API
+- ✅ Busca textual completa em background no conteúdo do PDF (`PDFTextStripper`)
+- ✅ Exportação de PDF com anotações e traços mesclados (Flatten PDF)
+- ✅ Navegação por sumário hierárquico do PDF (Bookmarks / Outlines)
 
 ---
 
