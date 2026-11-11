@@ -97,6 +97,28 @@ br.com.jotdown/
 
 ---
 
+## Apoie o projeto
+
+O Jotdown é gratuito e de código aberto. Se ele te ajudou, considere apoiar o desenvolvimento — qualquer contribuição ajuda a manter e melhorar o projeto:
+
+- ❤️ [GitHub Sponsors](https://github.com/sponsors/walterfr)
+- ☕ [Ko-fi](https://ko-fi.com/walterfr)
+- ☕ [Buy Me a Coffee](https://buymeacoffee.com/walterfr)
+
+### Pix (Brasil)
+
+Escaneie o QR code no app do seu banco, ou use a chave copia e cola abaixo:
+
+<p align="center">
+  <img src="docs/pix-qr.png" width="220" alt="Pix QR Code" />
+</p>
+
+```text
+00020101021126400014br.gov.bcb.pix0118walterfr@gmail.com5204000053039865802BR5915WALTER REBOUCAS6009FORTALEZA62070503***63045603
+```
+
+---
+
 ## Licença
 
 Este programa é um software livre: você pode redistribuí-lo e/ou modificá-lo sob os termos da Licença Pública Geral GNU (GPL) conforme publicada pela Free Software Foundation, tanto a versão 3 da Licença, ou (a seu critério) qualquer versão posterior.
