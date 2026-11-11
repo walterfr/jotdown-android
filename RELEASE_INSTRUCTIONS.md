@@ -3,48 +3,52 @@
 ## Version Info
 - **Current version:** 3.1.23
 - **Build Code:** 43
-- **Last release:** October 2026 (internal track, published automatically as `completed`)
+- **Last release:** October 2026 (GitHub Releases & Play Console internal track as `completed`)
 - **AAB Path:** `app/build/outputs/bundle/fullRelease/app-full-release.aab`
+- **APKs Path:** `app/build/outputs/apk/{full,foss}/release/app-*.apk`
 
 > Bump `versionCode`/`versionName` in `app/build.gradle` before every upload.
 
-## Features Included (F0-F5, since 3.1.8)
-- ✅ Reading status tracking (TO_READ/READING/READ)
-- ✅ Research goals (Metas) with progress tracking
-- ✅ Atomic notes (Fichas) — Zettelkasten-style
-- ✅ Document-note bidirectional linking
-- ✅ DOI import from CrossRef API
-- ✅ Citation linking infrastructure (highlights ↔ documents)
-- ✅ i18n: Full PT+EN localization
-- ✅ Bug fix: Note deletion UI waits for DB completion
+## Versioning Scheme (Pride Versioning 🏳️‍🌈 0.3.0)
+From v3.1.23 onwards, the project adopts [Pride Versioning](https://pridever.org/) (`PROUD.DEFAULT.SHAME`):
+- **PROUD (Major):** Bump when releasing milestone features you are really proud of (can reset the following digits, e.g. `4.0.0`).
+- **DEFAULT (Minor):** Bump when making normal, expected, routine feature releases.
+- **SHAME (Patch):** Bump when making hotfixes, emergency bug fixes, or corrections too embarrassing to admit.
+
+## Recent Features (3.1.22 – 3.1.23)
+- ✅ Multi-document reader tabs (with option to hide/show in fullscreen)
+- ✅ Premium reader tabs integration
+- ✅ Finger-as-pen option for non-recognized stylus / finger drawing
+- ✅ Play Billing library update
+- ✅ FOSS release workflow and CI reproducible builds alignment
 
 ---
 
-## Upload to Google Play Console
+## Release Process
 
-Upload always goes through `.github/workflows/release.yml`. The CI signs the AAB
-with the Play upload key (`PLAY_KEYSTORE_*`, alias `jotdown_upload`,
-SHA1 `E4:EE:B5:B3…`). A locally built AAB is signed with a different key and
-Play App Signing rejects it — do not upload one by hand.
+### 1. Via GitHub Actions (Recommended)
+Building via CI guarantees deterministic/reproducible builds matching F-Droid's Linux environment.
 
-### By workflow dispatch (no tag)
+**By tag (Publishes GitHub Release with APKs and uploads AAB to Play Console):**
+```bash
+git tag v3.1.24 && git push --tags
+```
+
+**By workflow dispatch (without creating tag or for draft/test promotion):**
 ```bash
 gh workflow run "Android Release Build" -f track=internal -f status=completed
 ```
-`track`: internal | alpha | beta · `status`: completed | draft (default: completed)
+`track`: internal | alpha | beta · `status`: completed | draft
 
-### By tag (also creates a GitHub Release with the APK)
-```bash
-git tag v3.1.23 && git push --tags
-```
+**Rebuild / Repackage tag assets:**
+Workflow dispatch allows rebuilding clean APKs for an existing tag if needed for F-Droid reproducibility checks.
 
-The workflow publishes to the internal testing track as `completed`, so the
-release is available to the configured internal testers automatically. The
-service account can only upload to test tracks — it cannot release to
-production, by design. Draft uploads remain available when explicitly selected
-with `status=draft`.
-
-Each upload needs a fresh `versionCode`; Play rejects a repeat.
+### 2. Local Build (Fallback)
+If CI quota is exhausted or runners are unavailable, release artifacts can be built locally:
+- APKs (FOSS & Full) use `jotdown-keystore.jks` (alias `key0`).
+- AAB (Play Console) uses `play-upload-keystore.p12` (alias `jotdown_upload`).
+- Run `./gradlew assembleFullRelease assembleFossRelease bundleFullRelease`.
+- Push release to GitHub using `gh release create` and upload AAB via Google Play API script.
 
 ---
 
@@ -163,23 +167,8 @@ Check logs:
 
 ---
 
-## Next Steps (F6 — Future)
-
-Planned for next release:
-- Knowledge graph visualization (force-directed layout)
-- Highlight linking UI (long-press menu in reader)
-- Graph export (DOT format for external tools)
-
----
-
 ## Support
 
 For issues or feedback:
 - GitHub Issues: https://github.com/walterfr/jotdown-android/issues
 - Play Console Reviews (monitor & respond)
-
----
-
-**Release prepared by:** Claude Haiku 4.5  
-**Date:** August 2026  
-**Status:** Ready for upload

@@ -4,7 +4,8 @@
 
 [![License: GPL v3+](https://img.shields.io/badge/License-GPLv3+-blue.svg)](LICENSE)
 [![Android](https://img.shields.io/badge/Android-8.0%2B-green.svg)](https://developer.android.com)
-[![F-Droid](https://img.shields.io/badge/F--Droid-pending-lightgrey.svg)](https://gitlab.com/fdroid/rfp/-/work_items/3833)
+[![F-Droid](https://img.shields.io/f-droid/v/br.com.jotdown.svg)](https://f-droid.org/packages/br.com.jotdown/)
+[![Pride Versioning 🏳️‍🌈](https://img.shields.io/badge/Pride%20Versioning%20🏳️‍🌈-0.3.0-ff69b4.svg)](https://pridever.org/)
 
 ---
 
