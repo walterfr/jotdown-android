@@ -315,6 +315,10 @@
     <string name="meta_preview">Notes Preview (Markdown)</string>
     <string name="meta_save">Save Metadata and Quotes</string>
     <string name="meta_export_chooser">Export Notes</string>
+    <string name="meta_import_searching">Searching…</string>
+    <string name="meta_import_success">Imported successfully</string>
+    <string name="meta_doi_not_found">DOI not found</string>
+    <string name="meta_isbn_not_found">ISBN not found</string>
 
     <!-- Reader outline / annotations -->
     <string name="reader_outline_title">Book Outline</string>

@@ -2,6 +2,11 @@ package br.com.jotdown.ui.screens.reader
 
 import android.content.Context
 import android.content.Intent
+import android.graphics.Paint
+import android.graphics.pdf.PdfDocument
+import android.text.Layout
+import android.text.StaticLayout
+import android.text.TextPaint
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
@@ -28,7 +33,9 @@ import androidx.compose.ui.window.DialogProperties
 import br.com.jotdown.R
 import br.com.jotdown.data.entity.DocumentEntity
 import br.com.jotdown.data.entity.HighlightEntity
+import br.com.jotdown.ui.viewmodel.MetadataImportStatus
 import java.io.File
+import java.io.FileOutputStream
 
 data class MetadataParams(
     val docType: String,
@@ -54,8 +61,8 @@ data class MetadataParams(
 fun MetadataSheet(
     document: DocumentEntity?, highlights: List<HighlightEntity>, pageOffset: Int,
     onSave: (MetadataParams) -> Unit, onUpdateHighlight: (Long, String) -> Unit, onDeleteHighlight: (Long) -> Unit, onDismiss: () -> Unit,
-    onImportDOI: (String) -> Unit = {}, doiImportStatus: String? = null,
-    onImportISBN: (String) -> Unit = {}, isbnImportStatus: String? = null,
+    onImportDOI: (String) -> Unit = {}, doiImportStatus: MetadataImportStatus? = null,
+    onImportISBN: (String) -> Unit = {}, isbnImportStatus: MetadataImportStatus? = null,
     onEditHighlightNote: (Long) -> Unit = {}
 ) {
     val context = LocalContext.current
@@ -118,17 +125,10 @@ fun MetadataSheet(
     }
 
     val markdownPreview = buildString {
-        val ref = when (docType) {
-            "Artigo de Peri\u00f3dico" -> "${authorLastName.uppercase()}, $authorFirstName. $title. **$journal**, $city, v. $volume, n. $edition, p. $pages, $year."
-            "Cap\u00edtulo de Livro" -> "${authorLastName.uppercase()}, $authorFirstName. $title. In: ${subtitle.uppercase()}. **$journal**. $city: $publisher, $year. p. $pages."
-            "Trabalho Acad\u00eamico" -> "${authorLastName.uppercase()}, $authorFirstName. **$title**. $year. $journal - $publisher, $city, $year."
-            "Documento Jur\u00eddico" -> "${authorLastName.uppercase()}. **$title**, $year. $publisher, $city."
-            else -> "${authorLastName.uppercase()}, $authorFirstName. **$title**" + (if (subtitle.isNotBlank()) ": $subtitle" else "") + ". " + (if (edition.isNotBlank()) "$edition ed. " else "") + "$city: $publisher, $year."
-        }
-        val onlineAddon = if (url.isNotBlank()) " Dispon\u00edvel em: $url. Acesso em: $accessDate." else ""
+        val ref = br.com.jotdown.util.AbntUtil.format(currentDocEntity)
         val apaRef = br.com.jotdown.util.CitationUtil.formatApa(currentDocEntity)
 
-        append("## Fichamento\n\n**Referência (ABNT):** $ref$onlineAddon\n\n**Referência (APA 7ª ed.):** $apaRef\n\n## Destaques\n")
+        append("## Fichamento\n\n**Referência (ABNT):** $ref\n\n**Referência (APA 7ª ed.):** $apaRef\n\n## Destaques\n")
         
         val citationName = if (docType == "Documento Jur\u00eddico") authorLastName.uppercase() else authorLastName
         val citationYear = if (year.isNotBlank()) year else "S.d."
@@ -207,23 +207,17 @@ fun MetadataSheet(
                     Text(stringResource(R.string.doi_label), color = Color.Gray, fontSize = 12.sp, fontWeight = FontWeight.Bold); Spacer(Modifier.height(8.dp))
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
                         OutlinedTextField(value = doiInput, onValueChange = { doiInput = it }, label = { Text("e.g. 10.1038/nature12373") }, modifier = Modifier.weight(1f), singleLine = true)
-                        Button(onClick = { if (doiInput.isNotBlank()) onImportDOI(doiInput) }, modifier = Modifier.height(56.dp)) { Text("Buscar") }
+                        Button(onClick = { if (doiInput.isNotBlank()) onImportDOI(doiInput) }, modifier = Modifier.height(56.dp)) { Text(stringResource(R.string.common_search)) }
                     }
-                    if (doiImportStatus != null) {
-                        Spacer(Modifier.height(8.dp))
-                        Text(doiImportStatus, color = if (doiImportStatus.contains("sucesso")) Color.Green else Color.Yellow, fontSize = 12.sp)
-                    }
+                    ImportStatusText(doiImportStatus, R.string.meta_doi_not_found)
 
                     Spacer(Modifier.height(16.dp))
                     Text(stringResource(R.string.isbn_label), color = Color.Gray, fontSize = 12.sp, fontWeight = FontWeight.Bold); Spacer(Modifier.height(8.dp))
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
                         OutlinedTextField(value = isbnInput, onValueChange = { isbnInput = it }, label = { Text(stringResource(R.string.isbn_hint)) }, modifier = Modifier.weight(1f), singleLine = true)
-                        Button(onClick = { if (isbnInput.isNotBlank()) onImportISBN(isbnInput) }, modifier = Modifier.height(56.dp)) { Text("Buscar") }
+                        Button(onClick = { if (isbnInput.isNotBlank()) onImportISBN(isbnInput) }, modifier = Modifier.height(56.dp)) { Text(stringResource(R.string.common_search)) }
                     }
-                    if (isbnImportStatus != null) {
-                        Spacer(Modifier.height(8.dp))
-                        Text(isbnImportStatus, color = if (isbnImportStatus.contains("sucesso")) Color.Green else Color.Yellow, fontSize = 12.sp)
-                    }
+                    ImportStatusText(isbnImportStatus, R.string.meta_isbn_not_found)
 
                     Spacer(Modifier.height(24.dp))
                     if (highlights.isNotEmpty()) {
@@ -262,11 +256,30 @@ fun MetadataSheet(
     }
 }
 
+@Composable
+private fun ImportStatusText(
+    status: MetadataImportStatus?,
+    @androidx.annotation.StringRes notFoundRes: Int
+) {
+    if (status == null) return
+    Spacer(Modifier.height(8.dp))
+    val (textRes, color) = when (status) {
+        MetadataImportStatus.SEARCHING -> R.string.meta_import_searching to Color.Yellow
+        MetadataImportStatus.SUCCESS -> R.string.meta_import_success to Color.Green
+        MetadataImportStatus.NOT_FOUND -> notFoundRes to Color.Yellow
+    }
+    Text(stringResource(textRes), color = color, fontSize = 12.sp)
+}
+
 fun exportFile(context: Context, title: String, content: String, extension: String) {
     try {
         val fileName = (if (title.isBlank()) "fichamento" else title.replace(" ", "_")) + ".$extension"
         val file = File(context.cacheDir, fileName)
-        file.writeText(content)
+        if (extension == "pdf") {
+            writeTextPdf(file, content)
+        } else {
+            file.writeText(content)
+        }
         val uri = androidx.core.content.FileProvider.getUriForFile(context, "${context.packageName}.provider", file)
         val intent = Intent(Intent.ACTION_SEND).apply {
             type = if (extension == "md" || extension == "txt" || extension == "bib") "text/plain" else "application/pdf"
@@ -275,6 +288,64 @@ fun exportFile(context: Context, title: String, content: String, extension: Stri
         }
         context.startActivity(Intent.createChooser(intent, context.getString(R.string.meta_export_chooser)))
     } catch (e: Exception) { e.printStackTrace() }
+}
+
+private fun writeTextPdf(file: File, content: String) {
+    val pageWidth = 595
+    val pageHeight = 842
+    val margin = 48
+    val usableWidth = pageWidth - margin * 2
+    val usableHeight = pageHeight - margin * 2
+
+    val cleaned = content
+        .replace("**", "")
+        .replace(Regex("(?m)^##\\s+"), "")
+        .replace(Regex("(?m)^#\\s+"), "")
+
+    val paint = TextPaint(Paint.ANTI_ALIAS_FLAG).apply {
+        color = android.graphics.Color.BLACK
+        textSize = 11f
+    }
+    val layout = StaticLayout.Builder
+        .obtain(cleaned, 0, cleaned.length, paint, usableWidth)
+        .setAlignment(Layout.Alignment.ALIGN_NORMAL)
+        .setIncludePad(false)
+        .build()
+
+    val pdfDoc = PdfDocument()
+    try {
+        var pageNumber = 1
+        var startLine = 0
+        while (startLine < layout.lineCount) {
+            val pageTopY = layout.getLineTop(startLine)
+            var endLine = startLine
+            while (endLine < layout.lineCount && layout.getLineBottom(endLine) - pageTopY <= usableHeight) {
+                endLine++
+            }
+            if (endLine == startLine) endLine = startLine + 1
+
+            val contentHeightOnPage = layout.getLineBottom(endLine - 1) - pageTopY
+            val pageInfo = PdfDocument.PageInfo.Builder(pageWidth, pageHeight, pageNumber++).create()
+            val page = pdfDoc.startPage(pageInfo)
+            val canvas = page.canvas
+            canvas.save()
+            canvas.clipRect(
+                margin.toFloat(),
+                margin.toFloat(),
+                (pageWidth - margin).toFloat(),
+                (margin + contentHeightOnPage).toFloat()
+            )
+            canvas.translate(margin.toFloat(), (margin - pageTopY).toFloat())
+            layout.draw(canvas)
+            canvas.restore()
+            pdfDoc.finishPage(page)
+
+            startLine = endLine
+        }
+        FileOutputStream(file).use { pdfDoc.writeTo(it) }
+    } finally {
+        pdfDoc.close()
+    }
 }
 
 /**

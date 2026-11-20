@@ -315,6 +315,10 @@
     <string name="meta_preview">Preview do Fichamento (Markdown)</string>
     <string name="meta_save">Salvar Metadados e Citações</string>
     <string name="meta_export_chooser">Exportar Fichamento</string>
+    <string name="meta_import_searching">Buscando…</string>
+    <string name="meta_import_success">Importado com sucesso</string>
+    <string name="meta_doi_not_found">DOI não encontrado</string>
+    <string name="meta_isbn_not_found">ISBN não encontrado</string>
 
     <!-- Sumário / anotações do leitor -->
     <string name="reader_outline_title">Sumário do Livro</string>

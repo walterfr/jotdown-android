@@ -1,13 +1,13 @@
 Jotdown is an open-source document manager and PDF reader built for researchers, students and academics. Reading, annotating and organizing your documents works fully offline; network is only used for optional metadata lookup by DOI (CrossRef) or ISBN (Open Library) and dictionary downloads. Focused on privacy — no account required, no data leaves the device beyond what those optional features need.
 
 Features:
-* PDF reader with text-layer extraction
-* OCR via open-source PdfBox
+* PDF text extraction, hierarchical outline/TOC navigation, and full-text PDF search via open-source PdfBox
 * Sticky note annotations and vector drawings (stylus + palm rejection)
-* Academic citation (fichamento) generator
-* Export to Markdown (.md), TXT and PDF
-* ABNT citation format support
-* Local folder organisation system
-* Offline dictionary (Portuguese / English)
-* Backup and restore (local ZIP)
+* Annotated PDF export merging vector drawings and sticky notes onto pages
+* Academic citation (fichamento) generator with ABNT NBR 6023 and APA 7th edition formatting
+* Export notes and references to Markdown (.md), TXT, PDF, and BibTeX (.bib)
+* Optional metadata lookup via DOI (CrossRef) and ISBN (Open Library)
+* Local folder organization, reading status tracking, and research goals
+* Offline dictionaries (Portuguese / English)
+* Local backup and restore (ZIP)
 * Dark mode support

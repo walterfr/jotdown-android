@@ -25,6 +25,8 @@ sealed class DictionaryLookupState {
     data class PhraseNotFound(val phrase: String) : DictionaryLookupState()
 }
 
+enum class MetadataImportStatus { SEARCHING, SUCCESS, NOT_FOUND }
+
 class ReaderViewModel(
     private val repository: DocumentRepository,
     private val documentId: String,
@@ -198,25 +200,25 @@ class ReaderViewModel(
     fun addHighlight(page: Int, text: String) = viewModelScope.launch(Dispatchers.IO) {
         repository.insertHighlight(HighlightEntity(id = 0L, documentId = documentId, page = page, text = text))
     }
-    private val _doiImportStatus = MutableStateFlow<String?>(null)
-    val doiImportStatus: StateFlow<String?> = _doiImportStatus
+    private val _doiImportStatus = MutableStateFlow<MetadataImportStatus?>(null)
+    val doiImportStatus: StateFlow<MetadataImportStatus?> = _doiImportStatus
 
-    private val _isbnImportStatus = MutableStateFlow<String?>(null)
-    val isbnImportStatus: StateFlow<String?> = _isbnImportStatus
+    private val _isbnImportStatus = MutableStateFlow<MetadataImportStatus?>(null)
+    val isbnImportStatus: StateFlow<MetadataImportStatus?> = _isbnImportStatus
 
     fun importDOI(doi: String) = viewModelScope.launch(Dispatchers.IO) {
-        _doiImportStatus.value = "Buscando..."
+        _doiImportStatus.value = MetadataImportStatus.SEARCHING
         val result = repository.importDOI(documentId, doi)
-        _doiImportStatus.value = if (result != null) "Importado com sucesso" else "DOI não encontrado"
+        _doiImportStatus.value = if (result != null) MetadataImportStatus.SUCCESS else MetadataImportStatus.NOT_FOUND
         _document.value = repository.getDocumentById(documentId)
         kotlinx.coroutines.delay(2000)
         _doiImportStatus.value = null
     }
 
     fun importISBN(isbn: String) = viewModelScope.launch(Dispatchers.IO) {
-        _isbnImportStatus.value = "Buscando..."
+        _isbnImportStatus.value = MetadataImportStatus.SEARCHING
         val result = repository.importISBN(documentId, isbn)
-        _isbnImportStatus.value = if (result != null) "Importado com sucesso" else "ISBN não encontrado"
+        _isbnImportStatus.value = if (result != null) MetadataImportStatus.SUCCESS else MetadataImportStatus.NOT_FOUND
         _document.value = repository.getDocumentById(documentId)
         kotlinx.coroutines.delay(2000)
         _isbnImportStatus.value = null

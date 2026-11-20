@@ -1,0 +1,6 @@
+What's new in v3.2.0:
+• APA 7th edition citations and BibTeX (.bib) export, alongside ABNT, MD, TXT and PDF
+• Book metadata import by ISBN via Open Library (alongside DOI/CrossRef)
+• Full-text search inside PDF document content
+• Hierarchical PDF outline/bookmarks table of contents navigation
+• Annotated PDF export with vector drawings and sticky notes flattened onto pages

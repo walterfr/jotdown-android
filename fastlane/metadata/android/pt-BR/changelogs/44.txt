@@ -1,0 +1,6 @@
+Novidades da v3.2.0:
+• Referências em APA (7ª edição) e exportação em BibTeX (.bib), além de ABNT, MD, TXT e PDF
+• Importação de metadados de livros por ISBN via Open Library (além de DOI/CrossRef)
+• Busca textual completa dentro do conteúdo do PDF
+• Navegação pelo sumário do PDF (outlines/bookmarks hierárquicos)
+• Exportação de PDF com anotações e desenhos vetoriais mesclados nas páginas

@@ -12,11 +12,16 @@
 ## Funcionalidades
 
 - **Leitor de PDF** com renderização lazy multi-página via `PdfRenderer`
+- **Sumário do PDF** — navegação por outlines/bookmarks hierárquicos do documento
+- **Busca textual completa** — pesquisa no conteúdo textual do PDF, além das anotações e fichamentos
 - **Camada de anotações** — caneta, lápis, marca-texto e borracha com suporte a pressão de caneta stylus
 - **Seletor de espessura** — três tamanhos pré-definidos por ferramenta (fino, médio, grosso)
 - **Balões de post-it** — notas ancoradas a coordenadas do PDF, armazenadas em Room
+- **Exportação de PDF com anotações mescladas** — gera cópia do PDF com traços vetoriais e post-its embutidos nas páginas
 - **Marcações e fichamentos** — captura de trechos com OCR opcional
-- **Exportação ABNT** — metadados acadêmicos com saída `.MD`, `.TXT` e `.PDF`
+- **Citações e exportação acadêmica** — referências em **ABNT NBR 6023**, **APA 7ª edição** e **BibTeX (`.BIB`)**, além de saída em `.MD`, `.TXT` e `.PDF`
+- **Importação de metadados** — preenchimento automático por **DOI (CrossRef)** e **ISBN (Open Library)**
+- **Abas multi-documento** — múltiplos PDFs abertos em abas no leitor (versão completa/Play)
 - **Pastas e rótulos** — organização da biblioteca com drag-and-drop
 - **Backup/restauração** — exportação em `.zip` de toda a biblioteca
 - **Offline por padrão** — leitura, anotações e organização funcionam sem rede; a internet só é usada, sob demanda, na importação de metadados por DOI (API CrossRef) ou ISBN (Open Library) e no download de dicionários

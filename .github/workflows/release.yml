@@ -47,12 +47,12 @@ jobs:
       # No modo release, compila a partir da tag (nao do branch disparado):
       # o F-Droid compara o APK publicado com o que ele compila da tag.
       - name: Checkout Code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           ref: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.operation == 'release' && format('refs/tags/{0}', github.event.inputs.release_tag) || '' }}
 
       - name: Setup Java
-        uses: actions/setup-java@v4
+        uses: actions/setup-java@v5
         with:
           distribution: 'zulu'
           java-version: '17'
@@ -134,7 +134,7 @@ jobs:
       # publishes the APKs, for cases where the AAB was already uploaded.
       - name: Create GitHub Release and Upload APKs
         if: startsWith(github.ref, 'refs/tags/') || (github.event_name == 'workflow_dispatch' && github.event.inputs.operation == 'release')
-        uses: softprops/action-gh-release@v1
+        uses: softprops/action-gh-release@v3
         with:
           tag_name: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.release_tag || github.ref_name }}
           files: |
