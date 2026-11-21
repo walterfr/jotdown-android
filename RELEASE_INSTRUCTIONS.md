@@ -3,7 +3,7 @@
 ## Version Info
 - **Current version:** 3.2.1
 - **Build Code:** 45
-- **Last release:** November 2026 (GitHub Releases & Play Console internal track as `completed`)
+- **Last release:** November 2026 (GitHub Releases, Play Console `production`, F-Droid)
 - **AAB Path:** `app/build/outputs/bundle/fullRelease/app-full-release.aab`
 - **APKs Path:** `app/build/outputs/apk/{full,foss}/release/app-*.apk`
 
@@ -31,16 +31,16 @@ From v3.1.23 onwards, the project adopts [Pride Versioning](https://pridever.org
 ### 1. Via GitHub Actions (Recommended)
 Building via CI guarantees deterministic/reproducible builds matching F-Droid's Linux environment.
 
-**By tag (Publishes GitHub Release with APKs and uploads AAB to Play Console):**
+**By tag (Publishes GitHub Release with APKs and uploads AAB directly to Play Console `production`):**
 ```bash
-git tag v3.1.24 && git push --tags
+git tag v3.2.2 && git push --tags
 ```
 
-**By workflow dispatch (without creating tag or for draft/test promotion):**
+**By workflow dispatch (without creating tag, or for internal/beta testing or promotion):**
 ```bash
-gh workflow run "Android Release Build" -f track=internal -f status=completed
+gh workflow run "Android Release Build" -f track=production -f status=completed
 ```
-`track`: internal | alpha | beta · `status`: completed | draft
+`track`: production | internal | alpha | beta · `status`: completed | draft
 
 **Rebuild / Repackage tag assets:**
 Workflow dispatch allows rebuilding clean APKs for an existing tag if needed for F-Droid reproducibility checks.

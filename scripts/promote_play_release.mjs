@@ -2,6 +2,7 @@ import { google } from "googleapis";
 
 const packageName = process.env.PLAY_PACKAGE_NAME;
 const versionCode = String(process.env.PLAY_VERSION_CODE);
+const targetTrack = process.env.PLAY_TARGET_TRACK || "production";
 const serviceAccount = JSON.parse(process.env.PLAY_SERVICE_ACCOUNT_JSON);
 
 if (!packageName || !versionCode || !serviceAccount.client_email) {
@@ -46,9 +47,9 @@ release.status = "completed";
 await publisher.edits.tracks.update({
   packageName,
   editId,
-  track: "internal",
+  track: targetTrack,
   requestBody: {
-    track: "internal",
+    track: targetTrack,
     releases: [
       {
         ...release,
@@ -60,5 +61,5 @@ await publisher.edits.tracks.update({
 await publisher.edits.commit({ packageName, editId });
 
 console.log(
-  `Promoted version code ${versionCode} to completed on the internal track.`,
+  `Promoted version code ${versionCode} to completed on the ${targetTrack} track.`,
 );
