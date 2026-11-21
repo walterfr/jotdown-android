@@ -1,0 +1,7 @@
+v3.2.1:
+• Real paginated A4 .PDF export for reading notes
+• Fixed eraser strokes and added a post-it notes appendix when exporting annotated PDFs
+• Unified all document types in ABNT NBR 6023 citation formatting
+• Full PT/EN localization for DOI/ISBN import status messages
+• Android 15 edge-to-edge display and status bar inset improvements
+• R8 optimization (~40% smaller APK and 97% DEX obfuscation)

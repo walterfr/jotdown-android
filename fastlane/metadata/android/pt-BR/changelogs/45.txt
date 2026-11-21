@@ -1,0 +1,7 @@
+v3.2.1:
+• Exportação real de fichamentos em .PDF paginado (A4)
+• Correção da borracha e adição de apêndice com texto dos post-its ao exportar PDF com anotações
+• Unificação de todos os tipos de documento na formatação ABNT NBR 6023
+• Tradução completa dos status de importação DOI/ISBN (PT/EN)
+• Ajustes de exibição ponta a ponta (edge-to-edge) no Android 15
+• Otimização de tamanho e ofuscação R8 (~40% menor)
