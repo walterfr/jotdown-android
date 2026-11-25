@@ -20,12 +20,14 @@ import androidx.compose.ui.graphics.toArgb
 import br.com.jotdown.R
 import br.com.jotdown.data.entity.AnnotationEntity
 import br.com.jotdown.data.entity.DrawingEntity
+import br.com.jotdown.data.entity.HighlightEntity
 import br.com.jotdown.ui.screens.reader.Tool
 import br.com.jotdown.ui.screens.reader.parseDrawingsJson
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.io.File
 import java.io.FileOutputStream
+import kotlin.math.roundToInt
 
 object PdfFlattenUtil {
 
@@ -40,10 +42,15 @@ object PdfFlattenUtil {
         pdfFile: File,
         drawings: List<DrawingEntity>,
         annotations: List<AnnotationEntity>,
-        title: String
+        title: String,
+        highlights: List<HighlightEntity> = emptyList(),
+        pagePaddingMode: String = PagePaddingSpec.MODE_NONE,
+        pagePaddingColor: String = PagePaddingSpec.COLOR_WHITE
     ): File? = withContext(Dispatchers.IO) {
         if (!pdfFile.exists()) return@withContext null
 
+        val paddingSpec = PagePaddingSpec.fromMode(pagePaddingMode)
+        val padRgb = PagePaddingSpec.parseHexRgb(pagePaddingColor)
         var pfd: ParcelFileDescriptor? = null
         var renderer: PdfRenderer? = null
         val outputDoc = PdfDocument()
@@ -56,12 +63,17 @@ object PdfFlattenUtil {
             val annotationsByPage = annotations
                 .groupBy { it.page }
                 .mapValues { (_, list) -> list.sortedBy { it.id } }
+            val highlightsByPage = highlights
+                .groupBy { it.page }
+                .mapValues { (_, list) -> list.sortedBy { it.id } }
 
             for (i in 0 until pageCount) {
                 val pageNumber = i + 1
                 val page = renderer.openPage(i)
                 val origW = page.width
                 val origH = page.height
+                val expW = (origW * (1f + paddingSpec.extraRightFraction)).roundToInt().coerceAtLeast(origW)
+                val expH = (origH * (1f + paddingSpec.extraBottomFraction)).roundToInt().coerceAtLeast(origH)
 
                 // Renderiza em 1.5x para nitidez sem estouro de memória
                 val scale = 1.5f
@@ -69,36 +81,52 @@ object PdfFlattenUtil {
                 val bmpH = (origH * scale).toInt().coerceAtLeast(1)
 
                 val bitmap = try {
-                    Bitmap.createBitmap(bmpW, bmpH, Bitmap.Config.ARGB_8888).apply {
-                        eraseColor(Color.WHITE)
-                        page.render(this, null, null, PdfRenderer.Page.RENDER_MODE_FOR_PRINT)
+                    try {
+                        Bitmap.createBitmap(bmpW, bmpH, Bitmap.Config.ARGB_8888).apply {
+                            eraseColor(Color.WHITE)
+                            page.render(this, null, null, PdfRenderer.Page.RENDER_MODE_FOR_PRINT)
+                        }
+                    } catch (oom: OutOfMemoryError) {
+                        // Fallback para 1x se faltar memória
+                        Bitmap.createBitmap(origW, origH, Bitmap.Config.ARGB_8888).apply {
+                            eraseColor(Color.WHITE)
+                            page.render(this, null, null, PdfRenderer.Page.RENDER_MODE_FOR_PRINT)
+                        }
                     }
-                } catch (oom: OutOfMemoryError) {
-                    // Fallback para 1x se faltar memória
-                    Bitmap.createBitmap(origW, origH, Bitmap.Config.ARGB_8888).apply {
-                        eraseColor(Color.WHITE)
-                        page.render(this, null, null, PdfRenderer.Page.RENDER_MODE_FOR_PRINT)
-                    }
+                } finally {
+                    page.close()
                 }
-                page.close()
 
-                val pageInfo = PdfDocument.PageInfo.Builder(origW, origH, pageNumber).create()
+                val pageInfo = PdfDocument.PageInfo.Builder(expW, expH, pageNumber).create()
                 val pdfPage = outputDoc.startPage(pageInfo)
                 val canvas = pdfPage.canvas
 
-                // 1. Desenha página base do PDF
-                canvas.drawBitmap(bitmap, null, RectF(0f, 0f, origW.toFloat(), origH.toFloat()), null)
-                bitmap.recycle()
+                try {
+                    if (paddingSpec.hasPadding) {
+                        canvas.drawColor(Color.rgb(padRgb.first, padRgb.second, padRgb.third))
+                    }
+
+                    // 1. Desenha página base do PDF
+                    canvas.drawBitmap(bitmap, null, RectF(0f, 0f, origW.toFloat(), origH.toFloat()), null)
+                } finally {
+                    bitmap.recycle()
+                }
+
+                // 2. Sobrepõe marcações de texto (antes da tinta)
+                val pageHighlights = highlightsByPage[pageNumber].orEmpty()
+                if (pageHighlights.isNotEmpty()) {
+                    drawPageHighlights(canvas, pageHighlights, origW, origH)
+                }
 
                 val strokeScale = origW.toFloat() / screenWidth
 
-                // 2. Sobrepõe traços vetoriais em camada offscreen para suportar Tool.ERASER
+                // 3. Sobrepõe traços vetoriais em camada offscreen para suportar Tool.ERASER
                 val drawing = drawings.find { it.page == pageNumber }
                 if (drawing != null && drawing.pathsJson.isNotBlank()) {
-                    drawPageInk(canvas, drawing.pathsJson, origW, origH, strokeScale)
+                    drawPageInk(canvas, drawing.pathsJson, expW, expH, strokeScale)
                 }
 
-                // 3. Sobrepõe marcadores de anotação (post-its)
+                // 4. Sobrepõe marcadores de anotação (post-its)
                 val pageAnnotations = annotationsByPage[pageNumber].orEmpty()
                 if (pageAnnotations.isNotEmpty()) {
                     drawPageAnnotationBadges(canvas, pageAnnotations, strokeScale)
@@ -134,25 +162,73 @@ object PdfFlattenUtil {
         }
     }
 
+    private fun drawPageHighlights(
+        canvas: Canvas,
+        pageHighlights: List<HighlightEntity>,
+        origW: Int,
+        origH: Int
+    ) {
+        val w = origW.toFloat()
+        val h = origH.toFloat()
+        pageHighlights.forEach { hl ->
+            val rects = PdfTextLayerUtil.parseRects(hl.rectsJson)
+            if (rects.isEmpty()) return@forEach
+            val rgb = PagePaddingSpec.parseHexRgb(hl.color, Triple(253, 224, 71))
+            when (hl.style) {
+                "UNDERLINE" -> {
+                    val paint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+                        color = Color.rgb(rgb.first, rgb.second, rgb.third)
+                        strokeWidth = 2f
+                        style = Paint.Style.STROKE
+                    }
+                    rects.forEach { r ->
+                        val y = r.bottom * h
+                        canvas.drawLine(r.left * w, y, r.right * w, y, paint)
+                    }
+                }
+                "STRIKEOUT" -> {
+                    val paint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+                        color = Color.rgb(rgb.first, rgb.second, rgb.third)
+                        strokeWidth = 2f
+                        style = Paint.Style.STROKE
+                    }
+                    rects.forEach { r ->
+                        val y = (r.top + r.bottom) * 0.5f * h
+                        canvas.drawLine(r.left * w, y, r.right * w, y, paint)
+                    }
+                }
+                else -> {
+                    val paint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+                        color = Color.argb(90, rgb.first, rgb.second, rgb.third)
+                        style = Paint.Style.FILL
+                    }
+                    rects.forEach { r ->
+                        canvas.drawRect(r.left * w, r.top * h, r.right * w, r.bottom * h, paint)
+                    }
+                }
+            }
+        }
+    }
+
     private fun drawPageInk(
         canvas: Canvas,
         pathsJson: String,
-        origW: Int,
-        origH: Int,
+        targetW: Int,
+        targetH: Int,
         strokeScale: Float
     ) {
         val paths = parseDrawingsJson(pathsJson)
         if (paths.isEmpty()) return
 
         val inkScale = 1.5f
-        val inkW = (origW * inkScale).toInt().coerceAtLeast(1)
-        val inkH = (origH * inkScale).toInt().coerceAtLeast(1)
+        val inkW = (targetW * inkScale).toInt().coerceAtLeast(1)
+        val inkH = (targetH * inkScale).toInt().coerceAtLeast(1)
         var effectiveInkScale = inkScale
         val inkBitmap = try {
             Bitmap.createBitmap(inkW, inkH, Bitmap.Config.ARGB_8888)
         } catch (oom: OutOfMemoryError) {
             effectiveInkScale = 1f
-            Bitmap.createBitmap(origW.coerceAtLeast(1), origH.coerceAtLeast(1), Bitmap.Config.ARGB_8888)
+            Bitmap.createBitmap(targetW.coerceAtLeast(1), targetH.coerceAtLeast(1), Bitmap.Config.ARGB_8888)
         }
 
         try {
@@ -184,13 +260,17 @@ object PdfFlattenUtil {
                         strokeWidthPx = 4f * path.widthMultiplier
                         strokeAlpha = (0.85f * 255).toInt()
                     }
-                    Tool.NONE, Tool.SELECT, Tool.DICTIONARY, Tool.ANNOTATION -> return@forEach
+                    Tool.TAPE -> {
+                        strokeWidthPx = 28f * path.widthMultiplier
+                        strokeAlpha = 255
+                    }
+                    Tool.NONE, Tool.SELECT, Tool.DICTIONARY, Tool.ANNOTATION, Tool.LASSO -> return@forEach
                 }
 
                 val paint = Paint().apply {
                     isAntiAlias = true
                     style = Paint.Style.STROKE
-                    strokeCap = Paint.Cap.ROUND
+                    strokeCap = if (path.tool == Tool.TAPE) Paint.Cap.SQUARE else Paint.Cap.ROUND
                     strokeJoin = Paint.Join.ROUND
                     strokeWidth = strokeWidthPx
                     if (isEraser) {
@@ -202,16 +282,33 @@ object PdfFlattenUtil {
                     }
                 }
 
-                val drawPath = Path().apply {
-                    moveTo(path.points[0].x, path.points[0].y)
-                    for (pIdx in 1 until path.points.size) {
-                        lineTo(path.points[pIdx].x, path.points[pIdx].y)
+                val triples = path.points.map { Triple(it.x, it.y, it.pressure) }
+                val segments = StrokeSmoothingUtil.buildQuadraticSegments(triples)
+                if (segments.isEmpty()) return@forEach
+
+                if (path.tool == Tool.PEN) {
+                    val segPath = Path()
+                    for (seg in segments) {
+                        val avgP = (seg.startPressure + seg.endPressure) * 0.5f
+                        val pFact = (0.5f + 1.5f * avgP).coerceIn(0.5f, 2.5f)
+                        paint.strokeWidth = strokeWidthPx * pFact
+                        segPath.reset()
+                        segPath.moveTo(seg.start.x, seg.start.y)
+                        segPath.quadTo(seg.control.x, seg.control.y, seg.end.x, seg.end.y)
+                        inkCanvas.drawPath(segPath, paint)
                     }
+                } else {
+                    val drawPath = Path().apply {
+                        moveTo(segments[0].start.x, segments[0].start.y)
+                        for (seg in segments) {
+                            quadTo(seg.control.x, seg.control.y, seg.end.x, seg.end.y)
+                        }
+                    }
+                    inkCanvas.drawPath(drawPath, paint)
                 }
-                inkCanvas.drawPath(drawPath, paint)
             }
 
-            canvas.drawBitmap(inkBitmap, null, RectF(0f, 0f, origW.toFloat(), origH.toFloat()), null)
+            canvas.drawBitmap(inkBitmap, null, RectF(0f, 0f, targetW.toFloat(), targetH.toFloat()), null)
         } finally {
             inkBitmap.recycle()
         }

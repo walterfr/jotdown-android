@@ -1,6 +1,7 @@
 package br.com.jotdown
 
 import android.app.Application
+import androidx.room.withTransaction
 import br.com.jotdown.data.dao.OfflineDictionaryDao
 import br.com.jotdown.data.db.JotdownDatabase
 import br.com.jotdown.data.manager.OfflineDictionaryManager
@@ -18,11 +19,14 @@ class JotdownApplication : Application() {
 
     val repository by lazy {
         DocumentRepository(
-            documentDao   = database.documentDao(),
-            annotationDao = database.annotationDao(),
-            highlightDao  = database.highlightDao(),
-            drawingDao    = database.drawingDao(),
-            folderDao     = database.folderDao()
+            documentDao      = database.documentDao(),
+            annotationDao    = database.annotationDao(),
+            highlightDao     = database.highlightDao(),
+            drawingDao       = database.drawingDao(),
+            folderDao        = database.folderDao(),
+            bookmarkDao      = database.bookmarkDao(),
+            audioRecordingDao = database.audioRecordingDao(),
+            runInTransaction = { block -> database.withTransaction { block() } }
         )
     }
 

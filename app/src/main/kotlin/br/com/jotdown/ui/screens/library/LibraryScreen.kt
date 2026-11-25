@@ -1,7 +1,11 @@
 package br.com.jotdown.ui.screens.library
 
+import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.fragment.app.FragmentActivity
+import br.com.jotdown.MultiReaderActivity
+import br.com.jotdown.util.BiometricLockUtil
 import androidx.compose.animation.*
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.Image
@@ -439,9 +443,48 @@ fun LibraryScreen(viewModel: LibraryViewModel, onOpenDocument: (String) -> Unit,
                             }
                             if (currentTab != "Pasta") {
                                 items(displayDocuments, key = { it.id }) { doc ->
+                                    val docTitle = doc.title.ifBlank { doc.fileName }
+                                    fun runIfUnlocked(action: () -> Unit) {
+                                        if (!doc.isLocked) {
+                                            action()
+                                            return
+                                        }
+                                        val activity = context as? FragmentActivity
+                                        if (activity != null && BiometricLockUtil.canAuthenticate(context)) {
+                                            BiometricLockUtil.authenticate(
+                                                activity = activity,
+                                                title = context.getString(R.string.biometric_prompt_title),
+                                                subtitle = context.getString(R.string.biometric_prompt_subtitle, docTitle),
+                                                onSuccess = action,
+                                                onError = { msg ->
+                                                    if (msg.isNotBlank()) Toast.makeText(context, msg, Toast.LENGTH_SHORT).show()
+                                                }
+                                            )
+                                        } else {
+                                            Toast.makeText(context, context.getString(R.string.biometric_unavailable), Toast.LENGTH_LONG).show()
+                                        }
+                                    }
+
                                     DocumentCoverCard(
                                         doc = doc, isDragging = draggingDocId == doc.id, isTarget = targetDocId == doc.id, inFolder = currentFolder != null, currentFilter = currentFilter, context = context,
-                                        onCardClick = { if (currentFilter != "Lixo") onOpenDocument(doc.id) },
+                                        onCardClick = { if (currentFilter != "Lixo") runIfUnlocked { onOpenDocument(doc.id) } },
+                                        onOpenSplitScreen = { runIfUnlocked { MultiReaderActivity.launchAdjacent(context, doc.id) } },
+                                        onToggleLock = {
+                                            val activity = context as? FragmentActivity
+                                            if (activity != null && BiometricLockUtil.canAuthenticate(context)) {
+                                                BiometricLockUtil.authenticate(
+                                                    activity = activity,
+                                                    title = context.getString(R.string.biometric_prompt_title),
+                                                    subtitle = context.getString(R.string.biometric_lock_toggle_subtitle, docTitle),
+                                                    onSuccess = { viewModel.toggleLocked(doc.id, !doc.isLocked) },
+                                                    onError = { msg ->
+                                                        if (msg.isNotBlank()) Toast.makeText(context, msg, Toast.LENGTH_SHORT).show()
+                                                    }
+                                                )
+                                            } else {
+                                                Toast.makeText(context, context.getString(R.string.biometric_unavailable), Toast.LENGTH_LONG).show()
+                                            }
+                                        },
                                         onRename = { docToRename = doc; renameText = doc.title.ifBlank { doc.fileName } },
                                         onEditTags = { docToTag = doc; tagText = doc.labels },
                                         onDelete = { docToDelete = doc },
@@ -611,7 +654,7 @@ private fun decodeCoverScaled(file: File, targetWidth: Int = 600): android.graph
 @Composable
 private fun DocumentCoverCard(
     doc: DocumentSummary, isDragging: Boolean, isTarget: Boolean, inFolder: Boolean, currentFilter: String, context: android.content.Context,
-    onCardClick: () -> Unit, onRename: () -> Unit, onEditTags: () -> Unit, onDelete: () -> Unit, onRemoveFromFolder: () -> Unit, onMoveToTrash: () -> Unit, onRestore: () -> Unit, onToggleFavorite: () -> Unit, onUpdateReadingStatus: (String) -> Unit,
+    onCardClick: () -> Unit, onOpenSplitScreen: () -> Unit, onToggleLock: () -> Unit, onRename: () -> Unit, onEditTags: () -> Unit, onDelete: () -> Unit, onRemoveFromFolder: () -> Unit, onMoveToTrash: () -> Unit, onRestore: () -> Unit, onToggleFavorite: () -> Unit, onUpdateReadingStatus: (String) -> Unit,
     onGloballyPositioned: (Rect) -> Unit, onDragStart: (Offset) -> Unit, onDrag: (Offset) -> Unit, onDragEnd: () -> Unit
 ) {
     val dateFormat = remember { SimpleDateFormat("dd/MM/yy", Locale.getDefault()) }
@@ -646,6 +689,34 @@ private fun DocumentCoverCard(
                 Box(modifier = Modifier.fillMaxSize()) {
                     if (coverBitmap != null) { Image(bitmap = coverBitmap!!, contentDescription = stringResource(R.string.lib_cover_desc), modifier = Modifier.fillMaxSize(), contentScale = ContentScale.Crop) } 
                     else { AutoGeneratedCover(title = doc.title.ifBlank { doc.fileName }, docType = doc.docType) }
+
+                    if (doc.isLocked) {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.94f)),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Column(
+                                horizontalAlignment = Alignment.CenterHorizontally,
+                                verticalArrangement = Arrangement.spacedBy(6.dp),
+                                modifier = Modifier.padding(12.dp)
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Lock,
+                                    contentDescription = stringResource(R.string.biometric_locked_badge),
+                                    tint = MaterialTheme.colorScheme.primary,
+                                    modifier = Modifier.size(34.dp)
+                                )
+                                Text(
+                                    text = stringResource(R.string.biometric_locked_badge),
+                                    fontSize = 11.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                        }
+                    }
                     
                     // 🛡️ Lombada do Livro (Book Spine)
                     // drawBehind permite usar blendMode=Multiply: escurece proporcionalmente
@@ -700,6 +771,17 @@ private fun DocumentCoverCard(
                                 DropdownMenuItem(text = { Text(stringResource(R.string.menu_delete_permanently), color = Color.Red) }, onClick = { expanded = false; onDelete() })
                             }
                             else {
+                                DropdownMenuItem(
+                                    text = { Text(stringResource(R.string.menu_open_split_screen)) },
+                                    leadingIcon = { Icon(Icons.Default.VerticalSplit, contentDescription = null) },
+                                    onClick = { expanded = false; onOpenSplitScreen() }
+                                )
+                                DropdownMenuItem(
+                                    text = { Text(stringResource(if (doc.isLocked) R.string.menu_unlock_document else R.string.menu_lock_document)) },
+                                    leadingIcon = { Icon(if (doc.isLocked) Icons.Default.LockOpen else Icons.Default.Lock, contentDescription = null) },
+                                    onClick = { expanded = false; onToggleLock() }
+                                )
+                                HorizontalDivider()
                                 DropdownMenuItem(text = { Text(stringResource(R.string.common_rename)) }, onClick = { expanded = false; onRename() })
                                 DropdownMenuItem(text = { Text(stringResource(R.string.dlg_edit_labels)) }, onClick = { expanded = false; onEditTags() })
                                 Divider()

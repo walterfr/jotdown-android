@@ -2,6 +2,7 @@ package br.com.jotdown.ui.screens.settings
 
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -17,8 +18,11 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.ui.text.input.PasswordVisualTransformation
+import androidx.compose.ui.text.input.VisualTransformation
 import br.com.jotdown.R
 import br.com.jotdown.ui.viewmodel.SettingsViewModel
+import br.com.jotdown.util.WebDavSyncUtil
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -257,12 +261,18 @@ fun SettingsScreen(
             }
             } // isPro
 
+            // ── Open FOSS WebDAV Sync (available in both foss and full) ────────
+            WebDavSyncSection(viewModel = viewModel)
+
             HorizontalDivider()
 
             Text(stringResource(R.string.settings_drawing), style = MaterialTheme.typography.titleLarge)
             val drawWithFinger by viewModel.drawWithFinger.collectAsState()
             val doubleTapToDeselect by viewModel.doubleTapToDeselect.collectAsState()
             val twoFingerScroll by viewModel.twoFingerScroll.collectAsState()
+            val twoThreeFingerUndo by viewModel.twoThreeFingerUndo.collectAsState()
+            val holdToShape by viewModel.holdToShape.collectAsState()
+            val stylusButtonAction by viewModel.stylusButtonAction.collectAsState()
             DrawingToggleRow(
                 titleRes = R.string.settings_draw_with_finger,
                 descRes = R.string.settings_draw_with_finger_desc,
@@ -283,6 +293,47 @@ fun SettingsScreen(
                 enabled = drawWithFinger,
                 onCheckedChange = { viewModel.setTwoFingerScroll(it) }
             )
+            DrawingToggleRow(
+                titleRes = R.string.settings_two_three_finger_undo,
+                descRes = R.string.settings_two_three_finger_undo_desc,
+                checked = twoThreeFingerUndo,
+                onCheckedChange = { viewModel.setTwoThreeFingerUndo(it) }
+            )
+            DrawingToggleRow(
+                titleRes = R.string.settings_hold_to_shape,
+                descRes = R.string.settings_hold_to_shape_desc,
+                checked = holdToShape,
+                onCheckedChange = { viewModel.setHoldToShape(it) }
+            )
+            Column(
+                modifier = Modifier.fillMaxWidth(),
+                verticalArrangement = Arrangement.spacedBy(6.dp)
+            ) {
+                Text(stringResource(R.string.settings_stylus_button_action), style = MaterialTheme.typography.bodyLarge)
+                Text(
+                    stringResource(R.string.settings_stylus_button_action_desc),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.outline
+                )
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .horizontalScroll(rememberScrollState()),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    listOf(
+                        "ERASER" to R.string.settings_stylus_action_eraser,
+                        "UNDO" to R.string.settings_stylus_action_undo,
+                        "NONE" to R.string.settings_stylus_action_none
+                    ).forEach { (value, labelRes) ->
+                        FilterChip(
+                            selected = stylusButtonAction == value,
+                            onClick = { viewModel.setStylusButtonAction(value) },
+                            label = { Text(stringResource(labelRes)) }
+                        )
+                    }
+                }
+            }
             HorizontalDivider()
 
             if (viewModel.isBillingSupported) {
@@ -401,5 +452,176 @@ fun DictionaryItemRow(
                 }
             }
         }
+    }
+}
+
+@Composable
+private fun WebDavSyncSection(viewModel: SettingsViewModel) {
+    val webdavUrl by viewModel.webdavUrl.collectAsState()
+    val webdavFilename by viewModel.webdavFilename.collectAsState()
+    val webdavUsername by viewModel.webdavUsername.collectAsState()
+    val webdavPassword by viewModel.webdavPassword.collectAsState()
+    val webdavBusy by viewModel.webdavBusy.collectAsState()
+    val webdavStatus by viewModel.webdavStatus.collectAsState()
+
+    var showPassword by remember { mutableStateOf(false) }
+    var showRestoreConfirm by remember { mutableStateOf(false) }
+
+    HorizontalDivider()
+
+    Card(
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.55f))
+    ) {
+        Column(
+            modifier = Modifier.fillMaxWidth().padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp)
+        ) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                Icon(Icons.Default.CloudSync, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
+                Text(stringResource(R.string.settings_webdav_title), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+            }
+            Text(
+                stringResource(R.string.settings_webdav_desc),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+
+            OutlinedTextField(
+                value = webdavUrl,
+                onValueChange = { viewModel.updateWebdavConfig(url = it) },
+                label = { Text(stringResource(R.string.settings_webdav_url_label)) },
+                placeholder = { Text(stringResource(R.string.settings_webdav_url_hint)) },
+                singleLine = true,
+                modifier = Modifier.fillMaxWidth()
+            )
+            OutlinedTextField(
+                value = webdavFilename,
+                onValueChange = { viewModel.updateWebdavConfig(filename = it) },
+                label = { Text(stringResource(R.string.settings_webdav_filename_label)) },
+                singleLine = true,
+                modifier = Modifier.fillMaxWidth()
+            )
+            OutlinedTextField(
+                value = webdavUsername,
+                onValueChange = { viewModel.updateWebdavConfig(username = it) },
+                label = { Text(stringResource(R.string.settings_webdav_user_label)) },
+                singleLine = true,
+                modifier = Modifier.fillMaxWidth()
+            )
+            OutlinedTextField(
+                value = webdavPassword,
+                onValueChange = { viewModel.updateWebdavConfig(password = it) },
+                label = { Text(stringResource(R.string.settings_webdav_pass_label)) },
+                singleLine = true,
+                visualTransformation = if (showPassword) VisualTransformation.None else PasswordVisualTransformation(),
+                trailingIcon = {
+                    IconButton(onClick = { showPassword = !showPassword }) {
+                        Icon(
+                            imageVector = if (showPassword) Icons.Default.VisibilityOff else Icons.Default.Visibility,
+                            contentDescription = stringResource(
+                                if (showPassword) R.string.settings_webdav_hide_pass else R.string.settings_webdav_show_pass
+                            )
+                        )
+                    }
+                },
+                modifier = Modifier.fillMaxWidth()
+            )
+
+            if (WebDavSyncUtil.isPlainHttp(webdavUrl)) {
+                Surface(
+                    color = MaterialTheme.colorScheme.errorContainer,
+                    shape = MaterialTheme.shapes.small
+                ) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth().padding(10.dp),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(
+                            Icons.Default.Warning,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.onErrorContainer,
+                            modifier = Modifier.size(18.dp)
+                        )
+                        Text(
+                            text = stringResource(R.string.settings_webdav_http_warning),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onErrorContainer
+                        )
+                    }
+                }
+            }
+
+            val canRunWebdav = !webdavBusy && webdavUrl.isNotBlank() && !WebDavSyncUtil.isPlainHttp(webdavUrl)
+            Row(
+                modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                OutlinedButton(
+                    onClick = { viewModel.testWebdavConnection() },
+                    enabled = canRunWebdav
+                ) {
+                    Text(stringResource(R.string.settings_webdav_test))
+                }
+                Button(
+                    onClick = { viewModel.uploadWebdavBackup() },
+                    enabled = canRunWebdav
+                ) {
+                    Icon(Icons.Default.CloudUpload, contentDescription = null, modifier = Modifier.size(16.dp))
+                    Spacer(Modifier.width(6.dp))
+                    Text(stringResource(R.string.settings_webdav_upload))
+                }
+                Button(
+                    onClick = { showRestoreConfirm = true },
+                    enabled = canRunWebdav,
+                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.secondary)
+                ) {
+                    Icon(Icons.Default.CloudDownload, contentDescription = null, modifier = Modifier.size(16.dp))
+                    Spacer(Modifier.width(6.dp))
+                    Text(stringResource(R.string.settings_webdav_restore))
+                }
+            }
+
+            if (webdavBusy) {
+                LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
+            }
+            if (!webdavStatus.isNullOrBlank()) {
+                Text(
+                    text = webdavStatus ?: "",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.primary
+                )
+            }
+        }
+    }
+
+    if (showRestoreConfirm) {
+        AlertDialog(
+            onDismissRequest = { showRestoreConfirm = false },
+            title = { Text(stringResource(R.string.settings_webdav_restore)) },
+            text = { Text(stringResource(R.string.dlg_import_backup_warning)) },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        showRestoreConfirm = false
+                        viewModel.restoreWebdavBackup()
+                    }
+                ) {
+                    Text(
+                        stringResource(R.string.dlg_import_confirm),
+                        color = MaterialTheme.colorScheme.error,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showRestoreConfirm = false }) {
+                    Text(stringResource(R.string.common_cancel))
+                }
+            }
+        )
     }
 }

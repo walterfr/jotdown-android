@@ -5,6 +5,7 @@
     <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE"
         android:maxSdkVersion="32" />
     <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.RECORD_AUDIO" />
 
 
     <application
@@ -19,10 +20,15 @@
         <activity
             android:name=".MainActivity"
             android:exported="true"
+            android:resizeableActivity="true"
             android:windowSoftInputMode="adjustResize">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+            <intent-filter>
+                <action android:name="android.intent.action.CREATE_NOTE" />
+                <category android:name="android.intent.category.DEFAULT" />
             </intent-filter>
             <!-- Abre PDFs diretamente pelo app -->
             <intent-filter tools:ignore="AppLinkUrlError">
@@ -31,6 +37,15 @@
                 <data android:mimeType="application/pdf" />
             </intent-filter>
         </activity>
+
+        <activity
+            android:name=".MultiReaderActivity"
+            android:exported="false"
+            android:resizeableActivity="true"
+            android:launchMode="standard"
+            android:documentLaunchMode="always"
+            android:taskAffinity=""
+            android:windowSoftInputMode="adjustResize" />
 
         <provider
             android:name="androidx.core.content.FileProvider"

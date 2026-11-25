@@ -1,5 +1,6 @@
 package br.com.jotdown.data.entity
 
+import androidx.room.ColumnInfo
 import androidx.room.Entity
 import androidx.room.PrimaryKey
 import androidx.room.ForeignKey
@@ -22,6 +23,9 @@ data class AnnotationEntity(
     val x: Float,
     val y: Float,
     val text: String,
-    val color: String = "#FDE047"
+    val color: String = "#FDE047",
+    val audioRecordingId: Long? = null,
+    @ColumnInfo(defaultValue = "0")
+    val audioTimestampMs: Long = 0L
 )
 

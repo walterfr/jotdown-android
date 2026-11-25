@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
@@ -36,7 +37,10 @@ import br.com.jotdown.ui.viewmodel.ReaderViewModelFactory
 
 @OptIn(ExperimentalAnimationApi::class)
 @Composable
-fun JotdownApp() {
+fun JotdownApp(
+    initialDocumentId: String? = null,
+    onInitialDocumentConsumed: () -> Unit = {}
+) {
     val navController = rememberNavController()
     val context = LocalContext.current
     val app = context.applicationContext as JotdownApplication
@@ -47,6 +51,21 @@ fun JotdownApp() {
     val tabs by tabsViewModel.tabs.collectAsState()
     val activeDocumentId by tabsViewModel.activeDocumentId.collectAsState()
     val isPro by app.billingProvider.isPro.collectAsState()
+
+    LaunchedEffect(initialDocumentId) {
+        val docId = initialDocumentId ?: return@LaunchedEffect
+        val allowMultiple = app.billingProvider.isBillingSupported && isPro
+        tabsViewModel.openDocument(docId, allowMultiple)
+        if (navController.currentDestination?.route == Screen.Splash.route) {
+            navController.navigate(Screen.Library.route) {
+                popUpTo(Screen.Splash.route) { inclusive = true }
+            }
+        }
+        navController.navigate(Screen.Reader.route) {
+            launchSingleTop = true
+        }
+        onInitialDocumentConsumed()
+    }
 
     NavHost(
         navController = navController,

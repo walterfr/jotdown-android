@@ -17,4 +17,7 @@ interface HighlightDao {
 
     @Query("UPDATE highlights SET note = :note WHERE id = :highlightId")
     fun updateNote(highlightId: Long, note: String): Int
+
+    @Query("UPDATE highlights SET page = page + 1 WHERE documentId = :documentId AND page > :afterPage")
+    fun shiftPagesAfter(documentId: String, afterPage: Int): Int
 }

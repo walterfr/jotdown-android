@@ -159,6 +159,12 @@ dependencies {
     // Leitura Estrutural de PDF
     implementation 'com.tom-roush:pdfbox-android:2.0.27.0'
 
+    // Low-latency stylus motion prediction (Apache-2.0, FOSS-safe)
+    implementation 'androidx.input:input-motionprediction:1.0.0'
+
+    // Biometric document lock (Apache-2.0, FOSS-safe)
+    implementation 'androidx.biometric:biometric:1.1.0'
+
     // Unit tests
     testImplementation 'junit:junit:4.13.2'
 }

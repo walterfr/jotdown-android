@@ -37,16 +37,16 @@ abstract class DocumentDao {
     @Query("UPDATE documents SET accessDate = :accessDate WHERE id = :id")
     abstract suspend fun updateAccessDate(id: String, accessDate: String): Int
 
-    @Query("SELECT id, fileName, title, dateAdded, accessDate, docType, authorLastName, authorFirstName, isFavorite, isTrashed, labels, readingStatus, (SELECT COUNT(*) FROM highlights h WHERE h.documentId = d.id) AS highlightCount, (SELECT COUNT(*) FROM annotations a WHERE a.documentId = d.id AND a.text != '') AS annotationCount FROM documents d WHERE isTrashed = 0 ORDER BY d.dateAdded DESC")
+    @Query("SELECT id, fileName, title, dateAdded, accessDate, docType, authorLastName, authorFirstName, isFavorite, isTrashed, labels, readingStatus, isLocked, (SELECT COUNT(*) FROM highlights h WHERE h.documentId = d.id) AS highlightCount, (SELECT COUNT(*) FROM annotations a WHERE a.documentId = d.id AND a.text != '') AS annotationCount FROM documents d WHERE isTrashed = 0 ORDER BY d.dateAdded DESC")
     abstract fun getAllDocumentSummaries(): Flow<List<DocumentSummary>>
 
-    @Query("SELECT id, fileName, title, dateAdded, accessDate, docType, authorLastName, authorFirstName, isFavorite, isTrashed, labels, readingStatus, (SELECT COUNT(*) FROM highlights h WHERE h.documentId = d.id) AS highlightCount, (SELECT COUNT(*) FROM annotations a WHERE a.documentId = d.id AND a.text != '') AS annotationCount FROM documents d WHERE isTrashed = 0 AND ((:folderId IS NULL AND d.folderId IS NULL) OR (d.folderId = :folderId)) ORDER BY d.dateAdded DESC")
+    @Query("SELECT id, fileName, title, dateAdded, accessDate, docType, authorLastName, authorFirstName, isFavorite, isTrashed, labels, readingStatus, isLocked, (SELECT COUNT(*) FROM highlights h WHERE h.documentId = d.id) AS highlightCount, (SELECT COUNT(*) FROM annotations a WHERE a.documentId = d.id AND a.text != '') AS annotationCount FROM documents d WHERE isTrashed = 0 AND ((:folderId IS NULL AND d.folderId IS NULL) OR (d.folderId = :folderId)) ORDER BY d.dateAdded DESC")
     abstract fun getDocumentSummariesByFolder(folderId: Long?): Flow<List<DocumentSummary>>
 
-    @Query("SELECT id, fileName, title, dateAdded, accessDate, docType, authorLastName, authorFirstName, isFavorite, isTrashed, labels, readingStatus, (SELECT COUNT(*) FROM highlights h WHERE h.documentId = d.id) AS highlightCount, (SELECT COUNT(*) FROM annotations a WHERE a.documentId = d.id AND a.text != '') AS annotationCount FROM documents d WHERE isTrashed = 0 AND isFavorite = 1 ORDER BY d.dateAdded DESC")
+    @Query("SELECT id, fileName, title, dateAdded, accessDate, docType, authorLastName, authorFirstName, isFavorite, isTrashed, labels, readingStatus, isLocked, (SELECT COUNT(*) FROM highlights h WHERE h.documentId = d.id) AS highlightCount, (SELECT COUNT(*) FROM annotations a WHERE a.documentId = d.id AND a.text != '') AS annotationCount FROM documents d WHERE isTrashed = 0 AND isFavorite = 1 ORDER BY d.dateAdded DESC")
     abstract fun getFavoriteDocumentSummaries(): Flow<List<DocumentSummary>>
 
-    @Query("SELECT id, fileName, title, dateAdded, accessDate, docType, authorLastName, authorFirstName, isFavorite, isTrashed, labels, readingStatus, (SELECT COUNT(*) FROM highlights h WHERE h.documentId = d.id) AS highlightCount, (SELECT COUNT(*) FROM annotations a WHERE a.documentId = d.id AND a.text != '') AS annotationCount FROM documents d WHERE isTrashed = 1 ORDER BY d.dateAdded DESC")
+    @Query("SELECT id, fileName, title, dateAdded, accessDate, docType, authorLastName, authorFirstName, isFavorite, isTrashed, labels, readingStatus, isLocked, (SELECT COUNT(*) FROM highlights h WHERE h.documentId = d.id) AS highlightCount, (SELECT COUNT(*) FROM annotations a WHERE a.documentId = d.id AND a.text != '') AS annotationCount FROM documents d WHERE isTrashed = 1 ORDER BY d.dateAdded DESC")
     abstract fun getTrashedDocumentSummaries(): Flow<List<DocumentSummary>>
 
     @Query("UPDATE documents SET labels = :labels WHERE id = :id")
@@ -61,6 +61,18 @@ abstract class DocumentDao {
     @Query("UPDATE documents SET readingStatus = :status WHERE id = :id")
     abstract suspend fun updateReadingStatus(id: String, status: String): Int
 
+    @Query("UPDATE documents SET pagePaddingMode = :mode, pagePaddingColor = :color WHERE id = :id")
+    abstract suspend fun updatePagePadding(id: String, mode: String, color: String): Int
+
+    @Query("UPDATE documents SET readingTheme = :theme WHERE id = :id")
+    abstract suspend fun updateReadingTheme(id: String, theme: String): Int
+
+    @Query("UPDATE documents SET readingMode = :mode WHERE id = :id")
+    abstract suspend fun updateReadingMode(id: String, mode: String): Int
+
+    @Query("UPDATE documents SET isLocked = :isLocked WHERE id = :id")
+    abstract suspend fun updateLockedStatus(id: String, isLocked: Boolean): Int
+
 }
 
 data class DocumentSummary(
@@ -68,6 +80,7 @@ data class DocumentSummary(
     val docType: String, val authorLastName: String, val authorFirstName: String,
     val isFavorite: Boolean = false, val isTrashed: Boolean = false, val labels: String = "",
     val readingStatus: String = "TO_READ",
+    val isLocked: Boolean = false,
     val highlightCount: Int = 0, val annotationCount: Int = 0
 )
 

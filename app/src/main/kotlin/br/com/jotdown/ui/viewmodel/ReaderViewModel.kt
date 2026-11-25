@@ -10,6 +10,8 @@ import br.com.jotdown.ui.screens.reader.Tool
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import java.io.File
 
 sealed class DictionaryLookupState {
@@ -51,6 +53,8 @@ class ReaderViewModel(
     val annotations = repository.getAnnotationsForDocument(documentId).stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
     val highlights = repository.getHighlightsForDocument(documentId).stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
     val drawings = repository.getDrawingsForDocument(documentId).stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+    val bookmarks = repository.getBookmarksForDocument(documentId).stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+    val audioRecordings = repository.getAudioRecordingsForDocument(documentId).stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
     val allDocuments = repository.getAllDocuments().stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     private val _dictionaryState = MutableStateFlow<DictionaryLookupState>(DictionaryLookupState.Idle)
@@ -172,19 +176,60 @@ class ReaderViewModel(
         }
     }
 
+    private val saveDrawingMutex = Mutex()
+
     fun clearDictionaryState() { _dictionaryState.value = DictionaryLookupState.Idle }
 
     fun saveDrawing(page: Int, json: String) = viewModelScope.launch(Dispatchers.IO) {
-        val existing = drawings.value.find { it.page == page }
-        if (existing != null) {
-            repository.upsertDrawing(existing.copy(pathsJson = json))
-        } else {
-            repository.upsertDrawing(DrawingEntity(documentId = documentId, page = page, pathsJson = json))
+        saveDrawingMutex.withLock {
+            val existing = repository.getDrawingForPage(documentId, page)
+                ?: drawings.value.find { it.page == page }
+            if (existing != null) {
+                repository.upsertDrawing(existing.copy(pathsJson = json))
+            } else {
+                repository.upsertDrawing(DrawingEntity(documentId = documentId, page = page, pathsJson = json))
+            }
         }
     }
 
-    fun addAnnotation(page: Int, x: Float, y: Float, text: String) = viewModelScope.launch(Dispatchers.IO) {
-        repository.upsertAnnotation(AnnotationEntity(id = 0L, documentId = documentId, page = page, x = x, y = y, text = text))
+    fun addAnnotation(
+        page: Int,
+        x: Float,
+        y: Float,
+        text: String,
+        audioRecordingId: Long? = null,
+        audioTimestampMs: Long = 0L
+    ) = viewModelScope.launch(Dispatchers.IO) {
+        repository.upsertAnnotation(
+            AnnotationEntity(
+                id = 0L,
+                documentId = documentId,
+                page = page,
+                x = x,
+                y = y,
+                text = text,
+                audioRecordingId = audioRecordingId,
+                audioTimestampMs = audioTimestampMs
+            )
+        )
+    }
+
+    suspend fun createAudioRecording(filePath: String, title: String): Long =
+        repository.insertAudioRecording(
+            AudioRecordingEntity(
+                documentId = documentId,
+                filePath = filePath,
+                title = title
+            )
+        )
+
+    fun updateAudioRecording(id: Long, durationMs: Long, title: String) = viewModelScope.launch(Dispatchers.IO) {
+        repository.updateAudioRecording(id, durationMs, title)
+    }
+
+    fun deleteAudioRecording(recording: AudioRecordingEntity) = viewModelScope.launch(Dispatchers.IO) {
+        runCatching { File(recording.filePath).delete() }
+        repository.deleteAudioRecording(recording.id)
     }
 
     fun updateAnnotation(id: Long, text: String) = viewModelScope.launch(Dispatchers.IO) {
@@ -197,8 +242,55 @@ class ReaderViewModel(
     fun updateHighlight(id: Long, text: String) = viewModelScope.launch(Dispatchers.IO) { highlights.value.find { it.id == id }?.let { repository.insertHighlight(it.copy(text = text)) } }
     fun deleteHighlight(id: Long) = viewModelScope.launch(Dispatchers.IO) { repository.deleteHighlight(id) }
     fun setHighlightNote(highlightId: Long, note: String) = viewModelScope.launch(Dispatchers.IO) { repository.updateHighlightNote(highlightId, note) }
-    fun addHighlight(page: Int, text: String) = viewModelScope.launch(Dispatchers.IO) {
-        repository.insertHighlight(HighlightEntity(id = 0L, documentId = documentId, page = page, text = text))
+    fun addHighlight(
+        page: Int,
+        text: String,
+        rectsJson: String = "",
+        style: String = "HIGHLIGHT",
+        color: String = "#FDE047"
+    ) = viewModelScope.launch(Dispatchers.IO) {
+        repository.insertHighlight(
+            HighlightEntity(
+                id = 0L,
+                documentId = documentId,
+                page = page,
+                text = text,
+                rectsJson = rectsJson,
+                style = style,
+                color = color
+            )
+        )
+    }
+
+    fun updatePagePadding(mode: String, color: String) = viewModelScope.launch(Dispatchers.IO) {
+        repository.updatePagePadding(documentId, mode, color)
+        _document.value = _document.value?.copy(pagePaddingMode = mode, pagePaddingColor = color)
+    }
+
+    fun updateReadingTheme(theme: String) = viewModelScope.launch(Dispatchers.IO) {
+        repository.updateReadingTheme(documentId, theme)
+        _document.value = _document.value?.copy(readingTheme = theme)
+    }
+
+    fun updateReadingMode(mode: String) = viewModelScope.launch(Dispatchers.IO) {
+        repository.updateReadingMode(documentId, mode)
+        _document.value = _document.value?.copy(readingMode = mode)
+    }
+
+    fun toggleBookmark(page: Int, defaultLabel: String = "") = viewModelScope.launch(Dispatchers.IO) {
+        repository.toggleBookmark(documentId, page, defaultLabel)
+    }
+
+    fun updateBookmarkLabel(id: Long, label: String) = viewModelScope.launch(Dispatchers.IO) {
+        repository.updateBookmarkLabel(id, label)
+    }
+
+    fun deleteBookmark(id: Long) = viewModelScope.launch(Dispatchers.IO) {
+        repository.deleteBookmarkById(id)
+    }
+
+    suspend fun shiftPagesAfterInsert(afterPage: Int) {
+        repository.shiftPagesAfterInsert(documentId, afterPage)
     }
     private val _doiImportStatus = MutableStateFlow<MetadataImportStatus?>(null)
     val doiImportStatus: StateFlow<MetadataImportStatus?> = _doiImportStatus

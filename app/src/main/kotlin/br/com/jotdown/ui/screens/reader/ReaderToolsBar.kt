@@ -7,10 +7,16 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -34,6 +40,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import br.com.jotdown.R
+import br.com.jotdown.util.PenBoxPresetUtil
 
 // Paleta de cores das ferramentas de desenho
 private val toolPalette = listOf(
@@ -58,6 +65,8 @@ private val toolButtons = listOf(
     Triple(Tool.PENCIL,      Icons.Default.Brush,                         R.string.tool_pencil),
     Triple(Tool.HIGHLIGHTER, Icons.Default.BorderColor,                   R.string.tool_highlighter),
     Triple(Tool.ERASER,      Icons.Default.AutoFixHigh,                   R.string.tool_eraser),
+    Triple(Tool.LASSO,       Icons.Default.HighlightAlt,                  R.string.tool_lasso),
+    Triple(Tool.TAPE,        Icons.Default.VisibilityOff,                 R.string.tool_tape),
     Triple(Tool.ANNOTATION,  Icons.AutoMirrored.Filled.StickyNote2,       R.string.tool_postit),
     Triple(Tool.SELECT,      Icons.Default.Crop,                          R.string.tool_select),
     Triple(Tool.DICTIONARY,  Icons.Default.Translate,                     R.string.tool_dictionary),
@@ -67,11 +76,11 @@ private val toolButtons = listOf(
  * Barra de ferramentas flutuante inferior do leitor.
  *
  * - Ferramentas de desenho/borracha: exibe seletor de cor + seletor de espessura.
- * - Borracha: exibe apenas seletor de espessura.
+ * - Borracha: exibe apenas seletor de espessura + alternador Traço/Pixel.
  * - A espessura é um multiplicador sobre a largura base de cada ferramenta;
  *   a pressão da caneta continua afetando individualmente cada ponto do traço.
  */
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
 @Composable
 fun ReaderToolsBar(
     activeTool: Tool,
@@ -82,8 +91,17 @@ fun ReaderToolsBar(
     onWidthSelect: (Float) -> Unit,
     onUndo: () -> Unit,
     onRedo: () -> Unit,
+    eraserMode: EraserMode = EraserMode.STROKE,
+    onEraserModeSelect: (EraserMode) -> Unit = {},
+    penPresets: List<PenBoxPresetUtil.PenPreset> = emptyList(),
+    onSelectPreset: (PenBoxPresetUtil.PenPreset) -> Unit = {},
+    onAddCurrentPreset: () -> Unit = {},
+    onRemovePreset: (String) -> Unit = {},
+    tapeRevealAll: Boolean = false,
+    onToggleTapeRevealAll: () -> Unit = {},
 ) {
-    val showColorPicker     = activeTool == Tool.PEN || activeTool == Tool.PENCIL || activeTool == Tool.HIGHLIGHTER
+    val showPenBox          = activeTool == Tool.PEN || activeTool == Tool.PENCIL || activeTool == Tool.HIGHLIGHTER
+    val showColorPicker     = showPenBox || activeTool == Tool.TAPE
     val showThicknessPicker = showColorPicker || activeTool == Tool.ERASER
     var showCustomColorDialog by remember { mutableStateOf(false) }
     var showThicknessDialog by remember { mutableStateOf(false) }
@@ -97,6 +115,98 @@ fun ReaderToolsBar(
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
+        // ── PenBox (Predefinições rápidas de caneta/lápis/marca-texto) ─────
+        AnimatedVisibility(
+            visible = showPenBox,
+            enter = fadeIn() + expandVertically(expandFrom = Alignment.Top),
+            exit = fadeOut() + shrinkVertically(shrinkTowards = Alignment.Top),
+        ) {
+            Surface(
+                shape = RoundedCornerShape(50),
+                color = MaterialTheme.colorScheme.surfaceVariant,
+                tonalElevation = 6.dp,
+                shadowElevation = 6.dp,
+            ) {
+                LazyRow(
+                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
+                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    items(penPresets, key = { it.id }) { preset ->
+                        val isActivePreset = activeTool.name == preset.toolName &&
+                            strokeColor == preset.colorArgb &&
+                            kotlin.math.abs(strokeWidthMultiplier - preset.widthMultiplier) < 0.05f
+                        val toolIcon = when (preset.toolName) {
+                            "PENCIL" -> Icons.Default.Brush
+                            "HIGHLIGHTER" -> Icons.Default.BorderColor
+                            else -> Icons.Default.Edit
+                        }
+                        Surface(
+                            shape = RoundedCornerShape(50),
+                            color = if (isActivePreset) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surface,
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(50))
+                                .border(
+                                    width = if (isActivePreset) 1.5.dp else 1.dp,
+                                    color = if (isActivePreset) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outlineVariant,
+                                    shape = RoundedCornerShape(50)
+                                )
+                                .combinedClickable(
+                                    onClick = { onSelectPreset(preset) },
+                                    onLongClick = { onRemovePreset(preset.id) }
+                                )
+                        ) {
+                            Row(
+                                modifier = Modifier.padding(horizontal = 10.dp, vertical = 5.dp),
+                                horizontalArrangement = Arrangement.spacedBy(5.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Icon(
+                                    imageVector = toolIcon,
+                                    contentDescription = stringResource(R.string.penbox_preset_label),
+                                    tint = Color(preset.colorArgb),
+                                    modifier = Modifier.size(14.dp)
+                                )
+                                Box(
+                                    modifier = Modifier
+                                        .size(10.dp)
+                                        .clip(CircleShape)
+                                        .background(Color(preset.colorArgb))
+                                        .border(0.5.dp, Color.Black.copy(alpha = 0.25f), CircleShape)
+                                )
+                                Text(
+                                    text = String.format(java.util.Locale.US, "%.1fx", preset.widthMultiplier),
+                                    style = MaterialTheme.typography.labelSmall,
+                                    fontWeight = if (isActivePreset) FontWeight.Bold else FontWeight.Medium
+                                )
+                            }
+                        }
+                    }
+                    item(key = "penbox_add") {
+                        Surface(
+                            shape = RoundedCornerShape(50),
+                            color = MaterialTheme.colorScheme.primary.copy(alpha = 0.12f),
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(50))
+                                .clickable { onAddCurrentPreset() }
+                        ) {
+                            Box(
+                                modifier = Modifier.padding(horizontal = 10.dp, vertical = 5.dp),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Add,
+                                    contentDescription = stringResource(R.string.penbox_add_preset),
+                                    tint = MaterialTheme.colorScheme.primary,
+                                    modifier = Modifier.size(16.dp)
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
         // ── Seletores de cor e/ou espessura ──────────────────────────────
         AnimatedVisibility(
             visible = showThicknessPicker,
@@ -104,6 +214,7 @@ fun ReaderToolsBar(
             exit  = fadeOut() + shrinkVertically(shrinkTowards = Alignment.Top),
         ) {
             Row(
+                modifier = Modifier.horizontalScroll(rememberScrollState()),
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
@@ -202,6 +313,74 @@ fun ReaderToolsBar(
                         }
                     }
                 }
+
+                if (activeTool == Tool.TAPE) {
+                    Surface(
+                        shape = RoundedCornerShape(50),
+                        color = if (tapeRevealAll) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceVariant,
+                        tonalElevation = 6.dp,
+                        shadowElevation = 6.dp,
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(50))
+                            .clickable { onToggleTapeRevealAll() }
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp),
+                            horizontalArrangement = Arrangement.spacedBy(6.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            Icon(
+                                imageVector = if (tapeRevealAll) Icons.Default.VisibilityOff else Icons.Default.Visibility,
+                                contentDescription = null,
+                                tint = if (tapeRevealAll) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.size(16.dp)
+                            )
+                            Text(
+                                text = stringResource(if (tapeRevealAll) R.string.tape_hide_all else R.string.tape_reveal_all),
+                                style = MaterialTheme.typography.labelMedium,
+                                fontWeight = FontWeight.Bold,
+                                color = if (tapeRevealAll) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.primary
+                            )
+                        }
+                    }
+                }
+
+                if (activeTool == Tool.ERASER) {
+                    Surface(
+                        shape = RoundedCornerShape(50),
+                        color = MaterialTheme.colorScheme.surfaceVariant,
+                        tonalElevation = 6.dp,
+                        shadowElevation = 6.dp,
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(horizontal = 6.dp, vertical = 6.dp),
+                            horizontalArrangement = Arrangement.spacedBy(4.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            listOf(
+                                EraserMode.STROKE to R.string.eraser_mode_stroke,
+                                EraserMode.PIXEL to R.string.eraser_mode_pixel,
+                            ).forEach { (mode, labelRes) ->
+                                val selected = eraserMode == mode
+                                Surface(
+                                    shape = RoundedCornerShape(50),
+                                    color = if (selected) MaterialTheme.colorScheme.primaryContainer else Color.Transparent,
+                                    modifier = Modifier
+                                        .clip(RoundedCornerShape(50))
+                                        .clickable { onEraserModeSelect(mode) }
+                                ) {
+                                    Text(
+                                        text = stringResource(labelRes),
+                                        style = MaterialTheme.typography.labelMedium,
+                                        fontWeight = if (selected) FontWeight.Bold else FontWeight.Medium,
+                                        color = if (selected) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurfaceVariant,
+                                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp)
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
             }
         }
 
@@ -213,7 +392,9 @@ fun ReaderToolsBar(
             shadowElevation = 16.dp,
         ) {
             Row(
-                modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
+                modifier = Modifier
+                    .horizontalScroll(rememberScrollState())
+                    .padding(horizontal = 10.dp, vertical = 6.dp),
                 horizontalArrangement = Arrangement.spacedBy(2.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {

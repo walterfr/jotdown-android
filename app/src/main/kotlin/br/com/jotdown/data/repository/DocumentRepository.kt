@@ -13,8 +13,11 @@ class DocumentRepository(
     private val annotationDao: AnnotationDao,
     private val drawingDao: DrawingDao,
     private val highlightDao: HighlightDao,
+    private val bookmarkDao: BookmarkDao,
+    private val audioRecordingDao: AudioRecordingDao? = null,
     private val syncManager: br.com.jotdown.data.sync.SyncManager? = null,
-    private val metadataService: MetadataService = MetadataService()
+    private val metadataService: MetadataService = MetadataService(),
+    private val runInTransaction: suspend (suspend () -> Unit) -> Unit = { it() }
 ) {
     private fun triggerSync() {
         syncManager?.triggerImmediateSync()
@@ -26,6 +29,7 @@ class DocumentRepository(
     suspend fun deleteDocument(id: String) { documentDao.deleteDocument(id); triggerSync() }
 
     fun getDrawingsForDocument(documentId: String): Flow<List<DrawingEntity>> = drawingDao.getDrawingsForDocument(documentId)
+    suspend fun getDrawingForPage(documentId: String, page: Int): DrawingEntity? = drawingDao.getDrawingForPage(documentId, page)
     suspend fun upsertDrawing(drawing: DrawingEntity) { drawingDao.upsertDrawing(drawing); triggerSync() }
 
     fun getAnnotationsForDocument(docId: String) = annotationDao.getAnnotationsForDocument(docId)
@@ -81,6 +85,81 @@ class DocumentRepository(
     suspend fun updateTrashStatus(id: String, isTrashed: Boolean) { documentDao.updateTrashStatus(id, isTrashed); triggerSync() }
     suspend fun updateAccessDate(id: String, accessDate: String) { documentDao.updateAccessDate(id, accessDate); triggerSync() }
     suspend fun updateReadingStatus(id: String, status: String) { documentDao.updateReadingStatus(id, status); triggerSync() }
+    suspend fun updatePagePadding(id: String, mode: String, color: String) {
+        documentDao.updatePagePadding(id, mode, color)
+        triggerSync()
+    }
+    suspend fun updateReadingTheme(id: String, theme: String) {
+        documentDao.updateReadingTheme(id, theme)
+        triggerSync()
+    }
+    suspend fun updateReadingMode(id: String, mode: String) {
+        documentDao.updateReadingMode(id, mode)
+        triggerSync()
+    }
+    suspend fun updateLockedStatus(id: String, isLocked: Boolean) {
+        documentDao.updateLockedStatus(id, isLocked)
+        triggerSync()
+    }
+
+    fun getAudioRecordingsForDocument(docId: String): Flow<List<AudioRecordingEntity>> =
+        audioRecordingDao?.getRecordingsForDocument(docId) ?: kotlinx.coroutines.flow.flowOf(emptyList())
+
+    suspend fun getAudioRecordingsListForDocument(docId: String): List<AudioRecordingEntity> = withContext(Dispatchers.IO) {
+        audioRecordingDao?.getRecordingsListForDocument(docId).orEmpty()
+    }
+
+    suspend fun insertAudioRecording(recording: AudioRecordingEntity): Long = withContext(Dispatchers.IO) {
+        val id = audioRecordingDao?.insertRecording(recording) ?: 0L
+        triggerSync()
+        id
+    }
+
+    suspend fun updateAudioRecording(id: Long, durationMs: Long, title: String) = withContext(Dispatchers.IO) {
+        audioRecordingDao?.updateDurationAndTitle(id, durationMs, title)
+        triggerSync()
+    }
+
+    suspend fun deleteAudioRecording(id: Long) = withContext(Dispatchers.IO) {
+        audioRecordingDao?.deleteRecordingById(id)
+        triggerSync()
+    }
+
+    fun getBookmarksForDocument(docId: String): Flow<List<BookmarkEntity>> = bookmarkDao.getBookmarksForDocument(docId)
+
+    suspend fun toggleBookmark(docId: String, page: Int, defaultLabel: String = ""): Boolean = withContext(Dispatchers.IO) {
+        val existing = bookmarkDao.getBookmark(docId, page)
+        val added = if (existing != null) {
+            bookmarkDao.deleteBookmark(docId, page)
+            false
+        } else {
+            bookmarkDao.upsertBookmark(BookmarkEntity(documentId = docId, page = page, label = defaultLabel))
+            true
+        }
+        triggerSync()
+        added
+    }
+
+    suspend fun updateBookmarkLabel(id: Long, label: String) = withContext(Dispatchers.IO) {
+        bookmarkDao.updateLabel(id, label)
+        triggerSync()
+    }
+
+    suspend fun deleteBookmarkById(id: Long) = withContext(Dispatchers.IO) {
+        bookmarkDao.deleteBookmarkById(id)
+        triggerSync()
+    }
+
+    suspend fun shiftPagesAfterInsert(docId: String, afterPage: Int) = withContext(Dispatchers.IO) {
+        runInTransaction {
+            annotationDao.shiftPagesAfter(docId, afterPage)
+            highlightDao.shiftPagesAfter(docId, afterPage)
+            drawingDao.shiftPagesAfter(docId, afterPage)
+            bookmarkDao.negateShiftedPages(docId, afterPage)
+            bookmarkDao.restoreNegatedPages(docId)
+        }
+        triggerSync()
+    }
     suspend fun saveDocument(doc: DocumentEntity) = upsertDocument(doc)
     suspend fun getDocumentByDriveFileId(driveFileId: String) = documentDao.getDocumentByDriveFileId(driveFileId)
     suspend fun getDocumentsByDriveFileIds(driveFileIds: List<String>) = documentDao.getDocumentsByDriveFileIds(driveFileIds)

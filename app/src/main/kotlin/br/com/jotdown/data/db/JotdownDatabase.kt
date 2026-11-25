@@ -16,9 +16,11 @@ import br.com.jotdown.data.entity.*
         HighlightEntity::class,
         DrawingEntity::class,
         FolderEntity::class,
-        DictionaryCache::class
+        DictionaryCache::class,
+        BookmarkEntity::class,
+        AudioRecordingEntity::class
     ],
-    version = 21,
+    version = 24,
     exportSchema = false
 )
 abstract class JotdownDatabase : RoomDatabase() {
@@ -29,6 +31,8 @@ abstract class JotdownDatabase : RoomDatabase() {
     abstract fun drawingDao(): DrawingDao
     abstract fun folderDao(): FolderDao
     abstract fun dictionaryCacheDao(): DictionaryCacheDao
+    abstract fun bookmarkDao(): BookmarkDao
+    abstract fun audioRecordingDao(): AudioRecordingDao
 
     companion object {
         @Volatile
@@ -195,6 +199,58 @@ abstract class JotdownDatabase : RoomDatabase() {
             }
         }
 
+        /** Adds page padding settings to documents and rects/style/color to highlights. */
+        private val MIGRATION_21_22 = object : Migration(21, 22) {
+            override fun migrate(database: SupportSQLiteDatabase) {
+                database.execSQL("ALTER TABLE documents ADD COLUMN pagePaddingMode TEXT NOT NULL DEFAULT 'NONE'")
+                database.execSQL("ALTER TABLE documents ADD COLUMN pagePaddingColor TEXT NOT NULL DEFAULT '#FFFFFF'")
+                database.execSQL("ALTER TABLE highlights ADD COLUMN rectsJson TEXT NOT NULL DEFAULT ''")
+                database.execSQL("ALTER TABLE highlights ADD COLUMN style TEXT NOT NULL DEFAULT 'HIGHLIGHT'")
+                database.execSQL("ALTER TABLE highlights ADD COLUMN color TEXT NOT NULL DEFAULT '#FDE047'")
+            }
+        }
+
+        /** Adds readingTheme/readingMode to documents and creates bookmarks table. */
+        private val MIGRATION_22_23 = object : Migration(22, 23) {
+            override fun migrate(database: SupportSQLiteDatabase) {
+                database.execSQL("ALTER TABLE documents ADD COLUMN readingTheme TEXT NOT NULL DEFAULT 'LIGHT'")
+                database.execSQL("ALTER TABLE documents ADD COLUMN readingMode TEXT NOT NULL DEFAULT 'VERTICAL'")
+                database.execSQL("""
+                    CREATE TABLE IF NOT EXISTS bookmarks (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+                        documentId TEXT NOT NULL,
+                        page INTEGER NOT NULL,
+                        label TEXT NOT NULL DEFAULT '',
+                        createdAt INTEGER NOT NULL,
+                        FOREIGN KEY(documentId) REFERENCES documents(id) ON DELETE CASCADE
+                    )
+                """)
+                database.execSQL("CREATE INDEX IF NOT EXISTS index_bookmarks_documentId ON bookmarks(documentId)")
+                database.execSQL("CREATE UNIQUE INDEX IF NOT EXISTS index_bookmarks_documentId_page ON bookmarks(documentId, page)")
+            }
+        }
+
+        /** Adds document lock flag, annotation audio links, and audio_recordings table. */
+        private val MIGRATION_23_24 = object : Migration(23, 24) {
+            override fun migrate(database: SupportSQLiteDatabase) {
+                database.execSQL("ALTER TABLE documents ADD COLUMN isLocked INTEGER NOT NULL DEFAULT 0")
+                database.execSQL("ALTER TABLE annotations ADD COLUMN audioRecordingId INTEGER DEFAULT NULL")
+                database.execSQL("ALTER TABLE annotations ADD COLUMN audioTimestampMs INTEGER NOT NULL DEFAULT 0")
+                database.execSQL("""
+                    CREATE TABLE IF NOT EXISTS audio_recordings (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+                        documentId TEXT NOT NULL,
+                        filePath TEXT NOT NULL,
+                        title TEXT NOT NULL DEFAULT '',
+                        durationMs INTEGER NOT NULL,
+                        createdAt INTEGER NOT NULL,
+                        FOREIGN KEY(documentId) REFERENCES documents(id) ON DELETE CASCADE
+                    )
+                """)
+                database.execSQL("CREATE INDEX IF NOT EXISTS index_audio_recordings_documentId ON audio_recordings(documentId)")
+            }
+        }
+
         fun getInstance(context: Context): JotdownDatabase {
             return INSTANCE ?: synchronized(this) {
                 Room.databaseBuilder(
@@ -202,7 +258,7 @@ abstract class JotdownDatabase : RoomDatabase() {
                     JotdownDatabase::class.java,
                     "jotdown_stable.db"
                 )
-                .addMigrations(MIGRATION_10_11, MIGRATION_11_12, MIGRATION_12_13, MIGRATION_13_14, MIGRATION_14_15, MIGRATION_15_16, MIGRATION_16_17, MIGRATION_17_18, MIGRATION_18_19, MIGRATION_19_20, MIGRATION_20_21)
+                .addMigrations(MIGRATION_10_11, MIGRATION_11_12, MIGRATION_12_13, MIGRATION_13_14, MIGRATION_14_15, MIGRATION_15_16, MIGRATION_16_17, MIGRATION_17_18, MIGRATION_18_19, MIGRATION_19_20, MIGRATION_20_21, MIGRATION_21_22, MIGRATION_22_23, MIGRATION_23_24)
                 .fallbackToDestructiveMigration()
                 .build()
                 .also { INSTANCE = it }

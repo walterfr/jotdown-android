@@ -337,4 +337,155 @@
     <string name="settings_reader_tabs">Reader Tabs</string>
     <string name="settings_tabs_in_fullscreen">Show tabs in full screen</string>
     <string name="settings_tabs_in_fullscreen_desc">Keep the document tabs bar visible even when full screen mode is active.</string>
+
+    <!-- Phase P0: Settings, Reader tools, Margins, Text Layer, Vector Export -->
+    <string name="settings_two_three_finger_undo">Two/three-finger tap undo &amp; redo</string>
+    <string name="settings_two_three_finger_undo_desc">Tap with two fingers to undo or three fingers to redo strokes.</string>
+    <string name="settings_stylus_button_action">Stylus button action</string>
+    <string name="settings_stylus_button_action_desc">Choose what holding the stylus side button does while drawing.</string>
+    <string name="settings_stylus_action_eraser">Eraser</string>
+    <string name="settings_stylus_action_undo">Undo</string>
+    <string name="settings_stylus_action_none">None</string>
+
+    <string name="readerbar_page_padding">Page Margins &amp; Padding</string>
+    <string name="tool_lasso">Lasso</string>
+    <string name="eraser_mode_stroke">Stroke</string>
+    <string name="eraser_mode_pixel">Pixel</string>
+    <string name="lasso_deselect">Deselect</string>
+
+    <string name="page_padding_title">Page Annotation Margins</string>
+    <string name="page_padding_mode_label">Expansion Mode</string>
+    <string name="page_padding_mode_none">Original</string>
+    <string name="page_padding_mode_right">Right</string>
+    <string name="page_padding_mode_bottom">Bottom</string>
+    <string name="page_padding_mode_both">Right &amp; Bottom</string>
+    <string name="page_padding_color_label">Margin Paper Color</string>
+    <string name="page_padding_color_white">White</string>
+    <string name="page_padding_color_sepia">Sepia</string>
+    <string name="page_padding_color_gray">Gray</string>
+    <string name="page_padding_dotted_grid">Dotted grid in margin</string>
+    <string name="common_apply">Apply</string>
+
+    <string name="export_annotated_pdf_title">Export Annotated PDF</string>
+    <string name="export_vector_pdf_title">Vector PDF (Editable, Recommended)</string>
+    <string name="export_vector_pdf_desc">Preserves crisp text, vector ink, highlights and notes compatible with external PDF editors.</string>
+    <string name="export_flattened_pdf_title">Flattened PDF (Max Compatibility)</string>
+    <string name="export_flattened_pdf_desc">Renders each page as an image with burned-in drawings, highlights and an appendix of notes.</string>
+    <string name="export_annotated_pdf_error">Failed to export annotated PDF.</string>
+
+    <string name="search_prev_match">Previous match</string>
+    <string name="search_next_match">Next match</string>
+    <string name="search_clear_highlights">Clear search highlights</string>
+    <string name="search_match_counter">%1$d/%2$d</string>
+
+    <string name="reader_action_define_translate">Translate / Define</string>
+    <string name="reader_action_highlight">Highlight</string>
+    <string name="reader_action_underline">Underline</string>
+    <string name="reader_action_strikeout">Strikeout</string>
+    <string name="reader_action_quote">Quote</string>
+    <string name="highlight_actions_title">Highlight Actions</string>
+    <string name="highlight_action_edit_note">Edit Note</string>
+
+    <!-- Phase P1: Stylus Shape Snap, Themes, Horizontal Paging, Thumbnails, Templates, Bookmarks -->
+    <string name="settings_hold_to_shape">Hold to snap to shape</string>
+    <string name="settings_hold_to_shape_desc">Hold the stylus still at the end of a stroke to snap lines, arrows, circles, triangles and rectangles.</string>
+
+    <string name="readerbar_appearance">Appearance &amp; Layout</string>
+    <string name="readerbar_bookmark_page">Bookmark page</string>
+    <string name="readerbar_page_grid">Page Grid</string>
+
+    <string name="appearance_title">Reading Appearance</string>
+    <string name="appearance_theme_label">Paper Theme</string>
+    <string name="theme_light">Light</string>
+    <string name="theme_sepia">Sepia</string>
+    <string name="theme_green">Green</string>
+    <string name="theme_dark">Dark</string>
+    <string name="appearance_layout_label">Reading Mode</string>
+    <string name="reading_mode_vertical">Vertical Scroll</string>
+    <string name="reading_mode_horizontal">Book Mode (Pages)</string>
+
+    <string name="outline_tab_toc">Table of Contents</string>
+    <string name="outline_tab_bookmarks">Bookmarks</string>
+    <string name="bookmarks_empty">No bookmarked pages yet. Tap the bookmark icon in the top bar to save a page.</string>
+    <string name="bookmark_edit_title">Edit Bookmark Label</string>
+    <string name="bookmark_label_hint">Optional label (e.g. Chapter 2, Key Formula)</string>
+    <string name="bookmark_edit_desc">Edit label</string>
+    <string name="bookmark_added_toast">Page %1$d bookmarked</string>
+    <string name="bookmark_removed_toast">Bookmark removed</string>
+
+    <string name="page_grid_title">Pages</string>
+    <string name="page_insert_button">Insert Page</string>
+    <string name="page_insert_dialog_title">Insert Paper Page</string>
+    <string name="page_insert_position_label">Position</string>
+    <string name="page_insert_after_current">After current page (%1$d)</string>
+    <string name="page_insert_at_end">End of document</string>
+    <string name="page_insert_template_label">Paper Template</string>
+    <string name="paper_template_blank">Blank</string>
+    <string name="paper_template_lined">Lined</string>
+    <string name="paper_template_grid">Grid</string>
+    <string name="paper_template_dotted">Dotted</string>
+    <string name="paper_template_cornell">Cornell</string>
+    <string name="page_insert_confirm">Insert</string>
+    <string name="page_insert_success">Page inserted</string>
+    <string name="page_insert_error">Could not insert page (encrypted or read-only PDF)</string>
+
+    <!-- Phase P2: PenBox, Study Tape, Multi-Window, Audio Notes, Biometric Lock, WebDAV -->
+    <string name="penbox_add_preset">Save preset</string>
+    <string name="penbox_preset_label">Preset</string>
+    <string name="penbox_saved_toast">Preset saved to PenBox</string>
+    <string name="penbox_removed_toast">Preset removed</string>
+
+    <string name="tool_tape">Study Tape</string>
+    <string name="tape_reveal_all">Reveal All</string>
+    <string name="tape_hide_all">Hide All</string>
+
+    <string name="readerbar_open_split_screen">Open in Split Screen</string>
+    <string name="menu_open_split_screen">Open in Split Screen</string>
+    <string name="split_screen_picker_title">Open Document in Split Screen</string>
+    <string name="split_screen_picker_empty">No other documents available.</string>
+
+    <string name="readerbar_audio_notes">Audio Notes</string>
+    <string name="audio_record_start">Record audio</string>
+    <string name="audio_record_stop">Stop recording</string>
+    <string name="audio_play">Play</string>
+    <string name="audio_pause">Pause</string>
+    <string name="audio_delete">Delete recording</string>
+    <string name="audio_close">Hide audio bar</string>
+    <string name="audio_permission_denied">Microphone permission is required to record audio notes.</string>
+    <string name="audio_recording_error">Could not start audio recording.</string>
+    <string name="audio_play_at">Play audio (%1$s)</string>
+    <string name="audio_recording_title_prefix">Audio %1$d</string>
+
+    <string name="menu_lock_document">Lock Document</string>
+    <string name="menu_unlock_document">Unlock Document</string>
+    <string name="biometric_prompt_title">Unlock Document</string>
+    <string name="biometric_prompt_subtitle">"Authenticate to access \"%1$s\""</string>
+    <string name="biometric_lock_toggle_subtitle">"Authenticate to change protection for \"%1$s\""</string>
+    <string name="biometric_unavailable">Set up device PIN, pattern, or biometrics in Android Settings to lock documents.</string>
+    <string name="biometric_locked_badge">Locked</string>
+    <string name="biometric_unlock_button">Unlock</string>
+    <string name="biometric_locked_screen_desc">This document is protected with biometric or device lock.</string>
+
+    <string name="settings_webdav_title">WebDAV Sync (Open / FOSS)</string>
+    <string name="settings_webdav_desc">Sync full library backups (.zip) to Nextcloud, ownCloud, or any standard WebDAV server.</string>
+    <string name="settings_webdav_url_label">WebDAV URL</string>
+    <string name="settings_webdav_url_hint">https://cloud.example.com/remote.php/dav/files/user/Jotdown</string>
+    <string name="settings_webdav_filename_label">Remote Backup Filename</string>
+    <string name="settings_webdav_user_label">Username</string>
+    <string name="settings_webdav_pass_label">Password / App Token</string>
+    <string name="settings_webdav_show_pass">Show password</string>
+    <string name="settings_webdav_hide_pass">Hide password</string>
+    <string name="settings_webdav_http_warning">HTTPS is required. Cleartext HTTP is blocked on Android and cannot be used.</string>
+    <string name="settings_webdav_test">Test Connection</string>
+    <string name="settings_webdav_upload">Upload Backup</string>
+    <string name="settings_webdav_restore">Download &amp; Restore</string>
+    <string name="msg_webdav_testing">Testing WebDAV connection…</string>
+    <string name="msg_webdav_test_ok">WebDAV connection succeeded (HTTP %1$d).</string>
+    <string name="msg_webdav_test_error">Connection failed: %1$s</string>
+    <string name="msg_webdav_uploading">Uploading backup to WebDAV…</string>
+    <string name="msg_webdav_upload_ok">Backup uploaded to WebDAV successfully.</string>
+    <string name="msg_webdav_upload_error">WebDAV upload error: %1$s</string>
+    <string name="msg_webdav_downloading">Downloading backup from WebDAV…</string>
+    <string name="msg_webdav_invalid_archive">Invalid or empty backup archive</string>
+    <string name="template_notes_header">READING NOTES</string>
 </resources>

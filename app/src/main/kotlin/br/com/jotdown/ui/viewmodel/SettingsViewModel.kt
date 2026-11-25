@@ -8,6 +8,9 @@ import androidx.lifecycle.viewModelScope
 import br.com.jotdown.JotdownApplication
 import br.com.jotdown.R
 import br.com.jotdown.data.sync.CloudFileInfo
+import br.com.jotdown.util.BackupUtil
+import br.com.jotdown.util.WebDavSyncUtil
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -43,6 +46,30 @@ class SettingsViewModel(private val application: JotdownApplication) : ViewModel
     fun setTwoFingerScroll(enabled: Boolean) {
         readerPrefs.edit().putBoolean("two_finger_scroll", enabled).apply()
         _twoFingerScroll.value = enabled
+    }
+
+    private val _twoThreeFingerUndo = MutableStateFlow(readerPrefs.getBoolean("two_three_finger_undo", true))
+    val twoThreeFingerUndo: StateFlow<Boolean> = _twoThreeFingerUndo.asStateFlow()
+
+    fun setTwoThreeFingerUndo(enabled: Boolean) {
+        readerPrefs.edit().putBoolean("two_three_finger_undo", enabled).apply()
+        _twoThreeFingerUndo.value = enabled
+    }
+
+    private val _stylusButtonAction = MutableStateFlow(readerPrefs.getString("stylus_button_action", "ERASER") ?: "ERASER")
+    val stylusButtonAction: StateFlow<String> = _stylusButtonAction.asStateFlow()
+
+    fun setStylusButtonAction(action: String) {
+        readerPrefs.edit().putString("stylus_button_action", action).apply()
+        _stylusButtonAction.value = action
+    }
+
+    private val _holdToShape = MutableStateFlow(readerPrefs.getBoolean("hold_to_shape", true))
+    val holdToShape: StateFlow<Boolean> = _holdToShape.asStateFlow()
+
+    fun setHoldToShape(enabled: Boolean) {
+        readerPrefs.edit().putBoolean("hold_to_shape", enabled).apply()
+        _holdToShape.value = enabled
     }
 
     // ── Reader Tabs ──────────────────────────────────────────────────────────
@@ -303,6 +330,122 @@ class SettingsViewModel(private val application: JotdownApplication) : ViewModel
         _driveFolderName.value = current.name
         _syncMessage.value = application.getString(R.string.msg_drive_folder_connected, current.name)
         closeFolderPicker()
+    }
+
+    // ── Open FOSS WebDAV Sync ─────────────────────────────────────────────────
+
+    private val webdavPrefs = application.getSharedPreferences("jotdown_webdav", Context.MODE_PRIVATE)
+
+    private val _webdavUrl = MutableStateFlow(webdavPrefs.getString("url", "") ?: "")
+    val webdavUrl: StateFlow<String> = _webdavUrl.asStateFlow()
+
+    private val _webdavFilename = MutableStateFlow(
+        webdavPrefs.getString("filename", "jotdown_backup.zip") ?: "jotdown_backup.zip"
+    )
+    val webdavFilename: StateFlow<String> = _webdavFilename.asStateFlow()
+
+    private val _webdavUsername = MutableStateFlow(webdavPrefs.getString("username", "") ?: "")
+    val webdavUsername: StateFlow<String> = _webdavUsername.asStateFlow()
+
+    private val _webdavPassword = MutableStateFlow(webdavPrefs.getString("password", "") ?: "")
+    val webdavPassword: StateFlow<String> = _webdavPassword.asStateFlow()
+
+    private val _webdavBusy = MutableStateFlow(false)
+    val webdavBusy: StateFlow<Boolean> = _webdavBusy.asStateFlow()
+
+    private val _webdavStatus = MutableStateFlow<String?>(null)
+    val webdavStatus: StateFlow<String?> = _webdavStatus.asStateFlow()
+
+    fun updateWebdavConfig(
+        url: String = _webdavUrl.value,
+        filename: String = _webdavFilename.value,
+        username: String = _webdavUsername.value,
+        password: String = _webdavPassword.value
+    ) {
+        _webdavUrl.value = url
+        _webdavFilename.value = filename
+        _webdavUsername.value = username
+        _webdavPassword.value = password
+        webdavPrefs.edit()
+            .putString("url", url)
+            .putString("filename", filename)
+            .putString("username", username)
+            .putString("password", password)
+            .apply()
+    }
+
+    fun testWebdavConnection() = viewModelScope.launch {
+        _webdavBusy.value = true
+        _webdavStatus.value = application.getString(R.string.msg_webdav_testing)
+        val result = WebDavSyncUtil.testConnection(
+            serverUrl = _webdavUrl.value,
+            username = _webdavUsername.value,
+            password = _webdavPassword.value
+        )
+        _webdavBusy.value = false
+        _webdavStatus.value = result.fold(
+            onSuccess = { code -> application.getString(R.string.msg_webdav_test_ok, code) },
+            onFailure = { e -> application.getString(R.string.msg_webdav_test_error, e.message ?: "") }
+        )
+    }
+
+    fun uploadWebdavBackup() = viewModelScope.launch {
+        _webdavBusy.value = true
+        _webdavStatus.value = application.getString(R.string.msg_webdav_uploading)
+        val filename = _webdavFilename.value.ifBlank { "jotdown_backup.zip" }
+        val result = WebDavSyncUtil.uploadBackup(
+            context = application,
+            serverUrl = _webdavUrl.value,
+            remoteFileName = filename,
+            username = _webdavUsername.value,
+            password = _webdavPassword.value
+        )
+        _webdavBusy.value = false
+        _webdavStatus.value = result.fold(
+            onSuccess = { application.getString(R.string.msg_webdav_upload_ok) },
+            onFailure = { e -> application.getString(R.string.msg_webdav_upload_error, e.message ?: "") }
+        )
+    }
+
+    fun restoreWebdavBackup() = viewModelScope.launch {
+        _webdavBusy.value = true
+        _webdavStatus.value = application.getString(R.string.msg_webdav_downloading)
+        val filename = _webdavFilename.value.ifBlank { "jotdown_backup.zip" }
+        val downloadResult = WebDavSyncUtil.downloadBackup(
+            context = application,
+            serverUrl = _webdavUrl.value,
+            remoteFileName = filename,
+            username = _webdavUsername.value,
+            password = _webdavPassword.value
+        )
+        val file = downloadResult.getOrElse { e ->
+            _webdavBusy.value = false
+            _webdavStatus.value = application.getString(R.string.msg_restore_error, e.message ?: "")
+            return@launch
+        }
+
+        val restored = try {
+            BackupUtil.restoreFromZipFile(application, file)
+        } finally {
+            runCatching { file.delete() }
+        }
+
+        _webdavBusy.value = false
+        if (restored) {
+            _webdavStatus.value = application.getString(R.string.msg_restore_done)
+            delay(1500)
+            val intent = application.packageManager.getLaunchIntentForPackage(application.packageName)
+            if (intent != null) {
+                intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_CLEAR_TASK or Intent.FLAG_ACTIVITY_NEW_TASK)
+                application.startActivity(intent)
+            }
+            Runtime.getRuntime().exit(0)
+        } else {
+            _webdavStatus.value = application.getString(
+                R.string.msg_restore_error,
+                application.getString(R.string.msg_webdav_invalid_archive)
+            )
+        }
     }
 }
 

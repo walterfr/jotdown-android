@@ -183,6 +183,7 @@ class LibraryViewModel(private val repository: DocumentRepository, private val a
     }
 
     fun toggleFavorite(id: String, isFavorite: Boolean) = viewModelScope.launch { repository.updateFavoriteStatus(id, isFavorite) }
+    fun toggleLocked(id: String, isLocked: Boolean) = viewModelScope.launch { repository.updateLockedStatus(id, isLocked) }
     fun moveToTrash(id: String) = viewModelScope.launch { repository.updateTrashStatus(id, true); repository.setDocumentFolder(id, null) }
     fun restoreFromTrash(id: String) = viewModelScope.launch { repository.updateTrashStatus(id, false) }
 
@@ -369,89 +370,27 @@ class LibraryViewModel(private val repository: DocumentRepository, private val a
 
     // 📝 NOVO: Cria um PDF com pautas (estilo caderno) e suporte a templates
     fun createBlankNote(context: Context, title: String, template: String = "Pautado") = viewModelScope.launch {
-        withContext(Dispatchers.IO) {
-            try {
-                val docId = UUID.randomUUID().toString()
-                val pdfDir = File(context.filesDir, "pdfs").also { it.mkdirs() }
-                val pdfFile = File(pdfDir, "$docId.pdf")
-
-                val pdfDocument = android.graphics.pdf.PdfDocument()
-                val pageInfo = android.graphics.pdf.PdfDocument.PageInfo.Builder(595, 842, 1).create()
-                val page = pdfDocument.startPage(pageInfo)
-                val canvas = page.canvas
-
-                // 1. Fundo da folha
-                val bgColor = if (template == "Fichamento" || template == "Branco") "#FFFFFF" else "#FAFAFA"
-                canvas.drawColor(android.graphics.Color.parseColor(bgColor))
-
-                val paint = android.graphics.Paint()
-
-                when (template) {
-                    "Pautado" -> {
-                        paint.color = android.graphics.Color.parseColor("#D1D5DB")
-                        paint.strokeWidth = 1f
-                        var y = 80f
-                        while (y < 842f) { canvas.drawLine(0f, y, 595f, y, paint); y += 30f }
-                        paint.color = android.graphics.Color.parseColor("#FCA5A5")
-                        paint.strokeWidth = 2f
-                        canvas.drawLine(80f, 0f, 80f, 842f, paint)
-                    }
-                    "Quadriculado" -> {
-                        paint.color = android.graphics.Color.parseColor("#E5E7EB")
-                        paint.strokeWidth = 1f
-                        var step = 20f
-                        while (step < 842f) { canvas.drawLine(0f, step, 595f, step, paint); step += 20f }
-                        step = 20f
-                        while (step < 595f) { canvas.drawLine(step, 0f, step, 842f, paint); step += 20f }
-                    }
-                    "Fichamento" -> {
-                        paint.color = android.graphics.Color.parseColor("#374151")
-                        paint.textSize = 14f
-                        paint.isAntiAlias = true
-                        canvas.drawText("FICHAMENTO DE LEITURA", 210f, 60f, paint)
-                        paint.strokeWidth = 2f
-                        canvas.drawLine(50f, 80f, 545f, 80f, paint)
-                        
-                        paint.textSize = 10f
-                        paint.color = android.graphics.Color.parseColor("#9CA3AF")
-                        canvas.drawText(application.getString(R.string.template_abnt_reference), 50f, 110f, paint)
-                        paint.strokeWidth = 1f
-                        canvas.drawLine(50f, 130f, 545f, 130f, paint)
-                        
-                        canvas.drawText(application.getString(R.string.template_main_ideas), 50f, 160f, paint)
-                        canvas.drawLine(50f, 180f, 545f, 180f, paint)
-                        canvas.drawLine(50f, 210f, 545f, 210f, paint)
-                        canvas.drawLine(50f, 240f, 545f, 240f, paint)
-                        
-                        canvas.drawText(application.getString(R.string.template_quotes), 50f, 290f, paint)
-                        canvas.drawLine(50f, 310f, 545f, 310f, paint)
-                    }
-                    // "Branco" não desenha linhas adicionais
-                }
-
-                pdfDocument.finishPage(page)
-                
-                pdfFile.outputStream().use { out -> pdfDocument.writeTo(out) }
-                pdfDocument.close()
-
-                val coverDir = File(context.filesDir, "covers").also { it.mkdirs() }
-                val coverFile = File(coverDir, "$docId.jpg")
-                br.com.jotdown.util.PdfCoverUtil.generateCover(pdfFile, coverFile)
-
-                val doc = DocumentEntity(
-                    id = docId, fileName = "$title.pdf", title = title,
-                    dateAdded = System.currentTimeMillis(), folderId = _currentFolder.value?.id, 
-                    pdfFilePath = pdfFile.absolutePath, docType = "nota" 
-                )
-                repository.saveDocument(doc)
-            } catch (e: Exception) { Log.e("Jotdown", "Erro ao criar caderno: ${e.message}") }
-        }
+        br.com.jotdown.util.QuickNoteUtil.createNotebook(
+            context = context,
+            repository = repository,
+            title = title,
+            template = template,
+            folderId = _currentFolder.value?.id
+        )
     }
 
     fun deleteDocument(context: Context, id: String) = viewModelScope.launch {
         val doc = repository.getDocumentById(id)
         doc?.pdfFilePath?.let { File(it).delete() }
-        
+
+        // Delete synced audio recordings for this document
+        withContext(Dispatchers.IO) {
+            repository.getAudioRecordingsListForDocument(id).forEach { rec ->
+                runCatching { File(rec.filePath).delete() }
+            }
+            runCatching { File(context.filesDir, "audio/$id").deleteRecursively() }
+        }
+
         // Fallback for backups restored from different devices/ROMs where the absolute path might have changed
         val fallbackPdfFile = File(context.filesDir, "pdfs/$id.pdf")
         if (fallbackPdfFile.exists()) fallbackPdfFile.delete()

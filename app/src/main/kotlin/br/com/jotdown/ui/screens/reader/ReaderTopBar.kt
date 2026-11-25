@@ -14,8 +14,8 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.input.TextFieldValue
 import br.com.jotdown.R
+import br.com.jotdown.util.ReadingThemeSpec
 
 /**
  * TopBar do leitor, expandida com:
@@ -39,11 +39,19 @@ fun ReaderTopBar(
     onSearchQueryChange: (String) -> Unit,
     onAbntClick: () -> Unit,
     onExportClick: () -> Unit,
-    isDarkMode: Boolean,
-    onToggleDarkMode: () -> Unit,
+    readingTheme: String,
+    onOpenAppearance: () -> Unit,
     onSharePdf: () -> Unit,
     onOutlineClick: () -> Unit,
     onExportAnnotatedPdf: () -> Unit = {},
+    onPagePaddingClick: () -> Unit = {},
+    isCurrentPageBookmarked: Boolean = false,
+    onToggleBookmark: () -> Unit = {},
+    onOpenPageGrid: () -> Unit = {},
+    isAudioBarVisible: Boolean = false,
+    isRecordingAudio: Boolean = false,
+    onToggleAudioBar: () -> Unit = {},
+    onOpenSplitScreen: () -> Unit = {},
 ) {
     var showOverflow by remember { mutableStateOf(false) }
 
@@ -94,9 +102,32 @@ fun ReaderTopBar(
                 IconButton(onClick = onMenuClick) {
                     Icon(Icons.Default.MenuBook, contentDescription = stringResource(R.string.readerbar_metadata))
                 }
-                // Modo Escuro
-                IconButton(onClick = onToggleDarkMode) {
-                    Icon(if (isDarkMode) Icons.Default.LightMode else Icons.Default.DarkMode, contentDescription = stringResource(R.string.readerbar_night_mode))
+                // Marcador de página
+                IconButton(onClick = onToggleBookmark) {
+                    Icon(
+                        imageVector = if (isCurrentPageBookmarked) Icons.Default.Bookmark else Icons.Default.BookmarkBorder,
+                        contentDescription = stringResource(R.string.readerbar_bookmark_page),
+                        tint = if (isCurrentPageBookmarked) MaterialTheme.colorScheme.primary else LocalContentColor.current
+                    )
+                }
+                // Aparência & Layout
+                IconButton(onClick = onOpenAppearance) {
+                    Icon(
+                        imageVector = if (readingTheme == ReadingThemeSpec.THEME_DARK) Icons.Default.LightMode else Icons.Default.Palette,
+                        contentDescription = stringResource(R.string.readerbar_appearance)
+                    )
+                }
+                // Notas de Áudio
+                IconButton(onClick = onToggleAudioBar) {
+                    Icon(
+                        imageVector = Icons.Default.Mic,
+                        contentDescription = stringResource(R.string.readerbar_audio_notes),
+                        tint = when {
+                            isRecordingAudio -> androidx.compose.ui.graphics.Color(0xFFDC2626)
+                            isAudioBarVisible -> MaterialTheme.colorScheme.primary
+                            else -> LocalContentColor.current
+                        }
+                    )
                 }
                 // Tela cheia
                 IconButton(onClick = onToggleFullscreen) {
@@ -119,6 +150,21 @@ fun ReaderTopBar(
                         text = { Text(stringResource(R.string.readerbar_book_outline), fontWeight = androidx.compose.ui.text.font.FontWeight.Bold) },
                         onClick = { showOverflow = false; onOutlineClick() },
                         leadingIcon = { Icon(Icons.Default.FormatListBulleted, null) }
+                    )
+                    DropdownMenuItem(
+                        text = { Text(stringResource(R.string.readerbar_page_grid)) },
+                        leadingIcon = { Icon(Icons.Default.GridView, contentDescription = null) },
+                        onClick = { showOverflow = false; onOpenPageGrid() }
+                    )
+                    DropdownMenuItem(
+                        text = { Text(stringResource(R.string.readerbar_open_split_screen)) },
+                        leadingIcon = { Icon(Icons.Default.VerticalSplit, contentDescription = null) },
+                        onClick = { showOverflow = false; onOpenSplitScreen() }
+                    )
+                    DropdownMenuItem(
+                        text = { Text(stringResource(R.string.readerbar_page_padding)) },
+                        leadingIcon = { Icon(Icons.Default.AspectRatio, contentDescription = null) },
+                        onClick = { showOverflow = false; onPagePaddingClick() }
                     )
                     DropdownMenuItem(
                         text = { Text(stringResource(R.string.abnt_citation_title)) },

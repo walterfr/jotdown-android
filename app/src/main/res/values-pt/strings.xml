@@ -337,4 +337,155 @@
     <string name="settings_reader_tabs">Abas de Leitura</string>
     <string name="settings_tabs_in_fullscreen">Manter abas em tela cheia</string>
     <string name="settings_tabs_in_fullscreen_desc">Mantém a barra de abas de documentos visível mesmo durante o modo tela cheia.</string>
+
+    <!-- Fase P0: Configurações, Ferramentas do Leitor, Margens, Camada de Texto, Exportação Vetorial -->
+    <string name="settings_two_three_finger_undo">Toque com 2/3 dedos para desfazer/refazer</string>
+    <string name="settings_two_three_finger_undo_desc">Toque com dois dedos para desfazer ou três dedos para refazer traços.</string>
+    <string name="settings_stylus_button_action">Ação do botão da caneta</string>
+    <string name="settings_stylus_button_action_desc">Escolha o que acontece ao segurar o botão lateral da caneta stylus.</string>
+    <string name="settings_stylus_action_eraser">Borracha</string>
+    <string name="settings_stylus_action_undo">Desfazer</string>
+    <string name="settings_stylus_action_none">Nenhuma</string>
+
+    <string name="readerbar_page_padding">Margens de Anotação</string>
+    <string name="tool_lasso">Laço</string>
+    <string name="eraser_mode_stroke">Traço</string>
+    <string name="eraser_mode_pixel">Pixel</string>
+    <string name="lasso_deselect">Desmarcar</string>
+
+    <string name="page_padding_title">Margens para Anotação</string>
+    <string name="page_padding_mode_label">Modo de Expansão</string>
+    <string name="page_padding_mode_none">Original</string>
+    <string name="page_padding_mode_right">Direita</string>
+    <string name="page_padding_mode_bottom">Inferior</string>
+    <string name="page_padding_mode_both">Direita e Inferior</string>
+    <string name="page_padding_color_label">Cor do Papel da Margem</string>
+    <string name="page_padding_color_white">Branco</string>
+    <string name="page_padding_color_sepia">Sépia</string>
+    <string name="page_padding_color_gray">Cinza</string>
+    <string name="page_padding_dotted_grid">Grade pontilhada na margem</string>
+    <string name="common_apply">Aplicar</string>
+
+    <string name="export_annotated_pdf_title">Exportar PDF Anotado</string>
+    <string name="export_vector_pdf_title">PDF Vetorial (Editável, Recomendado)</string>
+    <string name="export_vector_pdf_desc">Preserva texto nítido, traços vetoriais, marcações e notas compatíveis com editores de PDF.</string>
+    <string name="export_flattened_pdf_title">PDF Achatado (Compatibilidade Máxima)</string>
+    <string name="export_flattened_pdf_desc">Renderiza cada página como imagem com desenhos, destaques e apêndice de notas gravados.</string>
+    <string name="export_annotated_pdf_error">Falha ao exportar PDF anotado.</string>
+
+    <string name="search_prev_match">Ocorrência anterior</string>
+    <string name="search_next_match">Próxima ocorrência</string>
+    <string name="search_clear_highlights">Limpar destaques da busca</string>
+    <string name="search_match_counter">%1$d/%2$d</string>
+
+    <string name="reader_action_define_translate">Traduzir / Definir</string>
+    <string name="reader_action_highlight">Destacar</string>
+    <string name="reader_action_underline">Sublinhar</string>
+    <string name="reader_action_strikeout">Riscar</string>
+    <string name="reader_action_quote">Fichar</string>
+    <string name="highlight_actions_title">Ações do Destaque</string>
+    <string name="highlight_action_edit_note">Editar Nota</string>
+
+    <!-- Fase P1: Formas Geométricas, Temas, Modo Livro, Miniaturas, Modelos, Marcadores -->
+    <string name="settings_hold_to_shape">Segurar para ajustar forma</string>
+    <string name="settings_hold_to_shape_desc">Segure a caneta parada ao final do traço para ajustar linhas, setas, círculos, triângulos e retângulos.</string>
+
+    <string name="readerbar_appearance">Aparência e Layout</string>
+    <string name="readerbar_bookmark_page">Marcar página</string>
+    <string name="readerbar_page_grid">Grade de Páginas</string>
+
+    <string name="appearance_title">Aparência de Leitura</string>
+    <string name="appearance_theme_label">Tema da Folha</string>
+    <string name="theme_light">Claro</string>
+    <string name="theme_sepia">Sépia</string>
+    <string name="theme_green">Verde</string>
+    <string name="theme_dark">Escuro</string>
+    <string name="appearance_layout_label">Modo de Leitura</string>
+    <string name="reading_mode_vertical">Rolagem Vertical</string>
+    <string name="reading_mode_horizontal">Modo Livro (Páginas)</string>
+
+    <string name="outline_tab_toc">Sumário</string>
+    <string name="outline_tab_bookmarks">Marcadores</string>
+    <string name="bookmarks_empty">Nenhuma página marcada ainda. Toque no ícone de marcador na barra superior para salvar uma página.</string>
+    <string name="bookmark_edit_title">Editar Rótulo do Marcador</string>
+    <string name="bookmark_label_hint">Rótulo opcional (ex: Capítulo 2, Fórmula)</string>
+    <string name="bookmark_edit_desc">Editar rótulo</string>
+    <string name="bookmark_added_toast">Página %1$d marcada</string>
+    <string name="bookmark_removed_toast">Marcador removido</string>
+
+    <string name="page_grid_title">Páginas</string>
+    <string name="page_insert_button">Inserir Página</string>
+    <string name="page_insert_dialog_title">Inserir Página de Papel</string>
+    <string name="page_insert_position_label">Posição</string>
+    <string name="page_insert_after_current">Após a página atual (%1$d)</string>
+    <string name="page_insert_at_end">Final do documento</string>
+    <string name="page_insert_template_label">Modelo de Folha</string>
+    <string name="paper_template_blank">Em branco</string>
+    <string name="paper_template_lined">Pautada</string>
+    <string name="paper_template_grid">Quadriculada</string>
+    <string name="paper_template_dotted">Pontilhada</string>
+    <string name="paper_template_cornell">Cornell</string>
+    <string name="page_insert_confirm">Inserir</string>
+    <string name="page_insert_success">Página inserida</string>
+    <string name="page_insert_error">Não foi possível inserir página (PDF protegido ou somente leitura)</string>
+
+    <!-- Fase P2: PenBox, Fita de Estudo, Janela Dividida, Notas de Áudio, Bloqueio Biométrico, WebDAV -->
+    <string name="penbox_add_preset">Salvar predefinição</string>
+    <string name="penbox_preset_label">Predefinição</string>
+    <string name="penbox_saved_toast">Predefinição salva na PenBox</string>
+    <string name="penbox_removed_toast">Predefinição removida</string>
+
+    <string name="tool_tape">Fita de Estudo</string>
+    <string name="tape_reveal_all">Revelar Tudo</string>
+    <string name="tape_hide_all">Ocultar Tudo</string>
+
+    <string name="readerbar_open_split_screen">Abrir em Tela Dividida</string>
+    <string name="menu_open_split_screen">Abrir em Tela Dividida</string>
+    <string name="split_screen_picker_title">Abrir Documento em Tela Dividida</string>
+    <string name="split_screen_picker_empty">Nenhum outro documento disponível.</string>
+
+    <string name="readerbar_audio_notes">Notas de Áudio</string>
+    <string name="audio_record_start">Gravar áudio</string>
+    <string name="audio_record_stop">Parar gravação</string>
+    <string name="audio_play">Reproduzir</string>
+    <string name="audio_pause">Pausar</string>
+    <string name="audio_delete">Apagar gravação</string>
+    <string name="audio_close">Ocultar barra de áudio</string>
+    <string name="audio_permission_denied">Permissão de microfone necessária para gravar notas de áudio.</string>
+    <string name="audio_recording_error">Não foi possível iniciar a gravação de áudio.</string>
+    <string name="audio_play_at">Reproduzir áudio (%1$s)</string>
+    <string name="audio_recording_title_prefix">Áudio %1$d</string>
+
+    <string name="menu_lock_document">Bloquear Documento</string>
+    <string name="menu_unlock_document">Desbloquear Documento</string>
+    <string name="biometric_prompt_title">Desbloquear Documento</string>
+    <string name="biometric_prompt_subtitle">"Autentique-se para acessar \"%1$s\""</string>
+    <string name="biometric_lock_toggle_subtitle">"Autentique-se para alterar a proteção de \"%1$s\""</string>
+    <string name="biometric_unavailable">Configure PIN, padrão ou biometria nas Configurações do Android para bloquear documentos.</string>
+    <string name="biometric_locked_badge">Bloqueado</string>
+    <string name="biometric_unlock_button">Desbloquear</string>
+    <string name="biometric_locked_screen_desc">Este documento está protegido por bloqueio biométrico ou do dispositivo.</string>
+
+    <string name="settings_webdav_title">Sincronização WebDAV (Aberta / FOSS)</string>
+    <string name="settings_webdav_desc">Sincronize backups completos (.zip) com Nextcloud, ownCloud ou qualquer servidor WebDAV padrão.</string>
+    <string name="settings_webdav_url_label">URL do WebDAV</string>
+    <string name="settings_webdav_url_hint">https://nuvem.exemplo.com/remote.php/dav/files/usuario/Jotdown</string>
+    <string name="settings_webdav_filename_label">Nome do Arquivo Remoto</string>
+    <string name="settings_webdav_user_label">Usuário</string>
+    <string name="settings_webdav_pass_label">Senha / Token de App</string>
+    <string name="settings_webdav_show_pass">Mostrar senha</string>
+    <string name="settings_webdav_hide_pass">Ocultar senha</string>
+    <string name="settings_webdav_http_warning">HTTPS é obrigatório. HTTP sem criptografia é bloqueado pelo Android e não pode ser usado.</string>
+    <string name="settings_webdav_test">Testar Conexão</string>
+    <string name="settings_webdav_upload">Enviar Backup</string>
+    <string name="settings_webdav_restore">Baixar e Restaurar</string>
+    <string name="msg_webdav_testing">Testando conexão WebDAV…</string>
+    <string name="msg_webdav_test_ok">Conexão WebDAV bem-sucedida (HTTP %1$d).</string>
+    <string name="msg_webdav_test_error">Falha na conexão: %1$s</string>
+    <string name="msg_webdav_uploading">Enviando backup para o WebDAV…</string>
+    <string name="msg_webdav_upload_ok">Backup enviado para o WebDAV com sucesso.</string>
+    <string name="msg_webdav_upload_error">Erro ao enviar para o WebDAV: %1$s</string>
+    <string name="msg_webdav_downloading">Baixando backup do WebDAV…</string>
+    <string name="msg_webdav_invalid_archive">Arquivo de backup inválido ou vazio</string>
+    <string name="template_notes_header">FICHAMENTO DE LEITURA</string>
 </resources>

@@ -35,5 +35,15 @@ data class DocumentEntity(
     @ColumnInfo(defaultValue = "")
     val doi: String = "",
     @ColumnInfo(defaultValue = "")
-    val isbn: String = ""
+    val isbn: String = "",
+    @ColumnInfo(defaultValue = "NONE")
+    val pagePaddingMode: String = "NONE",
+    @ColumnInfo(defaultValue = "#FFFFFF")
+    val pagePaddingColor: String = "#FFFFFF",
+    @ColumnInfo(defaultValue = "LIGHT")
+    val readingTheme: String = "LIGHT",
+    @ColumnInfo(defaultValue = "VERTICAL")
+    val readingMode: String = "VERTICAL",
+    @ColumnInfo(defaultValue = "0")
+    val isLocked: Boolean = false
 )

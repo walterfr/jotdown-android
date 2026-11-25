@@ -9,6 +9,9 @@ abstract class DrawingDao {
     @Query("SELECT * FROM drawings WHERE documentId = :documentId ORDER BY page ASC")
     abstract fun getDrawingsForDocument(documentId: String): Flow<List<DrawingEntity>>
 
+    @Query("SELECT * FROM drawings WHERE documentId = :documentId AND page = :page LIMIT 1")
+    abstract suspend fun getDrawingForPage(documentId: String, page: Int): DrawingEntity?
+
     @Upsert
     abstract suspend fun upsertDrawing(drawing: DrawingEntity): Long
 
@@ -17,5 +20,8 @@ abstract class DrawingDao {
 
     @Query("DELETE FROM drawings WHERE documentId = :documentId")
     abstract suspend fun deleteAllForDocument(documentId: String): Int
+
+    @Query("UPDATE drawings SET page = page + 1 WHERE documentId = :documentId AND page > :afterPage")
+    abstract suspend fun shiftPagesAfter(documentId: String, afterPage: Int): Int
 }
 

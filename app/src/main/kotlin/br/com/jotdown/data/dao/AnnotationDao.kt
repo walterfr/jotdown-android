@@ -17,5 +17,8 @@ abstract class AnnotationDao {
 
     @Query("DELETE FROM annotations WHERE documentId = :documentId")
     abstract suspend fun deleteAllForDocument(documentId: String): Int
+
+    @Query("UPDATE annotations SET page = page + 1 WHERE documentId = :documentId AND page > :afterPage")
+    abstract suspend fun shiftPagesAfter(documentId: String, afterPage: Int): Int
 }
 
