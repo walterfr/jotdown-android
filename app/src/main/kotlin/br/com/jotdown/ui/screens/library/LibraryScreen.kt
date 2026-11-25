@@ -1,5 +1,8 @@
 package br.com.jotdown.ui.screens.library
 
+import android.content.ClipData
+import android.content.ClipboardManager
+import android.content.Context
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -19,6 +22,7 @@ import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.grid.*
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.text.ClickableText
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -38,10 +42,15 @@ import androidx.compose.ui.graphics.*
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.*
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -58,6 +67,12 @@ import java.io.File
 import java.text.SimpleDateFormat
 import java.util.*
 import kotlin.math.roundToInt
+
+private const val ABOUT_URL_GITHUB_SPONSORS = "https://github.com/sponsors/walterfr"
+private const val ABOUT_URL_KOFI = "https://ko-fi.com/walterfr"
+private const val ABOUT_URL_BUY_ME_A_COFFEE = "https://buymeacoffee.com/walterfr"
+private const val ABOUT_PIX_KEY =
+    "00020101021126400014br.gov.bcb.pix0118walterfr@gmail.com5204000053039865802BR5915WALTER REBOUCAS6009FORTALEZA62070503***63045603"
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -587,7 +602,65 @@ fun LibraryScreen(viewModel: LibraryViewModel, onOpenDocument: (String) -> Unit,
                     Text(stringResource(R.string.about_author_text))
                     Spacer(Modifier.height(16.dp))
                     Text(stringResource(R.string.about_footer), fontWeight = FontWeight.Bold, color = Indigo600)
-                    Spacer(Modifier.height(16.dp))
+                    Spacer(Modifier.height(14.dp))
+                    HorizontalDivider()
+                    Spacer(Modifier.height(12.dp))
+                    val uriHandler = LocalUriHandler.current
+                    val mutedColor = MaterialTheme.colorScheme.onSurfaceVariant
+                    val linkColor = MaterialTheme.colorScheme.onSurface
+                    val supportPrefix = stringResource(R.string.about_support_prefix)
+                    val githubLabel = stringResource(R.string.about_github_sponsors)
+                    val kofiLabel = stringResource(R.string.about_kofi)
+                    val bmcLabel = stringResource(R.string.about_buy_me_a_coffee)
+                    val pixLabel = stringResource(R.string.about_copy_pix)
+                    val pixCopiedMsg = stringResource(R.string.about_pix_copied)
+                    val supportText = remember(mutedColor, linkColor, supportPrefix, githubLabel, kofiLabel, bmcLabel, pixLabel) {
+                        buildAnnotatedString {
+                            withStyle(SpanStyle(color = mutedColor)) { append("${supportPrefix.trimEnd()} ") }
+                            val items = listOf(
+                                "github" to githubLabel,
+                                "kofi" to kofiLabel,
+                                "bmc" to bmcLabel,
+                                "pix" to pixLabel,
+                            )
+                            items.forEachIndexed { idx, (action, label) ->
+                                pushStringAnnotation(tag = "SUPPORT_ACTION", annotation = action)
+                                withStyle(SpanStyle(color = linkColor, textDecoration = TextDecoration.Underline)) {
+                                    append(label)
+                                }
+                                pop()
+                                if (idx < items.lastIndex) {
+                                    withStyle(SpanStyle(color = mutedColor)) { append(" · ") }
+                                }
+                            }
+                        }
+                    }
+                    @Suppress("DEPRECATION")
+                    ClickableText(
+                        text = supportText,
+                        modifier = Modifier.fillMaxWidth(),
+                        style = MaterialTheme.typography.bodySmall.copy(
+                            textAlign = TextAlign.Center,
+                            lineHeight = 18.sp
+                        ),
+                        onClick = { offset ->
+                            val action = supportText
+                                .getStringAnnotations("SUPPORT_ACTION", offset, offset)
+                                .firstOrNull()
+                                ?.item ?: return@ClickableText
+                            when (action) {
+                                "github" -> runCatching { uriHandler.openUri(ABOUT_URL_GITHUB_SPONSORS) }
+                                "kofi" -> runCatching { uriHandler.openUri(ABOUT_URL_KOFI) }
+                                "bmc" -> runCatching { uriHandler.openUri(ABOUT_URL_BUY_ME_A_COFFEE) }
+                                "pix" -> {
+                                    val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+                                    clipboard.setPrimaryClip(ClipData.newPlainText("Pix", ABOUT_PIX_KEY))
+                                    Toast.makeText(context, pixCopiedMsg, Toast.LENGTH_SHORT).show()
+                                }
+                            }
+                        }
+                    )
+                    Spacer(Modifier.height(14.dp))
                     val versionName = remember { runCatching { context.packageManager.getPackageInfo(context.packageName, 0).versionName }.getOrNull() ?: "" }
                     Text("v$versionName", fontSize = 12.sp, color = MaterialTheme.colorScheme.outline)
                 }

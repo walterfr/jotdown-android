@@ -17,12 +17,15 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Lock
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.LocalMinimumInteractiveComponentEnforcement
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -32,6 +35,7 @@ import androidx.compose.ui.unit.dp
 import br.com.jotdown.R
 import br.com.jotdown.ui.viewmodel.ReaderTab
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ReaderTabsBar(
     tabs: List<ReaderTab>,
@@ -47,66 +51,72 @@ fun ReaderTabsBar(
         if (selectedIndex >= 0) listState.animateScrollToItem(selectedIndex)
     }
 
-    Row(
-        modifier = Modifier.fillMaxWidth().statusBarsPadding(),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        LazyRow(
-            state = listState,
-            modifier = Modifier.weight(1f),
-            contentPadding = PaddingValues(horizontal = 8.dp, vertical = 6.dp),
-            horizontalArrangement = Arrangement.spacedBy(6.dp)
+    CompositionLocalProvider(LocalMinimumInteractiveComponentEnforcement provides false) {
+        Row(
+            modifier = Modifier.fillMaxWidth().statusBarsPadding(),
+            verticalAlignment = Alignment.CenterVertically
         ) {
-            items(tabs, key = { it.documentId }) { tab ->
-                Surface(
-                    shape = RoundedCornerShape(20.dp),
-                    color = if (tab.documentId == activeDocumentId) {
-                        MaterialTheme.colorScheme.secondaryContainer
-                    } else {
-                        MaterialTheme.colorScheme.surfaceVariant
-                    }
-                ) {
-                    Row(
-                        modifier = Modifier.widthIn(max = 240.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(2.dp)
+            LazyRow(
+                state = listState,
+                modifier = Modifier.weight(1f),
+                contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp),
+                horizontalArrangement = Arrangement.spacedBy(6.dp)
+            ) {
+                items(tabs, key = { it.documentId }) { tab ->
+                    Surface(
+                        shape = RoundedCornerShape(16.dp),
+                        color = if (tab.documentId == activeDocumentId) {
+                            MaterialTheme.colorScheme.secondaryContainer
+                        } else {
+                            MaterialTheme.colorScheme.surfaceVariant
+                        }
                     ) {
                         Row(
-                            modifier = Modifier
-                                .weight(1f)
-                                .clickable { onSelect(tab.documentId) }
-                                .padding(start = 12.dp),
-                            verticalAlignment = Alignment.CenterVertically
+                            modifier = Modifier.widthIn(max = 240.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(2.dp)
                         ) {
-                            Text(
-                                text = tab.title,
-                                modifier = Modifier.weight(1f),
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis,
-                                style = MaterialTheme.typography.labelLarge
-                            )
-                        }
-                        IconButton(
-                            onClick = { onClose(tab.documentId) },
-                            modifier = Modifier.size(36.dp)
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.Close,
-                                contentDescription = stringResource(R.string.reader_tabs_close, tab.title),
-                                modifier = Modifier.size(18.dp)
-                            )
+                            Row(
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .clickable { onSelect(tab.documentId) }
+                                    .padding(start = 10.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text(
+                                    text = tab.title,
+                                    modifier = Modifier.weight(1f),
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis,
+                                    style = MaterialTheme.typography.labelMedium
+                                )
+                            }
+                            IconButton(
+                                onClick = { onClose(tab.documentId) },
+                                modifier = Modifier.size(32.dp)
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Close,
+                                    contentDescription = stringResource(R.string.reader_tabs_close, tab.title),
+                                    modifier = Modifier.size(16.dp)
+                                )
+                            }
                         }
                     }
                 }
             }
-        }
-        IconButton(onClick = onAddTab) {
-            Icon(
-                imageVector = if (isPro) Icons.Default.Add else Icons.Default.Lock,
-                contentDescription = stringResource(
-                    if (isPro) R.string.reader_tabs_add else R.string.reader_tabs_unlock
+            IconButton(
+                onClick = onAddTab,
+                modifier = Modifier.padding(end = 4.dp).size(38.dp)
+            ) {
+                Icon(
+                    imageVector = if (isPro) Icons.Default.Add else Icons.Default.Lock,
+                    contentDescription = stringResource(
+                        if (isPro) R.string.reader_tabs_add else R.string.reader_tabs_unlock
+                    ),
+                    modifier = Modifier.size(22.dp)
                 )
-            )
+            }
         }
     }
 }

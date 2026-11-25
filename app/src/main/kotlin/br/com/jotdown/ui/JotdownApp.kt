@@ -4,7 +4,10 @@ import androidx.compose.animation.*
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.statusBars
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -121,10 +124,11 @@ fun JotdownApp(
                     val vm: ReaderViewModel = viewModel(
                         factory = ReaderViewModelFactory(repository, documentId, app.dictionaryRepository)
                     )
+                    val isTabsBarVisible = app.billingProvider.isBillingSupported && (!isFullscreen || showTabsInFullscreen)
                     Column {
                         if (app.billingProvider.isBillingSupported) {
                             AnimatedVisibility(
-                                visible = !isFullscreen || showTabsInFullscreen,
+                                visible = isTabsBarVisible,
                                 enter = fadeIn() + expandVertically(),
                                 exit = fadeOut() + shrinkVertically()
                             ) {
@@ -146,11 +150,17 @@ fun JotdownApp(
                                 )
                             }
                         }
-                        Box(Modifier.fillMaxWidth().weight(1f)) {
+                        Box(
+                            Modifier
+                                .fillMaxWidth()
+                                .weight(1f)
+                                .then(if (isTabsBarVisible) Modifier.consumeWindowInsets(WindowInsets.statusBars) else Modifier)
+                        ) {
                             ReaderScreen(
                                 viewModel = vm,
                                 onBack = { navController.popBackStack() },
-                                onFullscreenChanged = { isFullscreen = it }
+                                onFullscreenChanged = { isFullscreen = it },
+                                hasTopTabsBar = isTabsBarVisible
                             )
                         }
                     }

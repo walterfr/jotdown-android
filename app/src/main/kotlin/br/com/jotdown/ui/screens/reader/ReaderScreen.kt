@@ -109,7 +109,8 @@ enum class EraserMode { STROKE, PIXEL }
 fun ReaderScreen(
     viewModel: ReaderViewModel,
     onBack: () -> Unit,
-    onFullscreenChanged: (Boolean) -> Unit = {}
+    onFullscreenChanged: (Boolean) -> Unit = {},
+    hasTopTabsBar: Boolean = false,
 ) {
     val pdfFile         by viewModel.pdfFile.collectAsState()
     val currentPage     by viewModel.currentPage.collectAsState()
@@ -422,6 +423,11 @@ fun ReaderScreen(
     }
 
     Scaffold(
+        contentWindowInsets = if (hasTopTabsBar) {
+            ScaffoldDefaults.contentWindowInsets.only(WindowInsetsSides.Horizontal + WindowInsetsSides.Bottom)
+        } else {
+            ScaffoldDefaults.contentWindowInsets
+        },
         topBar = {
             AnimatedVisibility(
                 visible = !isFullscreen,
@@ -471,6 +477,11 @@ fun ReaderScreen(
                     isRecordingAudio = isRecordingAudio,
                     onToggleAudioBar = { showAudioBar = !showAudioBar },
                     onOpenSplitScreen = { showSplitScreenPicker = true },
+                    windowInsets = if (hasTopTabsBar) {
+                        TopAppBarDefaults.windowInsets.only(WindowInsetsSides.Horizontal)
+                    } else {
+                        TopAppBarDefaults.windowInsets
+                    },
                 )
             }
         },
@@ -893,7 +904,7 @@ fun ReaderScreen(
                 exit = fadeOut(),
                 modifier = Modifier
                     .align(Alignment.TopEnd)
-                    .statusBarsPadding()
+                    .then(if (hasTopTabsBar) Modifier else Modifier.statusBarsPadding())
                     .padding(16.dp)
             ) {
                 FilledTonalIconButton(

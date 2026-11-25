@@ -488,4 +488,11 @@
     <string name="msg_webdav_downloading">Downloading backup from WebDAV…</string>
     <string name="msg_webdav_invalid_archive">Invalid or empty backup archive</string>
     <string name="template_notes_header">READING NOTES</string>
+
+    <string name="about_support_prefix">Support the project:</string>
+    <string name="about_github_sponsors">GitHub Sponsors</string>
+    <string name="about_kofi">Ko-fi</string>
+    <string name="about_buy_me_a_coffee">Buy Me a Coffee</string>
+    <string name="about_copy_pix">Copy Pix key</string>
+    <string name="about_pix_copied">Pix key copied!</string>
 </resources>
