@@ -1,0 +1,7 @@
+v3.3.0:
+• Vector PDF export with editable annotations & extended page margins
+• Native PDF text selection, highlights, underlines, strikeouts & search marks
+• Stroke eraser, lasso, 2/3-finger undo/redo, stylus button & Hold-to-Shape
+• Smooth Bezier ink with stylus prediction, Hi-DPI zoom, themes & book mode
+• Thumbnails, page templates, bookmarks, PenBox presets & active study tape
+• Split-screen, Android Notes role, synced audio, biometrics & WebDAV sync

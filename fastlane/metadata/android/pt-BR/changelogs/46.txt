@@ -1,0 +1,7 @@
+v3.3.0:
+• PDF vetorial editável e margens estendidas de página
+• Seleção nativa de texto no PDF com destaque, sublinhado, tachado e busca
+• Borracha por traço, laço, gestos 2/3 dedos, botão stylus e Hold-to-Shape
+• Tinta Bézier com predição stylus, zoom Hi-DPI, temas e modo livro
+• Miniaturas, templates, marcadores, PenBox e Fita de Estudo Ativo
+• Tela dividida, Notas do Android, áudio sincronizado, biometria e WebDAV

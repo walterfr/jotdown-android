@@ -1,8 +1,8 @@
 # Jotdown — Release Instructions
 
 ## Version Info
-- **Current version:** 3.2.1
-- **Build Code:** 45
+- **Current version:** 3.3.0
+- **Build Code:** 46
 - **Last release:** November 2026 (GitHub Releases, Play Console `production`, F-Droid)
 - **AAB Path:** `app/build/outputs/bundle/fullRelease/app-full-release.aab`
 - **APKs Path:** `app/build/outputs/apk/{full,foss}/release/app-*.apk`
@@ -15,14 +15,14 @@ From v3.1.23 onwards, the project adopts [Pride Versioning](https://pridever.org
 - **DEFAULT (Minor):** Bump when making normal, expected, routine feature releases.
 - **SHAME (Patch):** Bump when making hotfixes, emergency bug fixes, or corrections too embarrassing to admit.
 
-## Recent Features (3.2.0 – 3.2.1)
-- ✅ Formatos de citação adicionais: APA 7ª Edição e BibTeX (`.bib` export)
-- ✅ Busca e importação de metadados por ISBN via Open Library Books API
-- ✅ Busca textual completa em background no conteúdo do PDF (`PDFTextStripper`)
-- ✅ Exportação de PDF com anotações e traços mesclados (Flatten PDF)
-- ✅ Navegação por sumário hierárquico do PDF (Bookmarks / Outlines)
-- ✅ Otimização R8/ProGuard (97,3% de ofuscação DEX e redução de ~40% no APK) e correções edge-to-edge Android 15
-- ✅ Correção do export .PDF de fichamentos, borracha + apêndice de notas no PDF anotado e unificação de tipos ABNT
+## Recent Features (3.2.0 – 3.3.0)
+- ✅ **v3.3.0:** Exportação de PDF vetorial editável, margens estendidas e seleção nativa de texto com destaque/sublinhado/tachado e destaques de busca
+- ✅ **v3.3.0:** Borracha por traço, laço, gestos 2/3 dedos, botão lateral da caneta, tinta Bézier suave + predição stylus (`input-motionprediction`) e *One-Stroke to Shape*
+- ✅ **v3.3.0:** Zoom Hi-DPI, temas Claro/Sépia/Verde/Escuro, modo livro horizontal, grid de miniaturas, inserção atômica de templates e marcadores
+- ✅ **v3.3.0:** Estojo PenBox, Fita de Estudo Ativo, Multi-janela (*split-screen*), papel `ROLE_NOTES`, áudio sincronizado, bloqueio biométrico e sync WebDAV FOSS
+- ✅ Formatos de citação adicionais: APA 7ª Edição e BibTeX (`.bib` export) + ISBN via Open Library API
+- ✅ Busca textual completa em background no conteúdo do PDF (`PDFTextStripper`) e sumário hierárquico
+- ✅ Otimização R8/ProGuard (~97% DEX) e edge-to-edge Android 15
 
 ---
 
@@ -33,7 +33,7 @@ Building via CI guarantees deterministic/reproducible builds matching F-Droid's 
 
 **By tag (Publishes GitHub Release with APKs and uploads AAB directly to Play Console `production`):**
 ```bash
-git tag v3.2.2 && git push --tags
+git tag v3.3.0 && git push --tags
 ```
 
 **By workflow dispatch (without creating tag, or for internal/beta testing or promotion):**

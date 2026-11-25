@@ -1,4 +1,4 @@
-# Jotdown v3.2.1 — Manual de Utilização
+# Jotdown v3.3.0 — Manual de Utilização
 
 ## Visão Geral
 
@@ -198,5 +198,5 @@ No leitor, cada ferramenta aceita **cor personalizada** e **espessura do traço*
 ---
 
 ## Versão
-**Jotdown v3.2.1** — Build 45  
+**Jotdown v3.3.0** — Build 46  
 Última atualização: Novembro 2026
