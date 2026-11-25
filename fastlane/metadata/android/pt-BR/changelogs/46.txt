@@ -4,4 +4,4 @@ v3.3.0:
 • Borracha por traço, laço, gestos 2/3 dedos, botão stylus e Hold-to-Shape
 • Tinta Bézier com predição stylus, zoom Hi-DPI, temas e modo livro
 • Miniaturas, templates, marcadores, PenBox e Fita de Estudo Ativo
-• Tela dividida, Notas do Android, áudio sincronizado, biometria e WebDAV
+• Tela dividida, Notas Android, áudio, biometria, WebDAV e barra compacta

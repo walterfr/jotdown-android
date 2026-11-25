@@ -118,6 +118,36 @@ jobs:
           echo "apk_foss=$(find app/build/outputs/apk/foss/release -name '*.apk' ! -name '*unsigned*' | head -1)" >> "$GITHUB_OUTPUT"
           echo "aab=$(find app/build/outputs/bundle/fullRelease -name '*.aab' | head -1)" >> "$GITHUB_OUTPUT"
 
+      - name: Prepare release notes
+        if: github.event_name != 'workflow_dispatch' || github.event.inputs.operation != 'promote'
+        id: release_notes
+        run: |
+          VERSION_CODE=$(grep -Eo 'versionCode[[:space:]]*=*[[:space:]]*[0-9]+' app/build.gradle | head -1 | grep -Eo '[0-9]+')
+          WHATSNEW_DIR="$RUNNER_TEMP/whatsnew"
+          mkdir -p "$WHATSNEW_DIR"
+          for locale_dir in fastlane/metadata/android/*; do
+            locale=$(basename "$locale_dir")
+            changelog="$locale_dir/changelogs/${VERSION_CODE}.txt"
+            if [ -f "$changelog" ]; then
+              cp "$changelog" "$WHATSNEW_DIR/whatsnew-${locale}"
+            fi
+          done
+          echo "whatsnew_dir=$WHATSNEW_DIR" >> "$GITHUB_OUTPUT"
+
+          BODY_FILE="$RUNNER_TEMP/github-release-notes.md"
+          : > "$BODY_FILE"
+          if [ -f "fastlane/metadata/android/pt-BR/changelogs/${VERSION_CODE}.txt" ]; then
+            printf "## Novidades (PT-BR)\n\n" >> "$BODY_FILE"
+            cat "fastlane/metadata/android/pt-BR/changelogs/${VERSION_CODE}.txt" >> "$BODY_FILE"
+            printf "\n\n" >> "$BODY_FILE"
+          fi
+          if [ -f "fastlane/metadata/android/en-US/changelogs/${VERSION_CODE}.txt" ]; then
+            printf "## What's New (EN-US)\n\n" >> "$BODY_FILE"
+            cat "fastlane/metadata/android/en-US/changelogs/${VERSION_CODE}.txt" >> "$BODY_FILE"
+            printf "\n" >> "$BODY_FILE"
+          fi
+          echo "body_file=$BODY_FILE" >> "$GITHUB_OUTPUT"
+
       # Sobe o AAB diretamente para a faixa escolhida (por padrao, production).
       - name: Publish AAB to Play Console
         if: github.event_name != 'workflow_dispatch' || github.event.inputs.operation == 'upload'
@@ -128,6 +158,7 @@ jobs:
           releaseFiles: ${{ steps.artifacts.outputs.aab }}
           tracks: ${{ github.event.inputs.track || 'production' }}
           status: ${{ github.event.inputs.status || 'completed' }}
+          whatsNewDirectory: ${{ steps.release_notes.outputs.whatsnew_dir }}
           mappingFile: app/build/outputs/mapping/fullRelease/mapping.txt
 
       # Releases from tags include the Play upload; manual release mode only
@@ -137,6 +168,7 @@ jobs:
         uses: softprops/action-gh-release@v3
         with:
           tag_name: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.release_tag || github.ref_name }}
+          body_path: ${{ steps.release_notes.outputs.body_file }}
           files: |
             ${{ steps.artifacts.outputs.apk }}
             ${{ steps.artifacts.outputs.apk_foss }}
